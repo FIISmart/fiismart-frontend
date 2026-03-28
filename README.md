@@ -26,20 +26,15 @@ auth/
 
 ## Quick Start
 
-### 1. Set your backend URL
+### 1. Set backend URL
 
-Create a `.env` file in your Vite project root:
+Create a `.env` file in Vite project root:
 
 ```
 VITE_API_BASE_URL=http://localhost:8080
 ```
 
-For production:
-```
-VITE_API_BASE_URL=https://api.educonnect.ro
-```
-
-### 2. Wrap your app with `<AuthProvider>`
+### 2. Wrap app with `<AuthProvider>`
 
 ```tsx
 // main.tsx
@@ -81,8 +76,6 @@ import { ProtectedRoute } from "./auth/components/ProtectedRoute";
 ---
 
 ## Backend Contract
-
-The service layer expects the Java backend to expose:
 
 | Method | Endpoint                    | Purpose                         |
 |--------|-----------------------------|---------------------------------|
@@ -134,10 +127,3 @@ These are automatically mapped to the correct form fields.
 
 ---
 
-## What's Left to Do
-
-- [ ] **Password Reset page** — a standalone page that reads `?token=...` from the URL and calls `authService.resetPassword()`
-- [ ] **Email Verification page** — reads `?token=...` from URL, calls `authService.verifyEmail()`
-- [ ] **CSS polish** — all styles are in the `styles` object at the bottom of `AuthPage.tsx`
-- [ ] **Token refresh interceptor** — call `attemptTokenRefresh()` from `auth.service.ts` when you receive a 401 from any other API call
-- [ ] **Social login** — add OAuth buttons to `AuthPage.tsx` and new endpoints to `auth.service.ts`
