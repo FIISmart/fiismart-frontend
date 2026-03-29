@@ -5,13 +5,16 @@ export interface Lesson {
   title: string;
   type: LessonType;
   content: string; // URL for video/pdf, markdown content for markdown
-  duration?: number; // in minutes
+  duration?: number; // in minutes (FE display) — converted from durationSecs
   order: number;
 }
 
 export interface Quiz {
   id: string;
   title: string;
+  passingScore?: number;
+  timeLimit?: number;
+  shuffleQuestions?: boolean;
   questions: QuizQuestion[];
 }
 
@@ -21,16 +24,6 @@ export interface QuizQuestion {
   options: string[];
   correctAnswer: number;
   explanation?: string;
-}
-
-export interface Module {
-  id: string;
-  title: string;
-  description?: string;
-  lessons: Lesson[];
-  quiz?: Quiz;
-  order: number;
-  isExpanded?: boolean;
 }
 
 export interface Comment {
@@ -57,7 +50,8 @@ export interface Course {
     title?: string;
     avatar?: string;
   };
-  modules: Module[];
+  lessons: Lesson[];
+  quiz?: Quiz;
   comments: Comment[];
   status: 'draft' | 'published';
   createdAt: Date;
@@ -67,3 +61,67 @@ export interface Course {
 }
 
 export const generateId = () => Math.random().toString(36).substring(2, 15);
+
+// ── Mappers: API → FE types ───────────────────────────
+
+import type { CourseAPI, LectureAPI, QuizAPI, CommentAPI } from './api';
+
+export function mapLectureToLesson(lecture: LectureAPI): Lesson {
+  return {
+    id: lecture.id,
+    title: lecture.title,
+    type: 'video', // BE only stores videoUrl, default to video
+    content: lecture.videoUrl || '',
+    duration: lecture.durationSecs ? Math.round(lecture.durationSecs / 60) : undefined,
+    order: lecture.order,
+  };
+}
+
+export function mapQuizToFE(quiz: QuizAPI): Quiz {
+  return {
+    id: quiz.id,
+    title: quiz.title,
+    passingScore: quiz.passingScore,
+    timeLimit: quiz.timeLimit,
+    shuffleQuestions: quiz.shuffleQuestions,
+    questions: quiz.questions.map((q) => ({
+      id: q.id,
+      question: q.text,
+      options: q.options,
+      correctAnswer: q.correctIdx,
+      explanation: q.explanation || undefined,
+    })),
+  };
+}
+
+export function mapCommentToFE(comment: CommentAPI): Comment {
+  return {
+    id: comment.id,
+    userId: comment.authorId,
+    userName: comment.authorId, // TODO: resolve user name from authorId
+    content: comment.body,
+    createdAt: new Date(comment.createdAt),
+    lessonId: comment.lectureId || '',
+    status: comment.isDeleted ? 'rejected' : comment.flagCount > 0 ? 'pending' : 'approved',
+  };
+}
+
+export function mapCourseToFE(course: CourseAPI, quiz?: QuizAPI | null, comments?: CommentAPI[]): Course {
+  return {
+    id: course.id,
+    title: course.title,
+    description: course.description,
+    thumbnail: course.thumbnailUrl || undefined,
+    tags: course.tags || [],
+    instructor: {
+      id: course.teacherId,
+      name: 'Profesor', // TODO: resolve from user API
+    },
+    lessons: course.lectures.map(mapLectureToLesson),
+    quiz: quiz ? mapQuizToFE(quiz) : undefined,
+    comments: comments ? comments.map(mapCommentToFE) : [],
+    status: course.status as 'draft' | 'published',
+    createdAt: new Date(course.createdAt),
+    updatedAt: new Date(course.updatedAt),
+  };
+}
