@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@theme {
+  --color-edu-bg: #FDF9F3;
+  --color-edu-accent: #B4D3D9;
+  --color-edu-secondary: #BDA6CE;
+  --color-edu-primary: #9B8EC7;
+  --color-edu-foreground: #2D2A3E;
+  --color-edu-muted-fg: #5A5470;
+  --color-edu-card: #FFFFFF;
+  --color-edu-border: #D4CCC0;
+  --color-edu-muted: #E8E1D6;
+
+  --font-poppins: 'Poppins', sans-serif;
+  --font-inter: 'Inter', sans-serif;
+}
+
+body {
+  font-family: var(--font-inter);
+}
