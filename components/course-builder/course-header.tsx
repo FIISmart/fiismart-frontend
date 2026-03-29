@@ -47,7 +47,6 @@ export function CourseHeader({
   const [editTitle, setEditTitle] = useState(course.title);
   const [editDescription, setEditDescription] = useState(course.description);
   const [editTags, setEditTags] = useState(course.tags.join(", "));
-  const [newTag, setNewTag] = useState("");
 
   const handleSaveDetails = () => {
     onUpdate({
@@ -61,16 +60,12 @@ export function CourseHeader({
     setEditDialogOpen(false);
   };
 
-  const totalLessons = course.modules.reduce(
-    (acc, m) => acc + m.lessons.length,
+  const totalLessons = course.lessons.length;
+  const totalDuration = course.lessons.reduce(
+    (acc, l) => acc + (l.duration || 0),
     0
   );
-  const totalDuration = course.modules.reduce(
-    (acc, m) =>
-      acc + m.lessons.reduce((lacc, l) => lacc + (l.duration || 0), 0),
-    0
-  );
-  const totalQuizzes = course.modules.filter((m) => m.quiz).length;
+  const hasQuiz = !!course.quiz;
 
   const formatDuration = (minutes: number) => {
     if (minutes < 60) return `${minutes} min`;
@@ -167,14 +162,6 @@ export function CourseHeader({
             <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
               <BookOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span>
-                <strong className="text-foreground">{course.modules.length}</strong>{" "}
-                <span className="hidden xs:inline">module</span>
-                <span className="xs:hidden">mod</span>
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
-              <BookOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span>
                 <strong className="text-foreground">{totalLessons}</strong>{" "}
                 <span className="hidden xs:inline">lecții</span>
                 <span className="xs:hidden">lec</span>
@@ -188,9 +175,9 @@ export function CourseHeader({
                 </strong>
               </div>
             )}
-            {totalQuizzes > 0 && (
+            {hasQuiz && (
               <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
-                <strong className="text-foreground">{totalQuizzes}</strong>{" "}
+                <strong className="text-foreground">1</strong>{" "}
                 quiz
               </div>
             )}
