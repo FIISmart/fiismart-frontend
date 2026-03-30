@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Work+Sans:wght@700&display=swap');
+
+:root {
+  background-color: #F4EFE8;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #F4EFE8;
+  color: #1a1a2e;
+  -webkit-font-smoothing: antialiased;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Scrollbar fin */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d4ccc0; border-radius: 10px; }
