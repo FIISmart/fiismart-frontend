@@ -1,4 +1,4 @@
-import { GraduationCap, Mail, Phone, MapPin } from 'lucide-react';
+import {Mail, Phone, MapPin } from 'lucide-react';
 
 const Footer = () => {
   return (
@@ -9,7 +9,7 @@ const Footer = () => {
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
-                <GraduationCap size={18} className="text-white" />
+                <img src="/logo_final.png" alt="Logo" className="w-8 h-8 object-contain" />
               </div>
               <span className="font-heading font-bold text-lg">FIISmart</span>
             </div>
