@@ -15,7 +15,7 @@ export function Dashboard() {
     useEffect(() => {
         fetch('http://localhost:8081/api/teacher-dashboard/me/overview', {
             headers: {
-                'X-Dev-UserId': '69cba1cf570c53224d7c44e2' //trebuie introdus manual
+                'X-Dev-UserId': '69cba6beb6a9312a695332a2' //trebuie introdus manual
             }
         })
             .then((response) => {

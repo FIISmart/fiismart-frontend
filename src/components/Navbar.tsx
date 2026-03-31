@@ -10,7 +10,7 @@ export function Navbar() {
                         <Menu size={24} />
                     </button>
                     <h1 className="text-xl md:text-2xl font-bold font-poppins text-edu-primary">
-                        Edu<span className='text-edu-foreground'>Smart</span>
+                        FII<span className='text-edu-foreground'>Smart</span>
                     </h1>
                 </div>
 
