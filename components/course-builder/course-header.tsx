@@ -23,7 +23,6 @@ import {
   Tag,
   Clock,
   BookOpen,
-  Eye,
 } from "lucide-react";
 import type { Course } from "@/lib/course-types";
 import Link from "next/link";
@@ -117,26 +116,6 @@ export function CourseHeader({
 
             {/* Bottom Row on Mobile: Action Buttons */}
             <div className="flex items-center gap-2 sm:gap-2 w-full sm:w-auto">
-              <Button
-                variant="outline"
-                className="gap-1.5 sm:gap-2 hidden md:flex"
-                asChild
-              >
-                <Link href={`/cursuri/${course.id}/preview`}>
-                  <Eye className="h-4 w-4" />
-                  <span>Previzualizare</span>
-                </Link>
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="md:hidden shrink-0"
-                asChild
-              >
-                <Link href={`/cursuri/${course.id}/preview`}>
-                  <Eye className="h-4 w-4" />
-                </Link>
-              </Button>
               <Button
                 variant="outline"
                 onClick={onSaveDraft}
