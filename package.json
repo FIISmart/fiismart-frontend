@@ -27,5 +27,17 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.57.0",
     "vite": "^8.0.1"
-  }
+  },
+  "description": "Complete authentication module in React + TypeScript, ready to wire to the Java Spring Boot backend.",
+  "main": "eslint.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FIISmart/fiismart-frontend.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/FIISmart/fiismart-frontend/issues"
+  },
+  "homepage": "https://github.com/FIISmart/fiismart-frontend#readme"
 }
