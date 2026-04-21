@@ -58,7 +58,7 @@ export function LessonEditor({ lesson, onSave, onCancel, isOpen }: LessonEditorP
 
     setIsUploading(true);
     try {
-      const result = await api.uploadFile(file);
+      const result = await api.uploadLectureFile(file);
       setContent(result.url);
       toast.success("Fișier încărcat cu succes!");
     } catch (err) {

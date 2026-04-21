@@ -232,26 +232,40 @@ export function createOrUpdateQuiz(
   });
 }
 
-// ── File Upload Helper ──────────────────────────────────
+// ── File Upload Helpers ─────────────────────────────────
 
-/**
- * Helper to upload a file to the backend. 
- * Note: You will need an @PostMapping endpoint in Spring to handle MultipartFile.
- */
-export async function uploadFile(file: File): Promise<{ url: string }> {
+export interface UploadResponse {
+  id: string;
+  url: string;
+  filename: string;
+  contentType: string;
+  size: number;
+}
+
+async function postMultipart(path: string, file: File): Promise<UploadResponse> {
   const formData = new FormData();
   formData.append("file", file);
 
-  const res = await fetch(`${API_BASE}/files/upload`, {
+  const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
-    body: formData, // No Content-Type header here, browser sets it for FormData
+    body: formData, // no Content-Type header — browser sets multipart boundary
   });
-  
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: res.statusText }));
     throw new Error(err.message || `Upload failed: ${res.status}`);
   }
   return res.json();
+}
+
+/** Upload a cover image for a course (JPG/PNG/WebP/GIF, max 5MB). */
+export function uploadThumbnail(file: File) {
+  return postMultipart("/files/thumbnail", file);
+}
+
+/** Upload a lecture file (PDF/DOC/DOCX/ZIP/TXT/MD, max 50MB). */
+export function uploadLectureFile(file: File) {
+  return postMultipart("/files/lecture", file);
 }
 
 // ── Existing Course/Comment endpoints remain largely the same...

@@ -90,7 +90,7 @@ export function CourseHeader({
 
     setIsUploadingThumbnail(true);
     try {
-      const result = await api.uploadFile(file);
+      const result = await api.uploadThumbnail(file);
       onUpdate({ thumbnail: result.url });
       toast.success("Imaginea de prezentare a fost încărcată.");
     } catch (err) {
