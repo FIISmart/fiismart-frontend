@@ -1,5 +1,3 @@
-import type { Lesson, LessonType } from "./course-types";
-
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -23,6 +21,7 @@ export interface ModuleResponse {
   description: string;
   order: number;
   lectures: LectureAPI[];
+  quiz?: QuizAPI | null;
 }
 
 export interface CourseAPI {
@@ -49,6 +48,8 @@ export interface LectureAPI {
 
 export interface QuizAPI {
   id: string;
+  courseId: string;
+  moduleId?: string | null;
   title: string;
   passingScore: number;
   timeLimit: number;
@@ -179,56 +180,64 @@ export function deleteComment(commentId: string) {
   return request<void>(`/comments/${commentId}`, { method: "DELETE" });
 }
 
-export function mapLectureToLesson(lecture: LectureAPI): Lesson {
-  let detectedType: LessonType = 'video';
-  const content = lecture.videoUrl || '';
+// mapLectureToLesson lives in lib/course-types.ts — it does type detection
+// based on the content shape (PDF/markdown/video). Re-export here for
+// any caller who imports from `@/lib/api`.
+export { mapLectureToLesson } from "./course-types";
 
-  // Logic to determine type since DB doesn't store a 'type' field
-  const normalizedContent = content.toLowerCase();
-  if (normalizedContent.endsWith('.pdf')) {
-    detectedType = 'pdf';
-  } else if (normalizedContent.endsWith('.md') || normalizedContent.endsWith('.markdown')) {
-    detectedType = 'markdown';
-  } else if (content.length > 255 || (content && !content.startsWith('http'))) {
-    detectedType = 'markdown';
-  }
-
-  return {
-    id: lecture.id,
-    title: lecture.title,
-    type: detectedType,
-    content: content,
-    duration: lecture.durationSecs ? Math.round(lecture.durationSecs / 60) : undefined,
-    order: lecture.order,
-  };
-}
 // ── Quiz Endpoints ──────────────────────────────────────
 
+export interface QuizQuestionPayload {
+  text: string;
+  type: string;
+  options: string[];
+  correctIdx?: number;
+  correctText?: string; // written responses
+  explanation?: string;
+}
+
+export interface QuizPayload {
+  title: string;
+  passingScore?: number;
+  timeLimit?: number;
+  shuffleQuestions?: boolean;
+  questions: QuizQuestionPayload[];
+}
+
+// Legacy course-wide quiz (kept for backwards compat, not used by the builder UI).
 export function getQuiz(courseId: string) {
   return request<QuizAPI>(`/courses/${courseId}/quiz`);
 }
 export function deleteQuiz(courseId: string) {
-  return request<void>(`/courses/${courseId}/quiz`, { 
-    method: "DELETE" 
-  });
+  return request<void>(`/courses/${courseId}/quiz`, { method: "DELETE" });
 }
-export function createOrUpdateQuiz(
-  courseId: string,
-  data: {
-    title: string;
-    questions: {
-      text: string;
-      type: string;
-      options: string[];
-      correctIdx?: number;
-      correctText?: string; // For written responses
-      explanation?: string;
-    }[];
-  }
-) {
+export function createOrUpdateQuiz(courseId: string, data: QuizPayload) {
   return request<QuizAPI>(`/courses/${courseId}/quiz`, {
     method: "POST",
     body: JSON.stringify(data),
+  });
+}
+
+// ── Module-scoped quiz (used by the course builder) ─────
+
+export function getModuleQuiz(courseId: string, moduleId: string) {
+  return request<QuizAPI>(`/courses/${courseId}/builder/modules/${moduleId}/quiz`);
+}
+
+export function createOrUpdateModuleQuiz(
+  courseId: string,
+  moduleId: string,
+  data: QuizPayload
+) {
+  return request<QuizAPI>(`/courses/${courseId}/builder/modules/${moduleId}/quiz`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteModuleQuiz(courseId: string, moduleId: string) {
+  return request<void>(`/courses/${courseId}/builder/modules/${moduleId}/quiz`, {
+    method: "DELETE",
   });
 }
 
