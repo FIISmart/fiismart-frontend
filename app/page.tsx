@@ -152,14 +152,18 @@ function CourseBuilderPageInner() {
     try {
       const newModuleApi = await api.addModule(course.id, { title: "Modul Nou" });
       const newModule: Module = {
-        ...newModuleApi,
+        id: newModuleApi.id,
+        title: newModuleApi.title,
+        description: newModuleApi.description,
+        order: course.modules.length,
         lessons: [],
-        order: course.modules.length
+        quiz: undefined,
       };
       setCourse(prev => prev ? { ...prev, modules: [...prev.modules, newModule] } : prev);
       toast.success("Modul adăugat!");
     } catch (err) {
-      toast.error("Eroare la crearea modulului");
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Eroare la crearea modulului");
     }
   };
 

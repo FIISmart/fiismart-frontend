@@ -130,37 +130,51 @@ export function ModuleCard({ courseId, module, moduleIndex, onUpdate, onDelete }
   };
 
   // ── Quiz Actions ──────────────────────────────────────
-    const handleRemoveQuiz = async () => {
-      try {
-        // This calls the DELETE endpoint from your QuizBuilderController
-        await api.deleteQuiz(courseId); 
-        onUpdate({ ...module, quiz: undefined });
-        setQuizEditorOpen(false);
-        toast.success("Quiz șters cu succes");
-      } catch (err) {
-        toast.error("Eroare la ștergerea quiz-ului");
-      }
-    };
+  const handleRemoveQuiz = async () => {
+    try {
+      await api.deleteModuleQuiz(courseId, module.id);
+      onUpdate({ ...module, quiz: undefined });
+      setQuizEditorOpen(false);
+      toast.success("Quiz șters cu succes");
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Eroare la ștergerea quiz-ului");
+    }
+  };
+
   const handleSaveQuiz = async (quiz: Quiz) => {
     try {
-      // Logic for written response vs multiple choice is handled inside QuizEditor
-      // but saved via the same endpoint
-      await api.createOrUpdateQuiz(courseId, {
+      const saved = await api.createOrUpdateModuleQuiz(courseId, module.id, {
         title: quiz.title,
-        questions: quiz.questions.map(q => ({
+        passingScore: quiz.passingScore,
+        timeLimit: quiz.timeLimit,
+        shuffleQuestions: quiz.shuffleQuestions,
+        questions: quiz.questions.map((q) => ({
           text: q.question,
           type: q.type,
           options: q.options || [],
-          correctIdx: typeof q.correctAnswer === 'number' ? q.correctAnswer : undefined,
-          correctText: typeof q.correctAnswer === 'string' ? q.correctAnswer : undefined,
-          explanation: q.explanation
-        }))
+          correctIdx: typeof q.correctAnswer === "number" ? q.correctAnswer : undefined,
+          correctText: typeof q.correctAnswer === "string" ? q.correctAnswer : undefined,
+          explanation: q.explanation,
+        })),
       });
-      onUpdate({ ...module, quiz });
+      // Use server-assigned ids so subsequent edits hit the right documents.
+      onUpdate({
+        ...module,
+        quiz: {
+          ...quiz,
+          id: saved.id,
+          questions: quiz.questions.map((q, i) => ({
+            ...q,
+            id: saved.questions?.[i]?.id || q.id,
+          })),
+        },
+      });
       setQuizEditorOpen(false);
       toast.success("Quiz salvat");
     } catch (err) {
-      toast.error("Eroare la salvarea quiz-ului");
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Eroare la salvarea quiz-ului");
     }
   };
 
