@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -27,6 +27,14 @@ const TEACHER_ID = "aaaaaaaaaaaaaaaaaaaaaaaa";
 const pendingNewCourseCreations = new Map<string, Promise<api.CourseAPI>>();
 
 export default function CourseBuilderPage() {
+  return (
+    <Suspense fallback={null}>
+      <CourseBuilderPageInner />
+    </Suspense>
+  );
+}
+
+function CourseBuilderPageInner() {
   const searchParams = useSearchParams();
   const [course, setCourse] = useState<Course | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -110,25 +118,13 @@ export default function CourseBuilderPage() {
           }
         }
 
-        // Fetch modules for this course
-        const modulesData = await api.getModules(currentCourseApi.id);
-        
         let commentsData: api.CommentAPI[] = [];
         try {
           commentsData = await api.getComments(currentCourseApi.id);
         } catch { /* No comments */ }
 
-        // Map everything to FE State
-        const feCourse = mapCourseToFE(currentCourseApi, null, commentsData);
-        
-        // Overwrite flat lessons with modules returned from modular API
-        // We cast because the mapper might still be expecting flat lessons
-        feCourse.modules = modulesData.map(m => ({
-          ...m,
-          lessons: m.lectures.map(api.mapLectureToLesson)
-        })) as unknown as Module[];
-
-        setCourse(feCourse);
+        // CourseResponse already includes modules -> mapCourseToFE maps them inline
+        setCourse(mapCourseToFE(currentCourseApi, null, commentsData));
       } catch (err) {
         console.error("Failed to load course:", err);
         toast.error("Eroare la încărcarea cursului");

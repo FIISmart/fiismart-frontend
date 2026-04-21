@@ -71,6 +71,20 @@ export interface Course {
 export const generateId = () => Math.random().toString(36).substring(2, 15);
 
 export function mapCourseToFE(course: any, quiz?: any, comments?: any): Course {
+  // The backend CourseResponse already includes the modules list — no need for a
+  // separate /builder/modules round-trip. Map nested lectures on the spot.
+  const modules: Module[] = Array.isArray(course.modules)
+    ? course.modules.map((m: any, index: number) => ({
+        id: m.id,
+        title: m.title,
+        description: m.description,
+        order: m.order ?? index,
+        lessons: Array.isArray(m.lectures)
+          ? m.lectures.map(mapLectureToLesson)
+          : [],
+      }))
+    : [];
+
   return {
     id: course.id,
     title: course.title,
@@ -81,7 +95,7 @@ export function mapCourseToFE(course: any, quiz?: any, comments?: any): Course {
       id: course.teacherId,
       name: 'Profesor',
     },
-    modules: [], // Populated by separate API call
+    modules,
     comments: comments || [],
     status: course.status as 'draft' | 'published',
     createdAt: new Date(course.createdAt),
