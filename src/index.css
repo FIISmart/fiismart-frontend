@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@theme {
+  /* Culori */
+  --color-background: #FDF9F3;
+  --color-accent: #B4D3D9;
+  --color-secondary: #BDA6CE;
+  --color-primary: #9B8EC7;
+  --color-foreground: #2D2A3E;
+  --color-muted-foreground: #5A5470;
+  --color-card: #FFFFFF;
+  --color-border: #D4CCC0;
+  --color-muted: #E8E1D6;
+
+  /* Fonturi */
+  --font-heading: 'Poppins', sans-serif;
+  --font-body: 'Inter', sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}
