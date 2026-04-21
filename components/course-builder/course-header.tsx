@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,6 +26,8 @@ import {
 } from "lucide-react";
 import type { Course } from "@/lib/course-types";
 import Link from "next/link";
+import * as api from "@/lib/api";
+import { toast } from "sonner";
 
 interface CourseHeaderProps {
   course: Course;
@@ -46,6 +48,22 @@ export function CourseHeader({
   const [editTitle, setEditTitle] = useState(course.title);
   const [editDescription, setEditDescription] = useState(course.description);
   const [editTags, setEditTags] = useState(course.tags.join(", "));
+  const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setEditTitle(course.title);
+    setEditDescription(course.description);
+    setEditTags(course.tags.join(", "));
+  }, [course.id, course.title, course.description, course.tags]);
+
+  // Module-aware calculations
+  const totalLessons = course.modules.reduce((acc, m) => acc + m.lessons.length, 0);
+  const totalDuration = course.modules.reduce(
+    (acc, m) => acc + m.lessons.reduce((lAcc, l) => lAcc + (l.duration || 0), 0),
+    0
+  );
+  const hasQuiz = course.modules.some((m) => !!m.quiz);
 
   const handleSaveDetails = () => {
     onUpdate({
@@ -59,18 +77,28 @@ export function CourseHeader({
     setEditDialogOpen(false);
   };
 
-  const totalLessons = course.lessons.length;
-  const totalDuration = course.lessons.reduce(
-    (acc, l) => acc + (l.duration || 0),
-    0
-  );
-  const hasQuiz = !!course.quiz;
-
   const formatDuration = (minutes: number) => {
     if (minutes < 60) return `${minutes} min`;
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     return `${hours}h ${mins > 0 ? `${mins}min` : ""}`;
+  };
+
+  const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingThumbnail(true);
+    try {
+      const result = await api.uploadFile(file);
+      onUpdate({ thumbnail: result.url });
+      toast.success("Imaginea de prezentare a fost încărcată.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Eroare la încărcarea imaginii.");
+    } finally {
+      setIsUploadingThumbnail(false);
+      e.target.value = "";
+    }
   };
 
   return (
@@ -86,7 +114,7 @@ export function CourseHeader({
                   <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
               </Link>
-              
+
               <button
                 onClick={() => setEditDialogOpen(true)}
                 className="flex-1 min-w-0 text-left group"
@@ -101,7 +129,7 @@ export function CourseHeader({
                   {course.description || "Adaugă o descriere..."}
                 </p>
               </button>
-              
+
               <Badge
                 variant={course.status === "published" ? "default" : "secondary"}
                 className={`shrink-0 text-xs ${
@@ -125,7 +153,11 @@ export function CourseHeader({
                 <Save className="h-4 w-4" />
                 <span className="sm:inline">Salvează</span>
               </Button>
-              <Button onClick={onPublish} disabled={isSaving} className="gap-1.5 sm:gap-2 flex-1 sm:flex-none text-sm">
+              <Button
+                onClick={onPublish}
+                disabled={isSaving}
+                className="gap-1.5 sm:gap-2 flex-1 sm:flex-none text-sm"
+              >
                 <Send className="h-4 w-4" />
                 <span className="sm:inline">Publică</span>
               </Button>
@@ -156,7 +188,9 @@ export function CourseHeader({
             )}
             {hasQuiz && (
               <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
-                <strong className="text-foreground">1</strong>{" "}
+                <strong className="text-foreground">
+                  {course.modules.filter((m) => !!m.quiz).length}
+                </strong>{" "}
                 quiz
               </div>
             )}
@@ -180,7 +214,10 @@ export function CourseHeader({
 
       {/* Edit Course Details Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-[600px] bg-card max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
+        <DialogContent
+          className="max-w-[calc(100vw-2rem)] sm:max-w-[600px] bg-card max-h-[90vh] overflow-y-auto"
+          aria-describedby={undefined}
+        >
           <DialogHeader>
             <DialogTitle className="font-serif text-lg sm:text-xl">
               Editează Detaliile Cursului
@@ -191,6 +228,13 @@ export function CourseHeader({
             {/* Thumbnail */}
             <div className="space-y-2">
               <Label className="text-sm">Imagine de Prezentare</Label>
+              <input
+                type="file"
+                ref={thumbnailInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={handleThumbnailUpload}
+              />
               <div className="relative aspect-video bg-muted rounded-xl border-2 border-dashed border-border overflow-hidden group">
                 {course.thumbnail ? (
                   <>
@@ -200,9 +244,15 @@ export function CourseHeader({
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <Button variant="secondary" size="sm" className="gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="gap-2"
+                        disabled={isUploadingThumbnail}
+                        onClick={() => thumbnailInputRef.current?.click()}
+                      >
                         <ImagePlus className="h-4 w-4" />
-                        Schimbă
+                        {isUploadingThumbnail ? "Se încarcă..." : "Schimbă"}
                       </Button>
                       <Button
                         variant="secondary"
@@ -214,9 +264,15 @@ export function CourseHeader({
                     </div>
                   </>
                 ) : (
-                  <button className="w-full h-full flex flex-col items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+                  <button
+                    className="w-full h-full flex flex-col items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => thumbnailInputRef.current?.click()}
+                    disabled={isUploadingThumbnail}
+                  >
                     <ImagePlus className="h-10 w-10 mb-2" />
-                    <span className="text-sm">Adaugă imagine</span>
+                    <span className="text-sm">
+                      {isUploadingThumbnail ? "Se încarcă..." : "Adaugă imagine"}
+                    </span>
                     <span className="text-xs">Recomandare: 1280x720px</span>
                   </button>
                 )}

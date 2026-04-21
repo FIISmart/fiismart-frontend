@@ -1,51 +1,104 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Plus, GraduationCap, BookOpen, Clock, Users } from "lucide-react";
+import { Plus, GraduationCap, BookOpen, Clock, Users, Trash2 } from "lucide-react";
 import Link from "next/link";
+import * as api from "@/lib/api";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-const courses = [
-  {
-    id: "1",
-    title: "Introducere în Web Development",
-    description: "Învață bazele dezvoltării web moderne cu HTML, CSS și JavaScript.",
-    thumbnail: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=640&h=360&fit=crop",
-    modules: 5,
-    lessons: 24,
-    duration: "12h 30min",
-    students: 1250,
-    status: "published" as const,
-    tags: ["Web", "HTML", "CSS"],
-  },
-  {
-    id: "2",
-    title: "JavaScript Avansat",
-    description: "Aprofundează cunoștințele de JavaScript cu concepte avansate.",
-    thumbnail: "https://images.unsplash.com/photo-1579468118864-1b9ea3c0db4a?w=640&h=360&fit=crop",
-    modules: 8,
-    lessons: 42,
-    duration: "18h 45min",
-    students: 890,
-    status: "published" as const,
-    tags: ["JavaScript", "ES6+", "Async"],
-  },
-  {
-    id: "3",
-    title: "React pentru Începători",
-    description: "Construiește aplicații moderne cu React.",
-    thumbnail: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=640&h=360&fit=crop",
-    modules: 3,
-    lessons: 12,
-    duration: "6h 20min",
-    students: 0,
-    status: "draft" as const,
-    tags: ["React", "Frontend"],
-  },
-];
+const TEACHER_ID = "aaaaaaaaaaaaaaaaaaaaaaaa";
+const FALLBACK_THUMBNAIL = "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=640&h=360&fit=crop";
+
+type CourseListItem = {
+  id: string;
+  title: string;
+  description: string;
+  thumbnail: string;
+  modules: number;
+  lessons: number;
+  duration: string;
+  students: number;
+  status: "draft" | "published";
+  tags: string[];
+};
 
 export default function CursuriPage() {
+  const newCourseHref = `/?new=1&newToken=${Date.now().toString()}`;
+  const [courses, setCourses] = useState<CourseListItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [deletingCourseId, setDeletingCourseId] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadCourses() {
+      setIsLoading(true);
+      try {
+        const teacherCourses = await api.getCoursesByTeacher(TEACHER_ID);
+        const mappedCourses = await Promise.all(
+          teacherCourses.map(async (course) => {
+            const modules = await api.getModules(course.id);
+            const lessonsCount = modules.reduce((acc, m) => acc + m.lectures.length, 0);
+            const durationMinutes = modules.reduce(
+              (acc, m) =>
+                acc +
+                m.lectures.reduce((lectureAcc, l) => lectureAcc + Math.round((l.durationSecs || 0) / 60), 0),
+              0
+            );
+            const duration =
+              durationMinutes < 60
+                ? `${durationMinutes}min`
+                : `${Math.floor(durationMinutes / 60)}h ${durationMinutes % 60}min`;
+
+            return {
+              id: course.id,
+              title: course.title,
+              description: course.description,
+              thumbnail: course.thumbnailUrl || FALLBACK_THUMBNAIL,
+              modules: modules.length,
+              lessons: lessonsCount,
+              duration,
+              students: 0,
+              status: (course.status === "published" ? "published" : "draft") as "published" | "draft",
+              tags: course.tags || [],
+            } satisfies CourseListItem;
+          })
+        );
+        setCourses(mappedCourses);
+      } catch (err) {
+        toast.error("Eroare la încărcarea cursurilor.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadCourses();
+  }, []);
+
+  const handleDeleteCourse = async () => {
+    if (!deletingCourseId) return;
+    try {
+      await api.deleteCourse(deletingCourseId);
+      setCourses((prev) => prev.filter((course) => course.id !== deletingCourseId));
+      toast.success("Cursul a fost șters.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Eroare la ștergerea cursului.");
+    } finally {
+      setDeletingCourseId(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -64,7 +117,7 @@ export default function CursuriPage() {
               </div>
             </div>
             <Button asChild className="gap-2">
-              <Link href="/">
+              <Link href={newCourseHref}>
                 <Plus className="h-4 w-4" />
                 Curs Nou
               </Link>
@@ -75,6 +128,9 @@ export default function CursuriPage() {
 
       {/* Course Grid */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {isLoading && (
+          <p className="text-sm text-muted-foreground mb-4">Se încarcă lista cursurilor...</p>
+        )}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {courses.map((course) => (
             <Card
@@ -129,16 +185,26 @@ export default function CursuriPage() {
                 </div>
               </CardContent>
               <CardFooter className="p-4 pt-0">
-                <Button asChild variant="outline" className="w-full">
-                  <Link href="/">Editează Cursul</Link>
-                </Button>
+                <div className="w-full flex gap-2">
+                  <Button asChild variant="outline" className="flex-1">
+                    <Link href={`/?courseId=${course.id}`}>Editează Cursul</Link>
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    onClick={() => setDeletingCourseId(course.id)}
+                    aria-label="Șterge cursul"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </CardFooter>
             </Card>
           ))}
 
           {/* Add New Course Card */}
           <Link
-            href="/"
+            href={newCourseHref}
             className="border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center min-h-[320px] text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
           >
             <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-3">
@@ -148,6 +214,23 @@ export default function CursuriPage() {
           </Link>
         </div>
       </main>
+
+      <AlertDialog open={deletingCourseId !== null} onOpenChange={() => setDeletingCourseId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Șterge cursul</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ești sigur că vrei să ștergi acest curs? Acțiunea nu poate fi anulată.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anulează</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteCourse} className="bg-destructive text-white">
+              Șterge
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

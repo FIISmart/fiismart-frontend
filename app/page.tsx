@@ -12,63 +12,123 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, GraduationCap, Sparkles } from "lucide-react";
+import { Plus, GraduationCap, Sparkles, LayoutPanelLeft } from "lucide-react";
 import { CourseHeader } from "@/components/course-builder/course-header";
-import { LessonItem, LessonEditor } from "@/components/course-builder/lesson-editor";
-import { QuizEditor } from "@/components/course-builder/quiz-editor";
+import { ModuleCard } from "@/components/course-builder/module-card";
 import { CommentModeration } from "@/components/course-builder/comment-moderation";
-import type { Course, Lesson, Quiz, Comment } from "@/lib/course-types";
-import { mapCourseToFE, mapLectureToLesson, mapQuizToFE } from "@/lib/course-types";
+import type { Course, Module, Comment } from "@/lib/course-types";
+import { mapCourseToFE } from "@/lib/course-types";
 import * as api from "@/lib/api";
 import { Toaster, toast } from "sonner";
+import { useSearchParams } from "next/navigation";
 
 // Hardcoded for now — in production, comes from auth context
 const TEACHER_ID = "aaaaaaaaaaaaaaaaaaaaaaaa";
+const pendingNewCourseCreations = new Map<string, Promise<api.CourseAPI>>();
 
 export default function CourseBuilderPage() {
+  const searchParams = useSearchParams();
   const [course, setCourse] = useState<Course | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
-  const [deleteLessonId, setDeleteLessonId] = useState<string | null>(null);
+  const [deleteModuleId, setDeleteModuleId] = useState<string | null>(null);
 
-  // Lesson editor state
-  const [lessonEditorOpen, setLessonEditorOpen] = useState(false);
-  const [editingLesson, setEditingLesson] = useState<Lesson | undefined>();
+  // ── Load Course & Modules on Mount ────────────────────
 
-  // Quiz editor state
-  const [quizEditorOpen, setQuizEditorOpen] = useState(false);
-
-  // Load course on mount — fetch first course by teacher, or create one
   useEffect(() => {
     async function loadCourse() {
       try {
-        const courses = await api.getCoursesByTeacher(TEACHER_ID);
-        if (courses.length > 0) {
-          const courseData = courses[0];
-          let quizData = null;
-          try {
-            quizData = await api.getQuiz(courseData.id);
-          } catch {
-            // No quiz yet
+        const shouldCreateNew = searchParams.get("new") === "1";
+        const newToken = searchParams.get("newToken") || "legacy-new-token";
+        const selectedCourseId = searchParams.get("courseId");
+        let currentCourseApi: api.CourseAPI;
+
+        if (shouldCreateNew) {
+          const consumedTokensKey = "fiismart-consumed-new-course-tokens";
+          const tokenToCourseKey = "fiismart-new-course-token-map";
+          const consumedTokens = JSON.parse(
+            sessionStorage.getItem(consumedTokensKey) || "[]"
+          ) as string[];
+          const tokenMap = JSON.parse(
+            sessionStorage.getItem(tokenToCourseKey) || "{}"
+          ) as Record<string, string>;
+          const alreadyConsumed = consumedTokens.includes(newToken);
+
+          if (alreadyConsumed && tokenMap[newToken]) {
+            currentCourseApi = await api.getCourse(tokenMap[newToken]);
+          } else {
+            sessionStorage.setItem(
+              consumedTokensKey,
+              JSON.stringify([...consumedTokens, newToken].slice(-50))
+            );
+            let creationPromise = pendingNewCourseCreations.get(newToken);
+            if (!creationPromise) {
+              creationPromise = api.createCourse({
+                title: "Curs Nou",
+                description: "Adaugă o descriere...",
+                teacherId: TEACHER_ID,
+                tags: [],
+              });
+              pendingNewCourseCreations.set(newToken, creationPromise);
+            }
+            currentCourseApi = await creationPromise;
+            pendingNewCourseCreations.delete(newToken);
+            sessionStorage.setItem(
+              tokenToCourseKey,
+              JSON.stringify({
+                ...tokenMap,
+                [newToken]: currentCourseApi.id,
+              })
+            );
           }
-          let commentsData: api.CommentAPI[] = [];
-          try {
-            commentsData = await api.getComments(courseData.id);
-          } catch {
-            // No comments
+
+          // Pin URL to the created course id so subsequent state/effect updates
+          // stay on the same course instead of falling back to another one.
+          if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            params.delete("new");
+            params.delete("newToken");
+            params.set("courseId", currentCourseApi.id);
+            const nextQuery = params.toString();
+            const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`;
+            window.history.replaceState(null, "", nextUrl);
           }
-          setCourse(mapCourseToFE(courseData, quizData, commentsData));
+        } else if (selectedCourseId) {
+          currentCourseApi = await api.getCourse(selectedCourseId);
         } else {
-          // Create a new draft course
-          const newCourse = await api.createCourse({
-            title: "Curs Nou",
-            description: "Adaugă o descriere...",
-            teacherId: TEACHER_ID,
-            tags: [],
-          });
-          setCourse(mapCourseToFE(newCourse, null, []));
+          const courses = await api.getCoursesByTeacher(TEACHER_ID);
+          if (courses.length > 0) {
+            currentCourseApi = courses[0];
+          } else {
+            currentCourseApi = await api.createCourse({
+              title: "Curs Nou",
+              description: "Adaugă o descriere...",
+              teacherId: TEACHER_ID,
+              tags: [],
+            });
+          }
         }
+
+        // Fetch modules for this course
+        const modulesData = await api.getModules(currentCourseApi.id);
+        
+        let commentsData: api.CommentAPI[] = [];
+        try {
+          commentsData = await api.getComments(currentCourseApi.id);
+        } catch { /* No comments */ }
+
+        // Map everything to FE State
+        const feCourse = mapCourseToFE(currentCourseApi, null, commentsData);
+        
+        // Overwrite flat lessons with modules returned from modular API
+        // We cast because the mapper might still be expecting flat lessons
+        feCourse.modules = modulesData.map(m => ({
+          ...m,
+          lessons: m.lectures.map(api.mapLectureToLesson)
+        })) as unknown as Module[];
+
+        setCourse(feCourse);
       } catch (err) {
         console.error("Failed to load course:", err);
         toast.error("Eroare la încărcarea cursului");
@@ -77,29 +137,69 @@ export default function CourseBuilderPage() {
       }
     }
     loadCourse();
-  }, []);
+  }, [searchParams]);
 
   if (isLoading || !course) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <GraduationCap className="h-12 w-12 text-primary animate-pulse mx-auto mb-4" />
-          <p className="text-muted-foreground">Se încarcă cursul...</p>
+          <p className="text-muted-foreground">Se încarcă structura cursului...</p>
         </div>
       </div>
     );
   }
 
+  // ── Module Handlers ───────────────────────────────────
+
+  const handleAddModule = async () => {
+    try {
+      const newModuleApi = await api.addModule(course.id, { title: "Modul Nou" });
+      const newModule: Module = {
+        ...newModuleApi,
+        lessons: [],
+        order: course.modules.length
+      };
+      setCourse(prev => prev ? { ...prev, modules: [...prev.modules, newModule] } : prev);
+      toast.success("Modul adăugat!");
+    } catch (err) {
+      toast.error("Eroare la crearea modulului");
+    }
+  };
+
+  const handleUpdateModuleInState = (updatedModule: Module) => {
+    setCourse(prev => prev ? {
+      ...prev,
+      modules: prev.modules.map(m => m.id === updatedModule.id ? updatedModule : m)
+    } : prev);
+  };
+
+  const handleDeleteModule = async (moduleId: string) => {
+    try {
+      await api.deleteModule(course.id, moduleId);
+      setCourse(prev => prev ? {
+        ...prev,
+        modules: prev.modules.filter(m => m.id !== moduleId)
+      } : prev);
+      toast.success("Modul șters!");
+    } catch (err) {
+      toast.error("Eroare la ștergerea modulului");
+    }
+    setDeleteModuleId(null);
+  };
+
+  // ── Course Handlers ───────────────────────────────────
+
   const handleUpdateCourse = async (updates: Partial<Course>) => {
     try {
-      const apiUpdates: Record<string, unknown> = {};
+      const apiUpdates: any = {};
       if (updates.title !== undefined) apiUpdates.title = updates.title;
       if (updates.description !== undefined) apiUpdates.description = updates.description;
       if (updates.tags !== undefined) apiUpdates.tags = updates.tags;
       if (updates.thumbnail !== undefined) apiUpdates.thumbnailUrl = updates.thumbnail || null;
 
       if (Object.keys(apiUpdates).length > 0) {
-        await api.updateCourse(course.id, apiUpdates as Parameters<typeof api.updateCourse>[1]);
+        await api.updateCourse(course.id, apiUpdates);
       }
       setCourse((prev) => prev ? { ...prev, ...updates, updatedAt: new Date() } : prev);
     } catch (err) {
@@ -107,175 +207,34 @@ export default function CourseBuilderPage() {
     }
   };
 
-  const handleAddLesson = () => {
-    setEditingLesson(undefined);
-    setLessonEditorOpen(true);
-  };
-
-  const handleEditLesson = (lesson: Lesson) => {
-    setEditingLesson(lesson);
-    setLessonEditorOpen(true);
-  };
-
-  const handleSaveLesson = async (lesson: Lesson) => {
-    try {
-      const durationSecs = (lesson.duration || 0) * 60;
-
-      if (editingLesson) {
-        // Update existing
-        await api.updateLecture(course.id, lesson.id, {
-          title: lesson.title,
-          videoUrl: lesson.content || undefined,
-          durationSecs,
-          order: lesson.order,
-        });
-        setCourse((prev) => prev ? {
-          ...prev,
-          lessons: prev.lessons.map((l) => (l.id === lesson.id ? lesson : l)),
-          updatedAt: new Date(),
-        } : prev);
-        toast.success("Lecție actualizată!");
-      } else {
-        // Create new
-        const created = await api.addLecture(course.id, {
-          title: lesson.title,
-          videoUrl: lesson.content || undefined,
-          durationSecs,
-          order: course.lessons.length,
-        });
-        const newLesson = mapLectureToLesson(created);
-        // Keep the FE type info
-        newLesson.type = lesson.type;
-        newLesson.content = lesson.content;
-        setCourse((prev) => prev ? {
-          ...prev,
-          lessons: [...prev.lessons, newLesson],
-          updatedAt: new Date(),
-        } : prev);
-        toast.success("Lecție adăugată!");
-      }
-    } catch (err) {
-      toast.error("Eroare la salvarea lecției");
-    }
-    setLessonEditorOpen(false);
-    setEditingLesson(undefined);
-  };
-
-  const handleDeleteLesson = async (lessonId: string) => {
-    try {
-      await api.deleteLecture(course.id, lessonId);
-      setCourse((prev) => prev ? {
-        ...prev,
-        lessons: prev.lessons.filter((l) => l.id !== lessonId),
-        updatedAt: new Date(),
-      } : prev);
-      toast.success("Lecție ștearsă!");
-    } catch (err) {
-      toast.error("Eroare la ștergerea lecției");
-    }
-    setDeleteLessonId(null);
-  };
-
-  const handleSaveQuiz = async (quiz: Quiz) => {
-    try {
-      const created = await api.createOrUpdateQuiz(course.id, {
-        title: quiz.title,
-        passingScore: quiz.passingScore || 70,
-        timeLimit: quiz.timeLimit || 30,
-        shuffleQuestions: quiz.shuffleQuestions || false,
-        questions: quiz.questions.map((q) => ({
-          text: q.question,
-          type: "multiple_choice",
-          points: 1,
-          options: q.options,
-          correctIdx: q.correctAnswer,
-          explanation: q.explanation,
-        })),
-      });
-      setCourse((prev) => prev ? { ...prev, quiz: mapQuizToFE(created), updatedAt: new Date() } : prev);
-      toast.success("Quiz salvat!");
-    } catch (err) {
-      toast.error("Eroare la salvarea quiz-ului");
-    }
-    setQuizEditorOpen(false);
-  };
-
-  const handleRemoveQuiz = async () => {
-    try {
-      await api.deleteQuiz(course.id);
-      setCourse((prev) => prev ? { ...prev, quiz: undefined, updatedAt: new Date() } : prev);
-      toast.success("Quiz șters!");
-    } catch (err) {
-      toast.error("Eroare la ștergerea quiz-ului");
-    }
-    setQuizEditorOpen(false);
-  };
-
-  const handleUpdateComment = async (commentId: string, status: Comment["status"]) => {
-    try {
-      await api.updateCommentStatus(commentId, status);
-      setCourse((prev) => prev ? {
-        ...prev,
-        comments: prev.comments.map((c) =>
-          c.id === commentId ? { ...c, status } : c
-        ),
-      } : prev);
-      toast.success(
-        status === "approved" ? "Comentariu aprobat!" :
-        status === "rejected" ? "Comentariu respins!" :
-        "Comentariu actualizat!"
-      );
-    } catch (err) {
-      toast.error("Eroare la actualizarea comentariului");
-    }
-  };
-
-  const handleDeleteComment = async (commentId: string) => {
-    try {
-      await api.deleteComment(commentId);
-      setCourse((prev) => prev ? {
-        ...prev,
-        comments: prev.comments.filter((c) => c.id !== commentId),
-      } : prev);
-      toast.success("Comentariu șters!");
-    } catch (err) {
-      toast.error("Eroare la ștergerea comentariului");
-    }
-  };
-
   const handleSaveDraft = async () => {
     setIsSaving(true);
     try {
       await api.draftCourse(course.id);
-      setCourse((prev) => prev ? { ...prev, status: "draft", updatedAt: new Date() } : prev);
-      toast.success("Ciornă salvată cu succes!");
+      setCourse(prev => prev ? { ...prev, status: "draft" } : prev);
+      toast.success("Ciornă salvată!");
     } catch (err) {
-      toast.error("Eroare la salvarea ciornei");
+      toast.error("Eroare la salvare");
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const handlePublish = () => {
-    setPublishDialogOpen(true);
   };
 
   const confirmPublish = async () => {
     setIsSaving(true);
-    setPublishDialogOpen(false);
     try {
       await api.publishCourse(course.id);
-      setCourse((prev) => prev ? { ...prev, status: "published", updatedAt: new Date() } : prev);
-      toast.success("Curs publicat cu succes!");
+      setCourse(prev => prev ? { ...prev, status: "published" } : prev);
+      toast.success("Curs publicat!");
     } catch (err) {
-      toast.error("Eroare la publicarea cursului");
+      toast.error("Eroare la publicare");
     } finally {
       setIsSaving(false);
+      setPublishDialogOpen(false);
     }
   };
 
-  const totalLessons = course.lessons.length;
-  const totalDuration = course.lessons.reduce((acc, l) => acc + (l.duration || 0), 0);
+  const totalLessons = course.modules.reduce((acc, m) => acc + m.lessons.length, 0);
   const canPublish = course.title && totalLessons > 0;
 
   return (
@@ -286,196 +245,109 @@ export default function CourseBuilderPage() {
         course={course}
         onUpdate={handleUpdateCourse}
         onSaveDraft={handleSaveDraft}
-        onPublish={handlePublish}
+        onPublish={() => setPublishDialogOpen(true)}
         isSaving={isSaving}
       />
 
       <main className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Action Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-6">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <GraduationCap className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-            <h2 className="font-serif font-bold text-lg sm:text-xl">Lecții Curs</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+          <div className="flex items-center gap-3">
+            <LayoutPanelLeft className="h-6 w-6 text-primary" />
+            <h2 className="font-serif font-bold text-xl">Module Curs</h2>
           </div>
           <div className="flex items-center gap-2">
             <CommentModeration
               comments={course.comments}
-              onUpdateComment={handleUpdateComment}
-              onDeleteComment={handleDeleteComment}
+              onUpdateComment={async (id, status) => {
+                await api.updateCommentStatus(id, status);
+                setCourse(prev => prev ? {
+                  ...prev,
+                  comments: prev.comments.map(c => c.id === id ? { ...c, status } : c)
+                } : prev);
+              }}
+              onDeleteComment={async (id) => {
+                await api.deleteComment(id);
+                setCourse(prev => prev ? {
+                  ...prev,
+                  comments: prev.comments.filter(c => c.id !== id)
+                } : prev);
+              }}
             />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setQuizEditorOpen(true)}
-              className="gap-1.5 text-sm"
-            >
-              {course.quiz ? "Editează Quiz" : "Adaugă Quiz"}
-            </Button>
-            <Button onClick={handleAddLesson} className="gap-1.5 sm:gap-2 flex-1 sm:flex-none text-sm">
+            <Button onClick={handleAddModule} className="gap-2">
               <Plus className="h-4 w-4" />
-              <span>Adaugă Lecție</span>
+              <span>Modul Nou</span>
             </Button>
           </div>
         </div>
 
-        {/* Lessons List */}
-        <div className="space-y-3 sm:space-y-4">
-          {course.lessons.length === 0 ? (
-            <div className="text-center py-10 sm:py-16 px-4 bg-card border border-border rounded-xl sm:rounded-2xl">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3 sm:mb-4">
-                <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
-              </div>
-              <h3 className="font-serif font-semibold text-base sm:text-lg mb-2">
-                Începe să construiești cursul
-              </h3>
-              <p className="text-muted-foreground text-sm mb-4 sm:mb-6 max-w-md mx-auto">
-                Adaugă prima lecție pentru a începe să creezi conținut educațional
-                captivant pentru studenții tăi.
+        {/* Modules List */}
+        <div className="space-y-4">
+          {course.modules.length === 0 ? (
+            <div className="text-center py-16 bg-card border border-border rounded-2xl">
+              <Sparkles className="h-12 w-12 text-primary/20 mx-auto mb-4" />
+              <h3 className="font-serif font-semibold text-lg mb-2">Organizează cursul pe module</h3>
+              <p className="text-muted-foreground text-sm mb-6 max-w-sm mx-auto">
+                Creează primul modul pentru a grupa lecțiile și quiz-urile pe tematici.
               </p>
-              <Button onClick={handleAddLesson} className="gap-2 text-sm">
+              <Button onClick={handleAddModule} className="gap-2">
                 <Plus className="h-4 w-4" />
-                Adaugă Prima Lecție
+                Creează Primul Modul
               </Button>
             </div>
           ) : (
-            <>
-              {course.lessons.map((lesson) => (
-                <LessonItem
-                  key={lesson.id}
-                  lesson={lesson}
-                  onEdit={handleEditLesson}
-                  onDelete={(id) => setDeleteLessonId(id)}
-                />
-              ))}
-
-              {/* Quiz indicator */}
-              {course.quiz && (
-                <button
-                  onClick={() => setQuizEditorOpen(true)}
-                  className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 bg-primary/10 rounded-lg sm:rounded-xl border border-primary/20 w-full hover:bg-primary/20 transition-colors"
-                >
-                  <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-md sm:rounded-lg bg-primary/20 text-primary shrink-0">
-                    <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  </div>
-                  <div className="flex-1 text-left min-w-0">
-                    <p className="font-medium text-xs sm:text-sm truncate">{course.quiz.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {course.quiz.questions.length} întrebări
-                    </p>
-                  </div>
-                </button>
-              )}
-            </>
+            course.modules.map((module, index) => (
+              <ModuleCard
+                key={module.id}
+                courseId={course.id}
+                module={module}
+                moduleIndex={index}
+                onUpdate={handleUpdateModuleInState}
+                onDelete={() => setDeleteModuleId(module.id)}
+              />
+            ))
           )}
         </div>
 
-        {/* Add Lesson Button (when lessons exist) */}
-        {course.lessons.length > 0 && (
-          <Button
-            variant="outline"
-            onClick={handleAddLesson}
-            className="w-full mt-4 gap-2 border-dashed"
-          >
-            <Plus className="h-4 w-4" />
-            Adaugă Lecție Nouă
+        {course.modules.length > 0 && (
+          <Button variant="outline" onClick={handleAddModule} className="w-full mt-6 gap-2 border-dashed">
+            <Plus className="h-4 w-4" /> Adaugă Modul Nou
           </Button>
         )}
 
         <div className="h-20" />
       </main>
 
-      {/* Lesson Editor Dialog */}
-      <LessonEditor
-        lesson={editingLesson}
-        onSave={handleSaveLesson}
-        onCancel={() => {
-          setLessonEditorOpen(false);
-          setEditingLesson(undefined);
-        }}
-        isOpen={lessonEditorOpen}
-      />
-
-      {/* Quiz Editor Dialog */}
-      <QuizEditor
-        quiz={course.quiz}
-        onSave={handleSaveQuiz}
-        onCancel={() => setQuizEditorOpen(false)}
-        onRemove={course.quiz ? handleRemoveQuiz : undefined}
-        isOpen={quizEditorOpen}
-      />
-
-      {/* Delete Lesson Confirmation */}
-      <AlertDialog
-        open={deleteLessonId !== null}
-        onOpenChange={() => setDeleteLessonId(null)}
-      >
+      {/* Delete Module Confirmation */}
+      <AlertDialog open={deleteModuleId !== null} onOpenChange={() => setDeleteModuleId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Șterge Lecția</AlertDialogTitle>
+            <AlertDialogTitle>Șterge Modulul</AlertDialogTitle>
             <AlertDialogDescription>
-              Ești sigur că vrei să ștergi această lecție? Această acțiune nu poate fi anulată.
+              Ești sigur că vrei să ștergi acest modul și toate lecțiile din el?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Anulează</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteLessonId && handleDeleteLesson(deleteLessonId)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Șterge Lecția
+            <AlertDialogAction onClick={() => deleteModuleId && handleDeleteModule(deleteModuleId)} className="bg-destructive text-white">
+              Șterge Tot
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Publish Confirmation */}
+      {/* Publish Dialog */}
       <AlertDialog open={publishDialogOpen} onOpenChange={setPublishDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              Publică Cursul
-            </AlertDialogTitle>
+            <AlertDialogTitle>Publică Cursul</AlertDialogTitle>
             <AlertDialogDescription>
-              {canPublish ? (
-                <>
-                  Ești gata să publici <strong>{course.title}</strong>? Cursul va
-                  deveni vizibil pentru toți studenții înscriși.
-                  <div className="mt-4 p-3 bg-muted rounded-xl text-sm">
-                    <div className="flex justify-between">
-                      <span>Lecții:</span>
-                      <strong>{totalLessons}</strong>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Durată totală:</span>
-                      <strong>{totalDuration} min</strong>
-                    </div>
-                    {course.quiz && (
-                      <div className="flex justify-between">
-                        <span>Quiz:</span>
-                        <strong>{course.quiz.questions.length} întrebări</strong>
-                      </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="text-destructive">
-                  Nu poți publica cursul încă. Asigură-te că ai:
-                  <ul className="list-disc ml-5 mt-2 space-y-1">
-                    {!course.title && <li>Adăugat un titlu pentru curs</li>}
-                    {totalLessons === 0 && <li>Cel puțin o lecție</li>}
-                  </ul>
-                </div>
-              )}
+              {canPublish ? `Ești gata să publici ${course.title}?` : "Adaugă titlu și lecții înainte de a publica."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Anulează</AlertDialogCancel>
-            {canPublish && (
-              <AlertDialogAction onClick={confirmPublish}>
-                Publică Acum
-              </AlertDialogAction>
-            )}
+            {canPublish && <AlertDialogAction onClick={confirmPublish}>Publică</AlertDialogAction>}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
