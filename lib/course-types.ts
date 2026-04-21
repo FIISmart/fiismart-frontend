@@ -1,12 +1,22 @@
+//
 export type LessonType = 'video' | 'pdf' | 'markdown';
 
 export interface Lesson {
   id: string;
   title: string;
   type: LessonType;
-  content: string; // URL for video/pdf, markdown content for markdown
-  duration?: number; // in minutes (FE display) — converted from durationSecs
+  content: string; 
+  duration?: number;
   order: number;
+}
+
+export interface QuizQuestion {
+  id: string;
+  question: string;
+  type: 'multiple_choice' | 'written'; 
+  options?: string[]; 
+  correctAnswer: number | string; 
+  explanation?: string;
 }
 
 export interface Quiz {
@@ -18,12 +28,14 @@ export interface Quiz {
   questions: QuizQuestion[];
 }
 
-export interface QuizQuestion {
+export interface Module {
   id: string;
-  question: string;
-  options: string[];
-  correctAnswer: number;
-  explanation?: string;
+  title: string;
+  description?: string;
+  lessons: Lesson[];
+  quiz?: Quiz;
+  order: number;
+  isExpanded?: boolean; 
 }
 
 export interface Comment {
@@ -47,66 +59,32 @@ export interface Course {
   instructor: {
     id: string;
     name: string;
-    title?: string;
     avatar?: string;
   };
-  lessons: Lesson[];
-  quiz?: Quiz;
+  modules: Module[]; 
   comments: Comment[];
   status: 'draft' | 'published';
   createdAt: Date;
   updatedAt: Date;
-  totalDuration?: number;
-  totalLessons?: number;
 }
 
 export const generateId = () => Math.random().toString(36).substring(2, 15);
 
-// ── Mappers: API → FE types ───────────────────────────
+export function mapCourseToFE(course: any, quiz?: any, comments?: any): Course {
+  // The backend CourseResponse already includes the modules list — no need for a
+  // separate /builder/modules round-trip. Map nested lectures on the spot.
+  const modules: Module[] = Array.isArray(course.modules)
+    ? course.modules.map((m: any, index: number) => ({
+        id: m.id,
+        title: m.title,
+        description: m.description,
+        order: m.order ?? index,
+        lessons: Array.isArray(m.lectures)
+          ? m.lectures.map(mapLectureToLesson)
+          : [],
+      }))
+    : [];
 
-import type { CourseAPI, LectureAPI, QuizAPI, CommentAPI } from './api';
-
-export function mapLectureToLesson(lecture: LectureAPI): Lesson {
-  return {
-    id: lecture.id,
-    title: lecture.title,
-    type: 'video', // BE only stores videoUrl, default to video
-    content: lecture.videoUrl || '',
-    duration: lecture.durationSecs ? Math.round(lecture.durationSecs / 60) : undefined,
-    order: lecture.order,
-  };
-}
-
-export function mapQuizToFE(quiz: QuizAPI): Quiz {
-  return {
-    id: quiz.id,
-    title: quiz.title,
-    passingScore: quiz.passingScore,
-    timeLimit: quiz.timeLimit,
-    shuffleQuestions: quiz.shuffleQuestions,
-    questions: quiz.questions.map((q) => ({
-      id: q.id,
-      question: q.text,
-      options: q.options,
-      correctAnswer: q.correctIdx,
-      explanation: q.explanation || undefined,
-    })),
-  };
-}
-
-export function mapCommentToFE(comment: CommentAPI): Comment {
-  return {
-    id: comment.id,
-    userId: comment.authorId,
-    userName: comment.authorId, // TODO: resolve user name from authorId
-    content: comment.body,
-    createdAt: new Date(comment.createdAt),
-    lessonId: comment.lectureId || '',
-    status: comment.isDeleted ? 'rejected' : comment.flagCount > 0 ? 'pending' : 'approved',
-  };
-}
-
-export function mapCourseToFE(course: CourseAPI, quiz?: QuizAPI | null, comments?: CommentAPI[]): Course {
   return {
     id: course.id,
     title: course.title,
@@ -115,13 +93,38 @@ export function mapCourseToFE(course: CourseAPI, quiz?: QuizAPI | null, comments
     tags: course.tags || [],
     instructor: {
       id: course.teacherId,
-      name: 'Profesor', // TODO: resolve from user API
+      name: 'Profesor',
     },
-    lessons: course.lectures.map(mapLectureToLesson),
-    quiz: quiz ? mapQuizToFE(quiz) : undefined,
-    comments: comments ? comments.map(mapCommentToFE) : [],
+    modules,
+    comments: comments || [],
     status: course.status as 'draft' | 'published',
     createdAt: new Date(course.createdAt),
     updatedAt: new Date(course.updatedAt),
+  };
+}
+
+export function mapLectureToLesson(lecture: any): Lesson {
+  return {
+    id: lecture.id,
+    title: lecture.title,
+    type: 'video', 
+    content: lecture.videoUrl || '',
+    duration: lecture.durationSecs ? Math.round(lecture.durationSecs / 60) : undefined,
+    order: lecture.order,
+  };
+}
+
+export function mapQuizToFE(quiz: any): Quiz {
+  return {
+    id: quiz.id,
+    title: quiz.title,
+    questions: quiz.questions.map((q: any) => ({
+      id: q.id,
+      question: q.text,
+      type: q.type || 'multiple_choice',
+      options: q.options || [],
+      correctAnswer: q.type === 'written' ? (q.correctText || "") : (q.correctIdx || 0),
+      explanation: q.explanation,
+    })),
   };
 }

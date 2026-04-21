@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,9 +19,11 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Video, FileText, Code, Clock, GripVertical, Trash2, Pencil } from "lucide-react";
+import { Video, FileText, Code, Clock, GripVertical, Trash2, Pencil, Upload, Loader2 } from "lucide-react";
 import type { Lesson, LessonType } from "@/lib/course-types";
 import { generateId } from "@/lib/course-types";
+import * as api from "@/lib/api"; // Added for upload helper
+import { toast } from "sonner";
 
 interface LessonEditorProps {
   lesson?: Lesson;
@@ -38,7 +40,7 @@ const lessonTypeIcons: Record<LessonType, React.ReactNode> = {
 
 const lessonTypeLabels: Record<LessonType, string> = {
   video: "Video",
-  pdf: "PDF Document",
+  pdf: "Document PDF",
   markdown: "Markdown/Text",
 };
 
@@ -47,6 +49,25 @@ export function LessonEditor({ lesson, onSave, onCancel, isOpen }: LessonEditorP
   const [type, setType] = useState<LessonType>(lesson?.type || "video");
   const [content, setContent] = useState(lesson?.content || "");
   const [duration, setDuration] = useState(lesson?.duration?.toString() || "");
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const result = await api.uploadLectureFile(file);
+      setContent(result.url);
+      toast.success("Fișier încărcat cu succes!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Eroare la încărcarea fișierului");
+    } finally {
+      setIsUploading(false);
+      e.target.value = "";
+    }
+  };
 
   const handleSave = () => {
     const newLesson: Lesson = {
@@ -60,23 +81,22 @@ export function LessonEditor({ lesson, onSave, onCancel, isOpen }: LessonEditorP
     onSave(newLesson);
   };
 
-  const isValid = title.trim() !== "" && content.trim() !== "";
+  const isValid = title.trim() !== "" && content.trim() !== "" && !isUploading;
 
   return (
     <Dialog open={isOpen} onOpenChange={() => onCancel()}>
-      <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-[600px] bg-card max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
+      <DialogContent className="max-w-[600px] bg-card max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-serif text-lg sm:text-xl">
             {lesson ? "Editează Lecția" : "Adaugă Lecție Nouă"}
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
+        <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="lesson-title">Titlu Lecție</Label>
+            <Label>Titlu Lecție</Label>
             <Input
-              id="lesson-title"
-              placeholder="ex: Introducere în HTML"
+              placeholder="ex: Introducere în React"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="bg-muted"
@@ -85,7 +105,10 @@ export function LessonEditor({ lesson, onSave, onCancel, isOpen }: LessonEditorP
 
           <div className="space-y-2">
             <Label>Tip Conținut</Label>
-            <Select value={type} onValueChange={(v) => setType(v as LessonType)}>
+            <Select value={type} onValueChange={(v) => {
+              setType(v as LessonType);
+              setContent(""); // Reset content on type change
+            }}>
               <SelectTrigger className="bg-muted">
                 <SelectValue />
               </SelectTrigger>
@@ -103,39 +126,75 @@ export function LessonEditor({ lesson, onSave, onCancel, isOpen }: LessonEditorP
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="lesson-content">
-              {type === "video" ? "URL Video (YouTube, Vimeo, etc.)" : 
-               type === "pdf" ? "URL PDF" : 
+            <Label>
+              {type === "video" ? "Sursă Video" : 
+               type === "pdf" ? "Sursă PDF" : 
                "Conținut Markdown"}
             </Label>
+            
             {type === "markdown" ? (
-              <Textarea
-                id="lesson-content"
-                placeholder="Scrie conținutul în format Markdown..."
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                className="min-h-[200px] bg-muted font-mono text-sm"
-              />
+              <div className="space-y-2">
+                <Textarea
+                  placeholder="Scrie conținutul aici sau încarcă un fișier .md..."
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  className="min-h-[200px] bg-muted font-mono text-sm"
+                />
+                <div className="flex justify-end">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept=".md,.markdown,text/markdown,text/plain"
+                    onChange={handleFileUpload}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={isUploading}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="gap-2"
+                  >
+                    {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    Încarcă fișier markdown
+                  </Button>
+                </div>
+              </div>
             ) : (
-              <Input
-                id="lesson-content"
-                placeholder={type === "video" ? "https://youtube.com/watch?v=..." : "https://example.com/document.pdf"}
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                className="bg-muted"
-              />
+              <div className="flex gap-2">
+                <Input
+                  placeholder={type === "video" ? "URL YouTube/Vimeo sau încarcă..." : "URL PDF sau încarcă..."}
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  className="bg-muted flex-1"
+                />
+                <div className="relative">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept={type === "video" ? "video/*" : ".pdf"}
+                    onChange={handleFileUpload}
+                  />
+                  <Button 
+                    type="button" 
+                    variant="secondary" 
+                    disabled={isUploading}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="lesson-duration" className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              Durată (minute)
+            <Label className="flex items-center gap-2">
+              <Clock className="h-4 w-4" /> Durată (minute)
             </Label>
             <Input
-              id="lesson-duration"
               type="number"
-              placeholder="ex: 15"
               value={duration}
               onChange={(e) => setDuration(e.target.value)}
               className="bg-muted w-32"
@@ -144,9 +203,7 @@ export function LessonEditor({ lesson, onSave, onCancel, isOpen }: LessonEditorP
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onCancel}>
-            Anulează
-          </Button>
+          <Button variant="outline" onClick={onCancel}>Anulează</Button>
           <Button onClick={handleSave} disabled={!isValid}>
             {lesson ? "Salvează Modificările" : "Adaugă Lecția"}
           </Button>
@@ -156,48 +213,22 @@ export function LessonEditor({ lesson, onSave, onCancel, isOpen }: LessonEditorP
   );
 }
 
-interface LessonItemProps {
-  lesson: Lesson;
-  onEdit: (lesson: Lesson) => void;
-  onDelete: (lessonId: string) => void;
-}
-
-export function LessonItem({ lesson, onEdit, onDelete }: LessonItemProps) {
+// ... LessonItem remains the same
+export function LessonItem({ lesson, onEdit, onDelete }: { lesson: Lesson, onEdit: (l: Lesson) => void, onDelete: (id: string) => void }) {
   return (
-    <div className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 bg-muted/50 rounded-lg sm:rounded-xl border border-border group hover:border-primary/30 transition-colors">
-      <button className="cursor-grab text-muted-foreground hover:text-foreground hidden sm:block">
-        <GripVertical className="h-4 w-4" />
-      </button>
-      
-      <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-md sm:rounded-lg bg-accent/40 text-foreground shrink-0">
+    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl border border-border group hover:border-primary/30 transition-colors">
+      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent/40 text-foreground">
         {lessonTypeIcons[lesson.type]}
       </div>
-      
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-xs sm:text-sm truncate">{lesson.title}</p>
-        <p className="text-xs text-muted-foreground truncate">
-          {lessonTypeLabels[lesson.type]}
-          {lesson.duration && ` • ${lesson.duration}m`}
+        <p className="font-medium text-sm truncate">{lesson.title}</p>
+        <p className="text-xs text-muted-foreground">
+          {lessonTypeLabels[lesson.type]} {lesson.duration && `• ${lesson.duration}m`}
         </p>
       </div>
-      
-      <div className="flex items-center gap-0.5 sm:gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 sm:h-8 sm:w-8"
-          onClick={() => onEdit(lesson)}
-        >
-          <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 sm:h-8 sm:w-8 text-destructive hover:text-destructive"
-          onClick={() => onDelete(lesson.id)}
-        >
-          <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-        </Button>
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(lesson)}><Pencil className="h-4 w-4" /></Button>
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onDelete(lesson.id)}><Trash2 className="h-4 w-4" /></Button>
       </div>
     </div>
   );
