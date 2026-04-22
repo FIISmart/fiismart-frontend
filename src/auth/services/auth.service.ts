@@ -83,7 +83,12 @@ async function apiFetch<T>(
     ...options.headers,
   };
 
-  const response = await fetch(url, { ...options, headers });
+  let response: Response;
+  try {
+    response = await fetch(url, { ...options, headers });
+  } catch  {
+    return { success: false, message: "Cannot reach the server." };
+  }
 
   // Handle non-JSON error responses gracefully
   const contentType = response.headers.get("content-type");
