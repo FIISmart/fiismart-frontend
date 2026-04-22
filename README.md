@@ -20,6 +20,10 @@ auth/
 └── components/
     ├── AuthPage.tsx          # Combined Login + Signup + Forgot Password page
     └── ProtectedRoute.tsx    # Route guard + App wiring example
+    ├── TermsOfService.tsx    # Terms Of Service page
+    └── PrivacyPolicy.tsx     # Privacy Policy page
+    ├── ResetPassword.tsx     # Password resetting page
+    └── VerifyEmail.tsx       # Email Verification page
 ```
 
 ---
