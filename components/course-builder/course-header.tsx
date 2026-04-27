@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +23,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import type { Course } from "@/lib/course-types";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import * as api from "@/lib/api";
 import { toast } from "sonner";
 
@@ -109,7 +107,7 @@ export function CourseHeader({
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between sm:h-16 py-3 sm:py-0 gap-3 sm:gap-4">
             {/* Top Row on Mobile: Back + Title + Status */}
             <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-              <Link href="/cursuri">
+              <Link to="/cursuri">
                 <Button variant="ghost" size="icon" className="shrink-0 h-9 w-9 sm:h-10 sm:w-10">
                   <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
