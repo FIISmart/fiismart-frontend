@@ -1,188 +1,175 @@
-// ============================================================
-// AuthContext.tsx
-// Global auth state via React Context.
-// Wrap your <App /> (or router root) with <AuthProvider>.
-// ============================================================
-
-import React, {
+import {
   createContext,
-  useCallback,
   useContext,
-  useEffect,
-  useMemo,
   useReducer,
-} from "react";
-import { authService } from "../services/auth.service";
-import type {
-  AuthError,
-  AuthState,
-  LoginRequest,
-  RegisterRequest,
-  User,
-} from "../types/auth.types";
+  useEffect,
+  useCallback,
+  type ReactNode,
+} from 'react'
+import type { AuthState, AuthAction, AuthResponse } from '../types/auth.types'
+import { authService } from '../services/auth.service'
 
-// ------------------------------------------------------------------
-// State shape & reducer
-// ------------------------------------------------------------------
+// ── Storage keys ──────────────────────────────────────────────────────────────
 
-type AuthAction =
-  | { type: "AUTH_START" }
-  | { type: "AUTH_SUCCESS"; payload: User }
-  | { type: "AUTH_ERROR"; payload: AuthError }
-  | { type: "AUTH_LOGOUT" }
-  | { type: "CLEAR_ERROR" };
+const STORAGE_KEYS = {
+  ACCESS_TOKEN:  'auth.accessToken',
+  REFRESH_TOKEN: 'auth.refreshToken',
+  COGNITO_SUB:   'auth.cognitoSub',
+} as const
+
+// ── Initial state ─────────────────────────────────────────────────────────────
 
 const initialState: AuthState = {
-  user: null,
+  user:            null,
+  accessToken:     sessionStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN),
+  refreshToken:    localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN),
+  isLoading:       true,
   isAuthenticated: false,
-  isLoading: true, // true on first load while we check localStorage token
-  error: null,
-};
+}
+
+// ── Reducer ───────────────────────────────────────────────────────────────────
 
 function authReducer(state: AuthState, action: AuthAction): AuthState {
   switch (action.type) {
-    case "AUTH_START":
-      return { ...state, isLoading: true, error: null };
-    case "AUTH_SUCCESS":
+
+    case 'AUTH_SUCCESS': {
+      const { accessToken, refreshToken, user } = action.payload
+      const persist = action.rememberMe ?? true
+      sessionStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken)
+      if (persist) {
+        localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken)
+        localStorage.setItem(STORAGE_KEYS.COGNITO_SUB,   user.cognitoSub)
+      } else {
+        sessionStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken)
+        sessionStorage.setItem(STORAGE_KEYS.COGNITO_SUB,   user.cognitoSub)
+        localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN)
+        localStorage.removeItem(STORAGE_KEYS.COGNITO_SUB)
+      }
       return {
         ...state,
-        isLoading: false,
+        user,
+        accessToken,
+        refreshToken,
+        isLoading:       false,
         isAuthenticated: true,
-        user: action.payload,
-        error: null,
-      };
-    case "AUTH_ERROR":
+      }
+    }
+
+    case 'REFRESH_SUCCESS': {
+      const { accessToken, refreshToken, user } = action.payload
+      sessionStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken)
+      // păstrăm tokenurile în același storage unde erau inițial
+      const persist = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN) !== null
+      if (persist) {
+        localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken)
+        localStorage.setItem(STORAGE_KEYS.COGNITO_SUB,   user.cognitoSub)
+      } else {
+        sessionStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken)
+        sessionStorage.setItem(STORAGE_KEYS.COGNITO_SUB,   user.cognitoSub)
+      }
       return {
         ...state,
-        isLoading: false,
+        user,
+        accessToken,
+        refreshToken,
+        isLoading:       false,
+        isAuthenticated: true,
+      }
+    }
+
+    case 'LOGOUT': {
+      sessionStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN)
+      sessionStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN)
+      sessionStorage.removeItem(STORAGE_KEYS.COGNITO_SUB)
+      localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN)
+      localStorage.removeItem(STORAGE_KEYS.COGNITO_SUB)
+      return {
+        ...state,
+        user:            null,
+        accessToken:     null,
+        refreshToken:    null,
+        isLoading:       false,
         isAuthenticated: false,
-        user: null,
-        error: action.payload,
-      };
-    case "AUTH_LOGOUT":
-      return { ...initialState, isLoading: false };
-    case "CLEAR_ERROR":
-      return { ...state, error: null };
+      }
+    }
+
+    case 'SET_LOADING':
+      return { ...state, isLoading: action.payload }
+
     default:
-      return state;
+      return state
   }
 }
 
-// ------------------------------------------------------------------
-// Context interface
-// ------------------------------------------------------------------
+// ── Context ───────────────────────────────────────────────────────────────────
 
 interface AuthContextValue extends AuthState {
-  login: (payload: LoginRequest) => Promise<boolean>;
-  register: (payload: RegisterRequest) => Promise<boolean>;
-  logout: () => Promise<void>;
-  clearError: () => void;
+  handleAuthSuccess: (response: AuthResponse, rememberMe?: boolean) => void
+  logout: () => Promise<void>
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+const AuthContext = createContext<AuthContextValue | null>(null)
 
-// ------------------------------------------------------------------
-// Provider
-// ------------------------------------------------------------------
+// ── Provider ──────────────────────────────────────────────────────────────────
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(authReducer, initialState);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [state, dispatch] = useReducer(authReducer, initialState)
 
-  // On mount: attempt to restore session from stored token
-  useEffect(() => {
-    const restoreSession = async () => {
-      if (!authService.isLoggedIn()) {
-        dispatch({ type: "AUTH_LOGOUT" });
-        return;
-      }
-      const result = await authService.getCurrentUser();
-      if (result.success && result.data) {
-        dispatch({ type: "AUTH_SUCCESS", payload: result.data as User });
-      } else {
-        // Token is stale / invalid — clear everything
-        dispatch({ type: "AUTH_LOGOUT" });
-      }
-    };
-    restoreSession();
-  }, []);
-
-  const login = useCallback(async (payload: LoginRequest): Promise<boolean> => {
-    dispatch({ type: "AUTH_START" });
-    const result = await authService.login(payload);
-    if (result.success && result.data) {
-      dispatch({ type: "AUTH_SUCCESS", payload: result.data.user });
-      return true;
-    }
-    dispatch({
-      type: "AUTH_ERROR",
-      payload: {
-        message: result.message ?? "Login failed. Please try again.",
-        fieldErrors: normaliseFieldErrors(result.errors),
-      },
-    });
-    return false;
-  }, []);
-
-  const register = useCallback(
-    async (payload: RegisterRequest): Promise<boolean> => {
-      dispatch({ type: "AUTH_START" });
-      const result = await authService.register(payload);
-      if (result.success && result.data) {
-        dispatch({ type: "AUTH_SUCCESS", payload: result.data.user });
-        return true;
-      }
-      dispatch({
-        type: "AUTH_ERROR",
-        payload: {
-          message: result.message ?? "Registration failed. Please try again.",
-          fieldErrors: normaliseFieldErrors(result.errors),
-        },
-      });
-      return false;
-    },
-    []
-  );
+  const handleAuthSuccess = useCallback((response: AuthResponse, rememberMe?: boolean) => {
+    dispatch({ type: 'AUTH_SUCCESS', payload: response, rememberMe })
+  }, [])
 
   const logout = useCallback(async () => {
-    await authService.logout();
-    dispatch({ type: "AUTH_LOGOUT" });
-  }, []);
+    if (state.accessToken) {
+      await authService.logout(state.accessToken).catch(() => {})
+    }
+    dispatch({ type: 'LOGOUT' })
+  }, [state.accessToken])
 
-  const clearError = useCallback(() => dispatch({ type: "CLEAR_ERROR" }), []);
+  useEffect(() => {
+    const refreshToken =
+      localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN) ??
+      sessionStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN)
+    const cognitoSub =
+      localStorage.getItem(STORAGE_KEYS.COGNITO_SUB) ??
+      sessionStorage.getItem(STORAGE_KEYS.COGNITO_SUB)
 
-  const value = useMemo<AuthContextValue>(
-    () => ({ ...state, login, register, logout, clearError }),
-    [state, login, register, logout, clearError]
-  );
+    if (!refreshToken || !cognitoSub) {
+      dispatch({ type: 'SET_LOADING', payload: false })
+      return
+    }
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+    authService
+        .refresh({ refreshToken, cognitoSub })
+        .then((response) => {
+          dispatch({ type: 'REFRESH_SUCCESS', payload: response })
+        })
+        .catch((err) => {
+          // dacă e eroare de la server (token expirat/invalid) → logout complet
+          // dacă e eroare de rețea (backend oprit) → păstrăm tokenurile, doar oprim loading
+          const isServerError = err && typeof err === 'object' && 'success' in err
+          if (isServerError) {
+            dispatch({ type: 'LOGOUT' })
+          } else {
+            console.error('[Auth] Refresh eșuat (eroare de rețea):', err)
+            dispatch({ type: 'SET_LOADING', payload: false })
+          }
+        })
+  }, [])
+
+  return (
+      <AuthContext.Provider value={{ ...state, handleAuthSuccess, logout }}>
+        {children}
+      </AuthContext.Provider>
+  )
 }
 
-// ------------------------------------------------------------------
-// Hook
-// ------------------------------------------------------------------
+// ── Hook ──────────────────────────────────────────────────────────────────────
 
 export function useAuth(): AuthContextValue {
-  const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error("useAuth must be used inside <AuthProvider>");
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error('useAuth must be used inside <AuthProvider>')
   }
-  return ctx;
-}
-
-// ------------------------------------------------------------------
-// Internal helper
-// ------------------------------------------------------------------
-
-/**
- * Spring Boot field errors come as { fieldName: ["message1", "message2"] }.
- * This flattens to { fieldName: "message1" } for easy form usage.
- */
-function normaliseFieldErrors(
-  errors?: Record<string, string[]>
-): Record<string, string> | undefined {
-  if (!errors) return undefined;
-  return Object.fromEntries(
-    Object.entries(errors).map(([k, v]) => [k, v[0] ?? ""])
-  );
+  return context
 }

@@ -1,25 +1,23 @@
-
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { AuthProvider } from './auth/context/AuthContext'
 import { AuthPage } from './auth/components/AuthPage'
-import { VerifyEmailPage } from './auth/components/VerifyEmail'
-import { ResetPasswordPage } from './auth/components/ResetPassword'
+import { ProtectedRoute } from './auth/components/ProtectedRoute'
 import { TermsOfServicePage } from './auth/components/TermsOfService'
 import { PrivacyPolicyPage } from './auth/components/PrivacyPolicy'
 import { UserRole } from './auth/types/auth.types'
 
 function AuthPageWrapper() {
-  const navigate = useNavigate()
-  return (
-    <AuthPage
-      onSuccess={(role) => {
-        if (role === UserRole.TEACHER) navigate('/teacher/dashboard')
-        else navigate('/student/dashboard')
-      }}
-    />
-  )
+    const navigate = useNavigate()
+    return (
+        <AuthPage
+            onSuccess={(role) => {
+                if (role === UserRole.PROFESSOR) navigate('/professor/dashboard')
+                else navigate('/student/dashboard')
+            }}
+        />
+    )
 }
 
 function UnauthorizedPage() {
@@ -61,21 +59,26 @@ function UnauthorizedPage() {
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/auth"           element={<AuthPageWrapper />} />
-          <Route path="/verify-email"   element={<VerifyEmailPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
- 
-          <Route path="/terms"          element={<TermsOfServicePage />} />
-          <Route path="/privacy"        element={<PrivacyPolicyPage />} />
- 
-          <Route path="/unauthorized"   element={<UnauthorizedPage />} />
-          <Route path="/" element={<Navigate to="/auth" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
-  </React.StrictMode>
+    <React.StrictMode>
+        <BrowserRouter>
+            <AuthProvider>
+                <Routes>
+                    <Route path="/auth" element={<AuthPageWrapper />} />
+                    <Route path="/professor/dashboard" element={
+                        <ProtectedRoute allowedRoles={[UserRole.PROFESSOR]}>
+                            <div>Professor Dashboard — placeholder</div>
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/student/dashboard" element={
+                        <ProtectedRoute allowedRoles={[UserRole.STUDENT]}>
+                            <div>Student Dashboard — placeholder</div>
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/terms"          element={<TermsOfServicePage />} />
+                    <Route path="/privacy"        element={<PrivacyPolicyPage />} />
+                    <Route path="/" element={<Navigate to="/auth" replace />} />
+                </Routes>
+            </AuthProvider>
+        </BrowserRouter>
+    </React.StrictMode>
 )

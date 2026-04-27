@@ -1,1062 +1,665 @@
-// ============================================================
-// AuthPage.tsx
-// Combined Login / Sign-up page for FIISmart.
-//
-//
-// STYLING NOTE FOR THE TEAM:
-//   All visual styles are expressed through the `styles` object
-//   at the bottom of this file or via className strings that map
-//   to a separate CSS/Tailwind file. To redesign the page, only
-//   touch the `styles` section — all logic above it remains intact.
-// ============================================================
+import { useState } from 'react'
+import { useAuth } from '../context/AuthContext'
+import { authService } from '../services/auth.service'
+import { UserRole, type ApiError } from '../types/auth.types'
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useAuth } from "../context/AuthContext";
-import { authService } from "../services/auth.service";
-import type {
-  ForgotPasswordFormValues,
-  LoginFormValues,
-  SignupFormValues,
-} from "../types/auth.types";
-import { UserRole } from "../types/auth.types";
-import {
-  validateLoginForm,
-  validateSignupForm,
-} from "../utils/validation";
-
-// ------------------------------------------------------------------
-// Types
-// ------------------------------------------------------------------
-
-type Tab = "login" | "signup";
-type View = "auth" | "forgotPassword" | "forgotPasswordSent";
-
-// ------------------------------------------------------------------
-// Small reusable sub-components (kept in this file for portability;
-// move to their own files once the team decides on a folder strategy)
-// ------------------------------------------------------------------
-
-interface FieldProps {
-  id: string;
-  label: string;
-  type?: string;
-  value: string;
-  onChange: (v: string) => void;
-  error?: string;
-  placeholder?: string;
-  autoComplete?: string;
-  disabled?: boolean;
-  hint?: string;
-}
-
-function Field({
-  id,
-  label,
-  type = "text",
-  value,
-  onChange,
-  error,
-  placeholder,
-  autoComplete,
-  disabled,
-  hint,
-}: FieldProps) {
-  const [showPassword, setShowPassword] = useState(false);
-  const isPassword = type === "password";
-  const inputType = isPassword ? (showPassword ? "text" : "password") : type;
-
-  return (
-    <div style={styles.fieldWrapper}>
-      <label htmlFor={id} style={styles.label}>
-        {label}
-      </label>
-      <div style={styles.inputWrapper}>
-        <input
-          id={id}
-          type={inputType}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          autoComplete={autoComplete}
-          disabled={disabled}
-          aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}
-          aria-invalid={!!error}
-          style={{
-            ...styles.input,
-            ...(error ? styles.inputError : {}),
-            ...(disabled ? styles.inputDisabled : {}),
-            ...(isPassword ? { paddingRight: "2.75rem" } : {}),
-          }}
-        />
-        {isPassword && (
-          <button
-            type="button"
-            aria-label={showPassword ? "Hide password" : "Show password"}
-            onClick={() => setShowPassword((p) => !p)}
-            style={styles.passwordToggle}
-            tabIndex={-1}
-          >
-            {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-          </button>
-        )}
-      </div>
-      {hint && !error && (
-        <span id={`${id}-hint`} style={styles.hint}>
-          {hint}
-        </span>
-      )}
-      {error && (
-        <span id={`${id}-error`} role="alert" style={styles.errorText}>
-          {error}
-        </span>
-      )}
-    </div>
-  );
-}
-
-interface SelectFieldProps {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: { value: string; label: string }[];
-  error?: string;
-  disabled?: boolean;
-}
-
-function SelectField({ id, label, value, onChange, options, error, disabled }: SelectFieldProps) {
-  return (
-    <div style={styles.fieldWrapper}>
-      <label htmlFor={id} style={styles.label}>
-        {label}
-      </label>
-      <select
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        aria-invalid={!!error}
-        style={{ ...styles.input, ...(error ? styles.inputError : {}), cursor: "pointer" }}
-      >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-      {error && (
-        <span role="alert" style={styles.errorText}>
-          {error}
-        </span>
-      )}
-    </div>
-  );
-}
-
-// ------------------------------------------------------------------
-// Login Form
-// ------------------------------------------------------------------
-
-interface LoginFormProps {
-  onForgotPassword: () => void;
-  onSuccess: (user: ReturnType<typeof useAuth>["user"]) => void;
-}
-
-function LoginForm({ onForgotPassword, onSuccess }: LoginFormProps) {
-  const { login, isLoading, error, clearError } = useAuth();
-
-  const [values, setValues] = useState<LoginFormValues>({
-    email: "",
-    password: "",
-    rememberMe: false,
-  });
-  const [fieldErrors, setFieldErrors] = useState<
-    Partial<Record<keyof LoginFormValues, string>>
-  >({});
-
-  // Sync server-side field errors into the form
-  useEffect(() => {
-    if (error?.fieldErrors) {
-      setFieldErrors(error.fieldErrors as Partial<Record<keyof LoginFormValues, string>>);
-    }
-  }, [error]);
-
-  const set = useCallback(
-    (field: keyof LoginFormValues) => (v: string) => {
-      setValues((prev) => ({ ...prev, [field]: v }));
-      setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
-      clearError();
-    },
-    [clearError]
-  );
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const errors = validateLoginForm(values);
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors);
-      return;
-    }
-    const user = await login({ email: values.email, password: values.password });
-    if (user) onSuccess(null); // AuthContext already holds the user
-  };
-
-  return (
-    <form onSubmit={handleSubmit} noValidate style={styles.form}>
-      <Field
-        id="login-email"
-        label="Email address"
-        type="email"
-        value={values.email}
-        onChange={set("email")}
-        error={fieldErrors.email}
-        placeholder="you@example.com"
-        autoComplete="email"
-        disabled={isLoading}
-      />
-      <Field
-        id="login-password"
-        label="Password"
-        type="password"
-        value={values.password}
-        onChange={set("password")}
-        error={fieldErrors.password}
-        placeholder="••••••••"
-        autoComplete="current-password"
-        disabled={isLoading}
-      />
-
-      <div style={styles.row}>
-        <label style={styles.checkboxLabel}>
-          <input
-            type="checkbox"
-            checked={values.rememberMe}
-            onChange={(e) =>
-              setValues((v) => ({ ...v, rememberMe: e.target.checked }))
-            }
-            style={styles.checkbox}
-          />
-          Remember me
-        </label>
-        <button
-          type="button"
-          onClick={onForgotPassword}
-          style={styles.linkButton}
-        >
-          Forgot password?
-        </button>
-      </div>
-
-      {/* Global server error (not field-specific) */}
-      {error && !error.fieldErrors && (
-        <div role="alert" style={styles.globalError}>
-          {error.message}
-        </div>
-      )}
-
-      <button type="submit" disabled={isLoading} style={styles.primaryButton}>
-        {isLoading ? <Spinner /> : "Log In"}
-      </button>
-    </form>
-  );
-}
-
-// ------------------------------------------------------------------
-// Signup Form
-// ------------------------------------------------------------------
-
-interface SignupFormProps {
-  onSuccess: () => void;
-}
-
-function SignupForm({ onSuccess }: SignupFormProps) {
-  const { register, isLoading, error, clearError } = useAuth();
-
-  const [values, setValues] = useState<SignupFormValues>({
-    firstName: "",
-    lastName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    role: UserRole.STUDENT,
-    agreeToTerms: false,
-  });
-  const [fieldErrors, setFieldErrors] = useState<
-    Partial<Record<keyof SignupFormValues, string>>
-  >({});
-
-  useEffect(() => {
-    if (error?.fieldErrors) {
-      setFieldErrors(error.fieldErrors as Partial<Record<keyof SignupFormValues, string>>);
-    }
-  }, [error]);
-
-  const set = useCallback(
-    (field: keyof SignupFormValues) => (v: string) => {
-      setValues((prev) => ({ ...prev, [field]: v }));
-      setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
-      clearError();
-    },
-    [clearError]
-  );
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const errors = validateSignupForm(values);
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors);
-      return;
-    }
-    const ok = await register({
-      firstName: values.firstName,
-      lastName: values.lastName,
-      email: values.email,
-      password: values.password,
-      role: values.role,
-    });
-    if (ok) onSuccess();
-  };
-
-  return (
-    <form onSubmit={handleSubmit} noValidate style={styles.form}>
-      <div style={styles.twoCol}>
-        <Field
-          id="signup-firstname"
-          label="First name"
-          value={values.firstName}
-          onChange={set("firstName")}
-          error={fieldErrors.firstName}
-          placeholder="Ana"
-          autoComplete="given-name"
-          disabled={isLoading}
-        />
-        <Field
-          id="signup-lastname"
-          label="Last name"
-          value={values.lastName}
-          onChange={set("lastName")}
-          error={fieldErrors.lastName}
-          placeholder="Ionescu"
-          autoComplete="family-name"
-          disabled={isLoading}
-        />
-      </div>
-
-      <Field
-        id="signup-email"
-        label="Email address"
-        type="email"
-        value={values.email}
-        onChange={set("email")}
-        error={fieldErrors.email}
-        placeholder="you@example.com"
-        autoComplete="email"
-        disabled={isLoading}
-      />
-
-      <SelectField
-        id="signup-role"
-        label="I am a..."
-        value={values.role}
-        onChange={set("role")}
-        options={[
-          { value: UserRole.STUDENT, label: "Student — I want to learn" },
-          { value: UserRole.TEACHER, label: "Teacher — I want to teach" },
-        ]}
-        error={fieldErrors.role}
-        disabled={isLoading}
-      />
-
-      <Field
-        id="signup-password"
-        label="Password"
-        type="password"
-        value={values.password}
-        onChange={set("password")}
-        error={fieldErrors.password}
-        placeholder="••••••••"
-        autoComplete="new-password"
-        hint="At least 8 characters, one uppercase letter, one number."
-        disabled={isLoading}
-      />
-
-      <Field
-        id="signup-confirm"
-        label="Confirm password"
-        type="password"
-        value={values.confirmPassword}
-        onChange={set("confirmPassword")}
-        error={fieldErrors.confirmPassword}
-        placeholder="••••••••"
-        autoComplete="new-password"
-        disabled={isLoading}
-      />
-
-      <label style={styles.checkboxLabel}>
-        <input
-          type="checkbox"
-          checked={values.agreeToTerms}
-          onChange={(e) => {
-            setValues((v) => ({ ...v, agreeToTerms: e.target.checked }));
-            setFieldErrors((prev) => ({ ...prev, agreeToTerms: undefined }));
-          }}
-          style={styles.checkbox}
-        />
-        <span>
-          I agree to the{" "}
-          <a href="/terms" style={styles.inlineLink}>
-            Terms of Service
-          </a>{" "}
-          and{" "}
-          <a href="/privacy" style={styles.inlineLink}>
-            Privacy Policy
-          </a>
-        </span>
-      </label>
-      {fieldErrors.agreeToTerms && (
-        <span role="alert" style={styles.errorText}>
-          {fieldErrors.agreeToTerms}
-        </span>
-      )}
-
-      {error && !error.fieldErrors && (
-        <div role="alert" style={styles.globalError}>
-          {error.message}
-        </div>
-      )}
-
-      <button type="submit" disabled={isLoading} style={styles.primaryButton}>
-        {isLoading ? <Spinner /> : "Create Account"}
-      </button>
-    </form>
-  );
-}
-
-// ------------------------------------------------------------------
-// Forgot Password Form
-// ------------------------------------------------------------------
-
-interface ForgotPasswordFormProps {
-  onBack: () => void;
-  onSent: () => void;
-}
-
-function ForgotPasswordForm({ onBack, onSent }: ForgotPasswordFormProps) {
-  const [values, setValues] = useState<ForgotPasswordFormValues>({ email: "" });
-  const [fieldError, setFieldError] = useState<string>();
-  const [isLoading, setIsLoading] = useState(false);
-  const [serverError, setServerError] = useState<string>();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())) {
-      setFieldError("Please enter a valid email address.");
-      return;
-    }
-    setIsLoading(true);
-    setServerError(undefined);
-    const result = await authService.forgotPassword({ email: values.email });
-    setIsLoading(false);
-    if (result.success) {
-      onSent();
-    } else {
-      setServerError(result.message ?? "Something went wrong. Please try again.");
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} noValidate style={styles.form}>
-      <p style={styles.bodyText}>
-        Enter the email address associated with your account and we'll send you
-        a link to reset your password.
-      </p>
-
-      <Field
-        id="forgot-email"
-        label="Email address"
-        type="email"
-        value={values.email}
-        onChange={(v) => {
-          setValues({ email: v });
-          setFieldError(undefined);
-          setServerError(undefined);
-        }}
-        error={fieldError}
-        placeholder="you@example.com"
-        autoComplete="email"
-        disabled={isLoading}
-      />
-
-      {serverError && (
-        <div role="alert" style={styles.globalError}>
-          {serverError}
-        </div>
-      )}
-
-      <button type="submit" disabled={isLoading} style={styles.primaryButton}>
-        {isLoading ? <Spinner /> : "Send Reset Link"}
-      </button>
-
-      <button type="button" onClick={onBack} style={styles.ghostButton}>
-        ← Back to login
-      </button>
-    </form>
-  );
-}
-
-// ------------------------------------------------------------------
-// Main AuthPage
-// ------------------------------------------------------------------
+type View = 'login' | 'register' | 'verify-email' | 'forgot-password' | 'reset-password'
 
 interface AuthPageProps {
-  /**
-   * Called after a successful login or registration.
-   * Use this to navigate the user to their dashboard.
-   * Example (React Router): onSuccess={() => navigate("/dashboard")}
-   */
-  onSuccess?: (role: UserRole) => void;
-  /** Initial tab to show. Default: "login" */
-  defaultTab?: Tab;
+    onSuccess: (role: UserRole) => void
 }
 
-export function AuthPage({ onSuccess, defaultTab = "login" }: AuthPageProps) {
-  const { user } = useAuth();
-  const [tab, setTab] = useState<Tab>(defaultTab);
-  const [view, setView] = useState<View>("auth");
-  const announcerRef = useRef<HTMLDivElement>(null);
+export function AuthPage({ onSuccess }: AuthPageProps) {
+    const { handleAuthSuccess } = useAuth()
+    const [view, setView] = useState<View>('login')
 
-  // If auth context already has a user (e.g. from token refresh), call onSuccess
-  useEffect(() => {
-    if (user) {
-      onSuccess?.(user.role);
+    const [email,    setEmail]    = useState('')
+    const [password, setPassword] = useState('')
+    const [showPassword, setShowPassword] = useState(false)
+    const [rememberMe,   setRememberMe]   = useState(false)
+
+    const [firstName,       setFirstName]       = useState('')
+    const [lastName,        setLastName]        = useState('')
+    const [role,            setRole]            = useState<UserRole>(UserRole.STUDENT)
+    const [confirmPassword, setConfirmPassword] = useState('')
+    const [showConfirm,     setShowConfirm]     = useState(false)
+    const [agreedToTerms,   setAgreedToTerms]   = useState(false)
+
+    const [emailToVerify, setEmailToVerify] = useState('')
+    const [verifyCode,    setVerifyCode]    = useState('')
+
+    const [forgotEmail, setForgotEmail] = useState('')
+    const [resetCode,   setResetCode]   = useState('')
+    const [newPassword, setNewPassword] = useState('')
+    const [showNew,     setShowNew]     = useState(false)
+
+    const [isLoading,      setIsLoading]      = useState(false)
+    const [error,          setError]          = useState<string | null>(null)
+    const [fieldErrors,    setFieldErrors]    = useState<Record<string, string[]>>({})
+    const [successMessage, setSuccessMessage] = useState<string | null>(null)
+
+    function clearErrors() {
+        setError(null)
+        setFieldErrors({})
+        setSuccessMessage(null)
     }
-  }, [user, onSuccess]);
 
-  const announce = (msg: string) => {
-    if (announcerRef.current) announcerRef.current.textContent = msg;
-  };
+    function handleApiError(err: unknown) {
+        const apiError = err as ApiError
+        if (apiError.errors && Object.keys(apiError.errors).length > 0) {
+            setFieldErrors(apiError.errors)
+        } else {
+            setError(apiError.message ?? 'Something went wrong, please try again')
+        }
+    }
 
-  if (view === "forgotPasswordSent") {
+    function fieldError(field: string): string | undefined {
+        return fieldErrors[field]?.[0]
+    }
+
+    function switchView(next: View) {
+        clearErrors()
+        setView(next)
+    }
+
+    async function handleLogin(e: React.FormEvent) {
+        e.preventDefault()
+        clearErrors()
+        setIsLoading(true)
+        try {
+            const response = await authService.login({ email, password })
+            handleAuthSuccess(response, rememberMe)
+            onSuccess(response.user.role)
+        } catch (err) {
+            const apiError = err as ApiError
+            if (apiError.code === 'USER_NOT_CONFIRMED') {
+                setEmailToVerify(email)
+                switchView('verify-email')
+                setSuccessMessage('Please verify your email before signing in.')
+            } else {
+                handleApiError(err)
+            }
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    async function handleRegister(e: React.FormEvent) {
+        e.preventDefault()
+        clearErrors()
+        if (password !== confirmPassword) {
+            setFieldErrors({ confirmPassword: ['Passwords do not match'] })
+            return
+        }
+        if (!agreedToTerms) {
+            setError('You must agree to the Terms of Service and Privacy Policy')
+            return
+        }
+        setIsLoading(true)
+        try {
+            await authService.register({ firstName, lastName, email, password, role })
+            setEmailToVerify(email)
+            switchView('verify-email')
+            setSuccessMessage('Account created! Check your email for a verification code.')
+        } catch (err) {
+            handleApiError(err)
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    async function handleVerifyEmail(e: React.FormEvent) {
+        e.preventDefault()
+        clearErrors()
+        setIsLoading(true)
+        try {
+            await authService.verifyEmail({ email: emailToVerify, code: verifyCode })
+            setEmail(emailToVerify)
+            switchView('login')
+            setSuccessMessage('Email verified! You can now sign in.')
+        } catch (err) {
+            handleApiError(err)
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    async function handleResendCode() {
+        clearErrors()
+        setIsLoading(true)
+        try {
+            await authService.resendVerification({ email: emailToVerify })
+            setSuccessMessage('A new code has been sent to your email.')
+        } catch (err) {
+            handleApiError(err)
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    async function handleForgotPassword(e: React.FormEvent) {
+        e.preventDefault()
+        clearErrors()
+        setIsLoading(true)
+        try {
+            await authService.forgotPassword({ email: forgotEmail })
+            switchView('reset-password')
+            setSuccessMessage('Check your email for a verification code.')
+        } catch (err) {
+            handleApiError(err)
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    async function handleResetPassword(e: React.FormEvent) {
+        e.preventDefault()
+        clearErrors()
+        setIsLoading(true)
+        try {
+            await authService.resetPassword({ email: forgotEmail, code: resetCode, newPassword })
+            switchView('login')
+            setSuccessMessage('Password reset successfully. You can now sign in.')
+        } catch (err) {
+            handleApiError(err)
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    const isAuthView = view === 'login' || view === 'register'
+
     return (
-      <PageShell>
-        <Card>
-          <div style={styles.centeredContent}>
-            <div style={styles.successIcon}>✉️</div>
-            <h2 style={styles.cardTitle}>Check your email</h2>
-            <p style={styles.bodyText}>
-              We've sent a password reset link. It may take a minute to arrive.
-              Check your spam folder if you don't see it.
-            </p>
-            <button
-              type="button"
-              onClick={() => setView("auth")}
-              style={styles.primaryButton}
-            >
-              Back to login
-            </button>
-          </div>
-        </Card>
-      </PageShell>
-    );
-  }
+        <>
+            <style>{css}</style>
+            <div className="fs-page">
+                <div className="fs-card">
 
-  if (view === "forgotPassword") {
-    return (
-      <PageShell>
-        <Card>
-          <div style={styles.logoRow}>
-            <Logo />
-          </div>
-          <h2 style={styles.cardTitle}>Reset your password</h2>
-          <ForgotPasswordForm
-            onBack={() => setView("auth")}
-            onSent={() => {
-              setView("forgotPasswordSent");
-              announce("Password reset email sent.");
-            }}
-          />
-        </Card>
-      </PageShell>
-    );
-  }
+                    <div className="fs-header">
+                        <span className="fs-logo-icon">🎓</span>
+                        <span className="fs-logo-text">FII Smart</span>
+                    </div>
 
-  return (
-    <PageShell>
-      {/* SR live region for dynamic announcements */}
-      <div
-        ref={announcerRef}
-        role="status"
-        aria-live="polite"
-        style={{ position: "absolute", width: 1, height: 1, overflow: "hidden" }}
-      />
+                    {isAuthView && (
+                        <div className="fs-tabs">
+                            <button className={`fs-tab ${view === 'login' ? 'fs-tab--active' : ''}`} onClick={() => switchView('login')} type="button">Log In</button>
+                            <button className={`fs-tab ${view === 'register' ? 'fs-tab--active' : ''}`} onClick={() => switchView('register')} type="button">Sign Up</button>
+                        </div>
+                    )}
 
-      <Card>
-        <div style={styles.logoRow}>
-          <Logo />
-        </div>
+                    {/* ── Login ── */}
+                    {view === 'login' && (
+                        <form onSubmit={handleLogin} className="fs-form" noValidate>
+                            <div className="fs-field">
+                                <label className="fs-label">Email address</label>
+                                <input type="email" className={`fs-input ${fieldError('email') ? 'fs-input--error' : ''}`} placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" required />
+                                {fieldError('email') && <span className="fs-field-error">{fieldError('email')}</span>}
+                            </div>
 
-        {/* Tab bar */}
-        <div style={styles.tabBar} role="tablist" aria-label="Authentication">
-          {(["login", "signup"] as Tab[]).map((t) => (
-            <button
-              key={t}
-              role="tab"
-              aria-selected={tab === t}
-              aria-controls={`panel-${t}`}
-              id={`tab-${t}`}
-              onClick={() => setTab(t)}
-              style={{
-                ...styles.tab,
-                ...(tab === t ? styles.tabActive : {}),
-              }}
-            >
-              {t === "login" ? "Log In" : "Sign Up"}
-            </button>
-          ))}
-        </div>
+                            <div className="fs-field">
+                                <label className="fs-label">Password</label>
+                                <div className="fs-input-wrap">
+                                    <input type={showPassword ? 'text' : 'password'} className={`fs-input fs-input--icon ${fieldError('password') ? 'fs-input--error' : ''}`} placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" required />
+                                    <button type="button" className="fs-eye" onClick={() => setShowPassword(v => !v)}>{showPassword ? <EyeOffIcon /> : <EyeIcon />}</button>
+                                </div>
+                                {fieldError('password') && <span className="fs-field-error">{fieldError('password')}</span>}
+                            </div>
 
-        {/* Tab panels */}
-        <div
-          id="panel-login"
-          role="tabpanel"
-          aria-labelledby="tab-login"
-          hidden={tab !== "login"}
-        >
-          {tab === "login" && (
-            <LoginForm
-              onForgotPassword={() => setView("forgotPassword")}
-              onSuccess={() => {
-                announce("Login successful.");
-                // onSuccess is triggered via the useEffect above once user state updates
-              }}
-            />
-          )}
-        </div>
+                            <div className="fs-row fs-row--spread">
+                                <label className="fs-checkbox-label">
+                                    <input type="checkbox" className="fs-checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)} />
+                                    Remember me
+                                </label>
+                                <button type="button" className="fs-link" onClick={() => { setForgotEmail(email); switchView('forgot-password') }}>Forgot password?</button>
+                            </div>
 
-        <div
-          id="panel-signup"
-          role="tabpanel"
-          aria-labelledby="tab-signup"
-          hidden={tab !== "signup"}
-        >
-          {tab === "signup" && (
-            <SignupForm
-              onSuccess={() => {
-                announce("Account created successfully.");
-              }}
-            />
-          )}
-        </div>
+                            {error          && <p className="fs-error">{error}</p>}
+                            {successMessage && <p className="fs-success">{successMessage}</p>}
 
-        {/* Cross-tab hint */}
-        <p style={styles.switchHint}>
-          {tab === "login" ? (
-            <>
-              Don't have an account?{" "}
-              <button
-                type="button"
-                onClick={() => setTab("signup")}
-                style={styles.linkButton}
-              >
-                Sign up for free
-              </button>
-            </>
-          ) : (
-            <>
-              Already have an account?{" "}
-              <button
-                type="button"
-                onClick={() => setTab("login")}
-                style={styles.linkButton}
-              >
-                Log in
-              </button>
-            </>
-          )}
-        </p>
-      </Card>
-    </PageShell>
-  );
+                            <button type="submit" className="fs-btn" disabled={isLoading}>{isLoading ? 'Signing in…' : 'Log In'}</button>
+                            <p className="fs-footer-text">Don't have an account? <button type="button" className="fs-link" onClick={() => switchView('register')}>Sign up for free</button></p>
+                        </form>
+                    )}
+
+                    {/* ── Register ── */}
+                    {view === 'register' && (
+                        <form onSubmit={handleRegister} className="fs-form" noValidate>
+                            <div className="fs-row fs-row--cols2">
+                                <div className="fs-field">
+                                    <label className="fs-label">First name</label>
+                                    <input type="text" className={`fs-input ${fieldError('firstName') ? 'fs-input--error' : ''}`} placeholder="Ana" value={firstName} onChange={e => setFirstName(e.target.value)} autoComplete="given-name" required />
+                                    {fieldError('firstName') && <span className="fs-field-error">{fieldError('firstName')}</span>}
+                                </div>
+                                <div className="fs-field">
+                                    <label className="fs-label">Last name</label>
+                                    <input type="text" className={`fs-input ${fieldError('lastName') ? 'fs-input--error' : ''}`} placeholder="Ionescu" value={lastName} onChange={e => setLastName(e.target.value)} autoComplete="family-name" required />
+                                    {fieldError('lastName') && <span className="fs-field-error">{fieldError('lastName')}</span>}
+                                </div>
+                            </div>
+
+                            <div className="fs-field">
+                                <label className="fs-label">Email address</label>
+                                <input type="email" className={`fs-input ${fieldError('email') ? 'fs-input--error' : ''}`} placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" required />
+                                {fieldError('email') && <span className="fs-field-error">{fieldError('email')}</span>}
+                            </div>
+
+                            <div className="fs-field">
+                                <label className="fs-label">I am a…</label>
+                                <select className="fs-select" value={role} onChange={e => setRole(e.target.value as UserRole)} required>
+                                    <option value={UserRole.STUDENT}>Student — I want to learn</option>
+                                    <option value={UserRole.PROFESSOR}>Professor — I want to teach</option>
+                                </select>
+                            </div>
+
+                            <div className="fs-field">
+                                <label className="fs-label">Password</label>
+                                <div className="fs-input-wrap">
+                                    <input type={showPassword ? 'text' : 'password'} className={`fs-input fs-input--icon ${fieldError('password') ? 'fs-input--error' : ''}`} placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} autoComplete="new-password" required />
+                                    <button type="button" className="fs-eye" onClick={() => setShowPassword(v => !v)}>{showPassword ? <EyeOffIcon /> : <EyeIcon />}</button>
+                                </div>
+                                <span className="fs-hint">At least 8 characters, one uppercase letter, one number.</span>
+                                {fieldError('password') && <span className="fs-field-error">{fieldError('password')}</span>}
+                            </div>
+
+                            <div className="fs-field">
+                                <label className="fs-label">Confirm password</label>
+                                <div className="fs-input-wrap">
+                                    <input type={showConfirm ? 'text' : 'password'} className={`fs-input fs-input--icon ${fieldError('confirmPassword') ? 'fs-input--error' : ''}`} placeholder="••••••••" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} autoComplete="new-password" required />
+                                    <button type="button" className="fs-eye" onClick={() => setShowConfirm(v => !v)}>{showConfirm ? <EyeOffIcon /> : <EyeIcon />}</button>
+                                </div>
+                                {fieldError('confirmPassword') && <span className="fs-field-error">{fieldError('confirmPassword')}</span>}
+                            </div>
+
+                            <label className="fs-checkbox-label">
+                                <input type="checkbox" className="fs-checkbox" checked={agreedToTerms} onChange={e => setAgreedToTerms(e.target.checked)} />
+                                I agree to the <a href="/terms" className="fs-link">Terms of Service</a> and <a href="/privacy" className="fs-link">Privacy Policy</a>
+                            </label>
+
+                            {error && <p className="fs-error">{error}</p>}
+                            <button type="submit" className="fs-btn" disabled={isLoading}>{isLoading ? 'Creating account…' : 'Create Account'}</button>
+                            <p className="fs-footer-text">Already have an account? <button type="button" className="fs-link" onClick={() => switchView('login')}>Log in</button></p>
+                        </form>
+                    )}
+
+                    {/* ── Verify email ── */}
+                    {view === 'verify-email' && (
+                        <div className="fs-form">
+                            <div className="fs-verify-icon">📬</div>
+                            <h2 className="fs-section-title">Check your inbox</h2>
+                            <p className="fs-section-subtitle">We sent a 6-digit code to <strong>{emailToVerify}</strong>. Enter it below to activate your account.</p>
+                            {successMessage && <p className="fs-success">{successMessage}</p>}
+                            <form onSubmit={handleVerifyEmail} noValidate>
+                                <div className="fs-field">
+                                    <label className="fs-label">Verification code</label>
+                                    <input type="text" className={`fs-input fs-input--code ${fieldError('code') ? 'fs-input--error' : ''}`} placeholder="000000" value={verifyCode} onChange={e => setVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" maxLength={6} required />
+                                    {fieldError('code') && <span className="fs-field-error">{fieldError('code')}</span>}
+                                </div>
+                                {error && <p className="fs-error">{error}</p>}
+                                <button type="submit" className="fs-btn" disabled={isLoading} style={{ marginTop: '0.75rem' }}>{isLoading ? 'Verifying…' : 'Verify Email'}</button>
+                            </form>
+                            <div className="fs-verify-links">
+                                <button className="fs-link" onClick={handleResendCode} disabled={isLoading} type="button">Resend code</button>
+                                <button className="fs-link" onClick={() => switchView('login')} type="button">Back to sign in</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── Forgot password ── */}
+                    {view === 'forgot-password' && (
+                        <div className="fs-form">
+                            <h2 className="fs-section-title">Reset your password</h2>
+                            <p className="fs-section-subtitle">Enter the email address associated with your account and we'll send you a code to reset your password.</p>
+                            <form onSubmit={handleForgotPassword} noValidate>
+                                <div className="fs-field">
+                                    <label className="fs-label">Email address</label>
+                                    <input type="email" className={`fs-input ${fieldError('email') ? 'fs-input--error' : ''}`} placeholder="you@example.com" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} autoComplete="email" required />
+                                    {fieldError('email') && <span className="fs-field-error">{fieldError('email')}</span>}
+                                </div>
+                                {error && <p className="fs-error">{error}</p>}
+                                <button type="submit" className="fs-btn" disabled={isLoading} style={{ marginTop: '0.75rem' }}>{isLoading ? 'Sending…' : 'Send Reset Code'}</button>
+                            </form>
+                            <button type="button" className="fs-btn-outline" onClick={() => switchView('login')}>← Back to login</button>
+                        </div>
+                    )}
+
+                    {/* ── Reset password ── */}
+                    {view === 'reset-password' && (
+                        <div className="fs-form">
+                            <h2 className="fs-section-title">Enter new password</h2>
+                            <p className="fs-section-subtitle">Enter the code from your email and choose a new password.</p>
+                            {successMessage && <p className="fs-success">{successMessage}</p>}
+                            <form onSubmit={handleResetPassword} noValidate>
+                                <div className="fs-field">
+                                    <label className="fs-label">Verification code</label>
+                                    <input type="text" className={`fs-input fs-input--code ${fieldError('code') ? 'fs-input--error' : ''}`} placeholder="000000" value={resetCode} onChange={e => setResetCode(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" maxLength={6} required />
+                                    {fieldError('code') && <span className="fs-field-error">{fieldError('code')}</span>}
+                                </div>
+                                <div className="fs-field">
+                                    <label className="fs-label">New password</label>
+                                    <div className="fs-input-wrap">
+                                        <input type={showNew ? 'text' : 'password'} className={`fs-input fs-input--icon ${fieldError('newPassword') ? 'fs-input--error' : ''}`} placeholder="••••••••" value={newPassword} onChange={e => setNewPassword(e.target.value)} autoComplete="new-password" required />
+                                        <button type="button" className="fs-eye" onClick={() => setShowNew(v => !v)}>{showNew ? <EyeOffIcon /> : <EyeIcon />}</button>
+                                    </div>
+                                    {fieldError('newPassword') && <span className="fs-field-error">{fieldError('newPassword')}</span>}
+                                </div>
+                                {error && <p className="fs-error">{error}</p>}
+                                <button type="submit" className="fs-btn" disabled={isLoading} style={{ marginTop: '0.75rem' }}>{isLoading ? 'Resetting…' : 'Reset Password'}</button>
+                            </form>
+                            <button type="button" className="fs-btn-outline" onClick={() => switchView('login')}>← Back to login</button>
+                        </div>
+                    )}
+
+                </div>
+            </div>
+        </>
+    )
 }
-
-// ------------------------------------------------------------------
-// Layout wrappers
-// ------------------------------------------------------------------
-
-function PageShell({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={styles.pageShell}>
-      <div style={styles.bgDecorTop} aria-hidden />
-      <div style={styles.bgDecorBottom} aria-hidden />
-      {children}
-    </div>
-  );
-}
-
-function Card({ children }: { children: React.ReactNode }) {
-  return <div style={styles.card}>{children}</div>;
-}
-
-function Logo() {
-  return (
-    <div style={styles.logo}>
-      <span style={styles.logoIcon}>🎓</span>
-      <span style={styles.logoText}>FII Smart</span>
-    </div>
-  );
-}
-
-// ------------------------------------------------------------------
-// Icon SVGs (inline, no external dependency)
-// ------------------------------------------------------------------
 
 function EyeIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
+    return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+        </svg>
+    )
 }
 
 function EyeOffIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
-      <line x1="1" y1="1" x2="23" y2="23" />
-    </svg>
-  );
+    return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+            <line x1="1" y1="1" x2="23" y2="23"/>
+        </svg>
+    )
 }
 
-function Spinner() {
-  return (
-    <span
-      style={styles.spinner}
-      role="status"
-      aria-label="Loading"
-    />
-  );
-}
+const css = `
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Serif+Display&display=swap');
 
-// ------------------------------------------------------------------
-// STYLES
-// All visual styles are centralised here.
-// To restyle the page: edit only this section.
-// The rest of the component logic is style-agnostic.
-// ------------------------------------------------------------------
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-const COLOR = {
-  bg: "#f2eae0",
-  teal: "#84d3d9",
-  lavender: "#bda6ce",
-  purple: "#9b8ec7",
-  purpleDark: "#7a6fb5",
-  white: "#ffffff",
-  text: "#2d2d2d",
-  textMuted: "#7a7a7a",
-  border: "#d9cfc5",
-  errorBg: "#fff0f0",
-  errorText: "#c0392b",
-  errorBorder: "#e08080",
-};
+  :root {
+    --bg:           #ede8df;
+    --card:         #ffffff;
+    --purple:       #8875b0;
+    --purple-hover: #7464a0;
+    --border:       #e0d9ce;
+    --text:         #2a2520;
+    --text-soft:    #7d7168;
+    --input-bg:     #faf8f5;
+    --error:        #b83232;
+    --success:      #2e7d52;
+    --radius:       14px;
+    --radius-sm:    9px;
+    --shadow:       0 8px 48px rgba(80, 60, 40, 0.13);
+  }
 
-const styles: Record<string, React.CSSProperties> = {
-  // ---- Layout ----
-  pageShell: {
-    minHeight: "100vh",
-    backgroundColor: COLOR.bg,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "2rem 1rem",
-    position: "relative",
-    overflow: "hidden",
-    fontFamily: "'Segoe UI', system-ui, sans-serif",
-  },
-  bgDecorTop: {
-    position: "absolute",
-    top: "-8rem",
-    right: "-8rem",
-    width: "28rem",
-    height: "28rem",
-    borderRadius: "50%",
-    background: `radial-gradient(circle, ${COLOR.lavender}55, transparent 70%)`,
-    pointerEvents: "none",
-  },
-  bgDecorBottom: {
-    position: "absolute",
-    bottom: "-6rem",
-    left: "-6rem",
-    width: "22rem",
-    height: "22rem",
-    borderRadius: "50%",
-    background: `radial-gradient(circle, ${COLOR.teal}44, transparent 70%)`,
-    pointerEvents: "none",
-  },
-  card: {
-    backgroundColor: COLOR.white,
-    borderRadius: "1.25rem",
-    padding: "2.5rem",
-    width: "100%",
-    maxWidth: "460px",
-    boxShadow: "0 8px 40px rgba(0,0,0,0.10)",
-    position: "relative",
-    zIndex: 1,
-  },
+  .fs-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    font-family: 'DM Sans', sans-serif;
+    padding: 1.5rem;
+  }
 
-  // ---- Logo ----
-  logoRow: {
-    display: "flex",
-    justifyContent: "center",
-    marginBottom: "1.75rem",
-  },
-  logo: {
-    display: "flex",
-    alignItems: "center",
-    gap: "0.5rem",
-  },
-  logoIcon: { fontSize: "1.6rem" },
-  logoText: {
-    fontWeight: 700,
-    fontSize: "1.25rem",
-    color: COLOR.purple,
-    letterSpacing: "-0.02em",
-  },
+  .fs-card {
+    background: var(--card);
+    border-radius: 22px;
+    box-shadow: var(--shadow);
+    width: 100%;
+    max-width: 460px;
+    padding: 2.25rem 2.5rem 2.25rem;
+  }
 
-  // ---- Tabs ----
-  tabBar: {
-    display: "flex",
-    borderRadius: "0.625rem",
-    backgroundColor: COLOR.bg,
-    padding: "0.25rem",
-    marginBottom: "2rem",
-    gap: "0.25rem",
-  },
-  tab: {
-    flex: 1,
-    padding: "0.625rem",
-    border: "none",
-    borderRadius: "0.5rem",
-    backgroundColor: "transparent",
-    color: COLOR.textMuted,
-    fontWeight: 500,
-    fontSize: "0.9375rem",
-    cursor: "pointer",
-    transition: "all 0.2s",
-  },
-  tabActive: {
-    backgroundColor: COLOR.white,
-    color: COLOR.purple,
-    fontWeight: 600,
-    boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-  },
+  .fs-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 1.75rem;
+  }
+  .fs-logo-icon { font-size: 1.5rem; }
+  .fs-logo-text {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.45rem;
+    color: var(--purple);
+    letter-spacing: -0.01em;
+  }
 
-  // ---- Card heading ----
-  cardTitle: {
-    margin: "0 0 1.5rem",
-    fontSize: "1.5rem",
-    fontWeight: 700,
-    color: COLOR.text,
-    textAlign: "center",
-  },
-  bodyText: {
-    color: COLOR.textMuted,
-    fontSize: "0.9rem",
-    lineHeight: 1.6,
-    margin: "0 0 1.25rem",
-    textAlign: "center",
-  },
+  .fs-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: var(--bg);
+    border-radius: var(--radius);
+    padding: 4px;
+    margin-bottom: 1.75rem;
+    gap: 2px;
+  }
+  .fs-tab {
+    padding: 0.6rem 1rem;
+    border: none;
+    border-radius: calc(var(--radius) - 2px);
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-soft);
+    cursor: pointer;
+    transition: all 0.18s ease;
+  }
+  .fs-tab--active {
+    background: var(--card);
+    color: var(--purple);
+    box-shadow: 0 1px 6px rgba(80,60,40,0.10);
+  }
 
-  // ---- Form ----
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "1.125rem",
-  },
-  twoCol: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "0.875rem",
-  },
-  fieldWrapper: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "0.3rem",
-  },
-  label: {
-    fontSize: "0.875rem",
-    fontWeight: 500,
-    color: COLOR.text,
-  },
-  inputWrapper: {
-    position: "relative",
-  },
-  input: {
-    width: "100%",
-    padding: "0.6875rem 0.875rem",
-    border: `1.5px solid ${COLOR.border}`,
-    borderRadius: "0.6rem",
-    fontSize: "0.9375rem",
-    color: COLOR.text,
-    backgroundColor: COLOR.white,
-    outline: "none",
-    transition: "border-color 0.2s, box-shadow 0.2s",
-    boxSizing: "border-box",
-    // Focus ring applied via onFocus/onBlur if needed; can also be done in CSS
-  },
-  inputError: {
-    borderColor: COLOR.errorBorder,
-    backgroundColor: COLOR.errorBg,
-  },
-  inputDisabled: {
-    opacity: 0.6,
-    cursor: "not-allowed",
-  },
-  passwordToggle: {
-    position: "absolute",
-    right: "0.75rem",
-    top: "50%",
-    transform: "translateY(-50%)",
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    color: COLOR.textMuted,
-    padding: "0.25rem",
-    display: "flex",
-    alignItems: "center",
-  },
-  hint: {
-    fontSize: "0.78rem",
-    color: COLOR.textMuted,
-  },
-  errorText: {
-    fontSize: "0.8rem",
-    color: COLOR.errorText,
-  },
-  globalError: {
-    padding: "0.75rem 1rem",
-    backgroundColor: COLOR.errorBg,
-    border: `1px solid ${COLOR.errorBorder}`,
-    borderRadius: "0.5rem",
-    color: COLOR.errorText,
-    fontSize: "0.875rem",
-  },
+  .fs-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .fs-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .fs-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .fs-input {
+    width: 100%;
+    padding: 0.7rem 0.9rem;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--input-bg);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .fs-input::placeholder { color: #c4bdb4; }
+  .fs-input:focus { border-color: var(--purple); background: #fff; }
+  .fs-input--error { border-color: var(--error) !important; }
+  .fs-input--icon { padding-right: 2.8rem; }
+  .fs-input--code {
+    letter-spacing: 0.4em;
+    font-size: 1.4rem;
+    font-weight: 600;
+    text-align: center;
+    color: var(--purple);
+    padding: 0.8rem;
+  }
 
-  // ---- Row (remember me / forgot) ----
-  row: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  checkboxLabel: {
-    display: "flex",
-    alignItems: "flex-start",
-    gap: "0.5rem",
-    fontSize: "0.875rem",
-    color: COLOR.text,
-    cursor: "pointer",
-    lineHeight: 1.5,
-  },
-  checkbox: {
-    marginTop: "0.15rem",
-    accentColor: COLOR.purple,
-    width: "1rem",
-    height: "1rem",
-    flexShrink: 0,
-  },
+  .fs-input-wrap { position: relative; }
+  .fs-eye {
+    position: absolute;
+    right: 0.8rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-soft);
+    display: flex;
+    align-items: center;
+    padding: 0;
+    transition: color 0.15s;
+  }
+  .fs-eye:hover { color: var(--purple); }
 
-  // ---- Buttons ----
-  primaryButton: {
-    width: "100%",
-    padding: "0.8125rem",
-    backgroundColor: COLOR.purple,
-    color: COLOR.white,
-    border: "none",
-    borderRadius: "0.6rem",
-    fontSize: "1rem",
-    fontWeight: 600,
-    cursor: "pointer",
-    transition: "background-color 0.2s, opacity 0.2s",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "0.5rem",
-    marginTop: "0.25rem",
-  },
-  ghostButton: {
-    width: "100%",
-    padding: "0.75rem",
-    backgroundColor: "transparent",
-    color: COLOR.textMuted,
-    border: `1.5px solid ${COLOR.border}`,
-    borderRadius: "0.6rem",
-    fontSize: "0.9375rem",
-    cursor: "pointer",
-    transition: "border-color 0.2s",
-  },
-  linkButton: {
-    background: "none",
-    border: "none",
-    color: COLOR.purple,
-    fontWeight: 500,
-    fontSize: "0.875rem",
-    cursor: "pointer",
-    padding: 0,
-    textDecoration: "underline",
-    textUnderlineOffset: "2px",
-  },
-  inlineLink: {
-    color: COLOR.purple,
-    textDecoration: "underline",
-    textUnderlineOffset: "2px",
-  },
+  .fs-select {
+    width: 100%;
+    padding: 0.7rem 2.5rem 0.7rem 0.9rem;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--input-bg);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    color: var(--text);
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    transition: border-color 0.15s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238875b0' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.9rem center;
+  }
+  .fs-select:focus { border-color: var(--purple); background-color: #fff; }
 
-  // ---- Bottom hint ----
-  switchHint: {
-    textAlign: "center",
-    fontSize: "0.875rem",
-    color: COLOR.textMuted,
-    margin: "1.25rem 0 0",
-  },
+  .fs-row { display: flex; align-items: center; }
+  .fs-row--spread { justify-content: space-between; }
+  .fs-row--cols2 { gap: 0.75rem; align-items: flex-start; }
+  .fs-row--cols2 > * { flex: 1; min-width: 0; }
 
-  // ---- Spinner ----
-  spinner: {
-    display: "inline-block",
-    width: "1rem",
-    height: "1rem",
-    border: "2px solid rgba(255,255,255,0.4)",
-    borderTopColor: "#fff",
-    borderRadius: "50%",
-    animation: "spin 0.7s linear infinite",
-  },
+  .fs-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-soft);
+    cursor: pointer;
+    user-select: none;
+    flex-wrap: wrap;
+    line-height: 1.5;
+  }
+  .fs-checkbox {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    accent-color: var(--purple);
+    cursor: pointer;
+  }
 
-  // ---- Success view ----
-  centeredContent: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: "1rem",
-    textAlign: "center",
-  },
-  successIcon: {
-    fontSize: "3rem",
-  },
-};
+  .fs-hint {
+    font-size: 0.78rem;
+    color: var(--text-soft);
+  }
+  .fs-field-error {
+    font-size: 0.78rem;
+    color: var(--error);
+  }
 
-// Inject keyframes for spinner (once, globally)
-if (typeof document !== "undefined" && !document.getElementById("educonnect-auth-styles")) {
-  const styleEl = document.createElement("style");
-  styleEl.id = "educonnect-auth-styles";
-  styleEl.textContent = `
-    @keyframes spin { to { transform: rotate(360deg); } }
-    input:focus, select:focus {
-      outline: none;
-      border-color: #9b8ec7 !important;
-      box-shadow: 0 0 0 3px rgba(155, 142, 199, 0.18);
-    }
-    button[type="submit"]:hover:not(:disabled) { background-color: #7a6fb5 !important; }
-    button[type="submit"]:disabled { opacity: 0.65; cursor: not-allowed; }
-  `;
-  document.head.appendChild(styleEl);
-}
+  .fs-error {
+    font-size: 0.845rem;
+    color: var(--error);
+    background: #fdf0ef;
+    border: 1px solid #f0c8c5;
+    border-radius: var(--radius-sm);
+    padding: 0.6rem 0.875rem;
+    line-height: 1.4;
+  }
+  .fs-success {
+    font-size: 0.845rem;
+    color: var(--success);
+    background: #edf7f1;
+    border: 1px solid #b2dcc3;
+    border-radius: var(--radius-sm);
+    padding: 0.6rem 0.875rem;
+    line-height: 1.4;
+  }
+
+  .fs-btn {
+    width: 100%;
+    padding: 0.82rem;
+    background: var(--purple);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.975rem;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+    transition: background 0.15s, opacity 0.15s;
+  }
+  .fs-btn:hover:not(:disabled) { background: var(--purple-hover); }
+  .fs-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .fs-btn-outline {
+    width: 100%;
+    padding: 0.78rem;
+    background: transparent;
+    color: var(--text-soft);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+    margin-top: 0.5rem;
+  }
+  .fs-btn-outline:hover { border-color: var(--purple); color: var(--purple); }
+
+  .fs-link {
+    background: none;
+    border: none;
+    color: var(--purple);
+    font-family: 'DM Sans', sans-serif;
+    font-size: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: none;
+    transition: opacity 0.15s;
+  }
+  .fs-link:hover { opacity: 0.72; text-decoration: underline; }
+
+  .fs-footer-text {
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--text-soft);
+    margin-top: 0.25rem;
+  }
+
+  .fs-section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.5rem;
+    color: var(--text);
+    font-weight: 400;
+    margin-bottom: 0.15rem;
+  }
+  .fs-section-subtitle {
+    font-size: 0.875rem;
+    color: var(--text-soft);
+    line-height: 1.55;
+    margin-bottom: 0.25rem;
+  }
+  .fs-section-subtitle strong { color: var(--text); font-weight: 600; }
+
+  .fs-verify-icon {
+    font-size: 2.5rem;
+    text-align: center;
+    margin-bottom: 0.25rem;
+  }
+  .fs-verify-links {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.875rem;
+    font-size: 0.875rem;
+  }
+`
