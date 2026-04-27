@@ -1,6 +1,4 @@
-"use client";
-
-import { Suspense, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -20,22 +18,14 @@ import type { Course, Module, Comment } from "@/lib/course-types";
 import { mapCourseToFE } from "@/lib/course-types";
 import * as api from "@/lib/api";
 import { Toaster, toast } from "sonner";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams } from "react-router-dom";
 
 // Hardcoded for now — in production, comes from auth context
 const TEACHER_ID = "aaaaaaaaaaaaaaaaaaaaaaaa";
 const pendingNewCourseCreations = new Map<string, Promise<api.CourseAPI>>();
 
 export default function CourseBuilderPage() {
-  return (
-    <Suspense fallback={null}>
-      <CourseBuilderPageInner />
-    </Suspense>
-  );
-}
-
-function CourseBuilderPageInner() {
-  const searchParams = useSearchParams();
+  const [searchParams] = useSearchParams();
   const [course, setCourse] = useState<Course | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);

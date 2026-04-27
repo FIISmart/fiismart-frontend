@@ -1,11 +1,9 @@
-"use client";
-
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Plus, GraduationCap, BookOpen, Clock, Users, Trash2 } from "lucide-react";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import * as api from "@/lib/api";
 import { toast } from "sonner";
 import {
@@ -35,7 +33,7 @@ type CourseListItem = {
   tags: string[];
 };
 
-export default function CursuriPage() {
+export default function CoursesListPage() {
   const newCourseHref = `/?new=1&newToken=${Date.now().toString()}`;
   const [courses, setCourses] = useState<CourseListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -117,7 +115,7 @@ export default function CursuriPage() {
               </div>
             </div>
             <Button asChild className="gap-2">
-              <Link href={newCourseHref}>
+              <Link to={newCourseHref}>
                 <Plus className="h-4 w-4" />
                 Curs Nou
               </Link>
@@ -187,7 +185,7 @@ export default function CursuriPage() {
               <CardFooter className="p-4 pt-0">
                 <div className="w-full flex gap-2">
                   <Button asChild variant="outline" className="flex-1">
-                    <Link href={`/?courseId=${course.id}`}>Editează Cursul</Link>
+                    <Link to={`/?courseId=${course.id}`}>Editează Cursul</Link>
                   </Button>
                   <Button
                     variant="destructive"
@@ -204,7 +202,7 @@ export default function CursuriPage() {
 
           {/* Add New Course Card */}
           <Link
-            href={newCourseHref}
+            to={newCourseHref}
             className="border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center min-h-[320px] text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
           >
             <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-3">
