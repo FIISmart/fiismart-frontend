@@ -50,6 +50,19 @@ export interface ModuleSummary {
     quiz?: QuizStatus;
 }
 
+export interface StudentCommentDTO {
+    commentId: string;
+    authorName: string;
+    authorRole: string;
+    body: string;
+    videoTimestamp?: number;
+    likeCount: number;
+    timeAgo: string;
+    isLikedByMe: boolean;
+    createdAt: string;
+    replies: StudentCommentDTO[];
+}
+
 export interface CourseComment {
     commentId: string;
     authorName: string;
@@ -58,5 +71,7 @@ export interface CourseComment {
     timestampSecs?: number;
     likeCount: number;
     timeAgo: string;
-    isLikedByMe?: boolean;
+    likedByMe: boolean;
+    isPinned?: boolean;
 }
+
