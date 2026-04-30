@@ -1,6 +1,10 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "@/features/auth/components/ProtectedRoute";
 import { UserRole } from "@/features/auth/types";
+import AuthPage from "@/features/auth/pages/AuthPage";
+import UnauthorizedPage from "@/features/auth/pages/UnauthorizedPage";
+import TermsOfServicePage from "@/features/auth/components/TermsOfServicePage";
+import PrivacyPolicyPage from "@/features/auth/components/PrivacyPolicyPage";
 import CourseBuilderPage from "@/features/course-builder/pages/CourseBuilderPage";
 import CoursesListPage from "@/features/courses/pages/CoursesListPage";
 
@@ -14,10 +18,10 @@ export default function App() {
     <Routes>
       {/* Public */}
       <Route path="/" element={<LandingPlaceholder />} />
-      <Route path="/auth" element={<AuthPlaceholder />} />
-      <Route path="/terms" element={<LegalPlaceholder kind="Terms" />} />
-      <Route path="/privacy" element={<LegalPlaceholder kind="Privacy" />} />
-      <Route path="/unauthorized" element={<UnauthorizedPlaceholder />} />
+      <Route path="/auth" element={<AuthPage />} />
+      <Route path="/terms" element={<TermsOfServicePage />} />
+      <Route path="/privacy" element={<PrivacyPolicyPage />} />
+      <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
       {/* Student-only */}
       <Route element={<ProtectedRoute allowedRoles={[UserRole.STUDENT]} />}>
@@ -57,13 +61,4 @@ function Placeholder({ name }: { name: string }) {
 
 function LandingPlaceholder() {
   return <Placeholder name="Landing" />;
-}
-function AuthPlaceholder() {
-  return <Placeholder name="Auth" />;
-}
-function LegalPlaceholder({ kind }: { kind: string }) {
-  return <Placeholder name={kind} />;
-}
-function UnauthorizedPlaceholder() {
-  return <Placeholder name="Access denied" />;
 }
