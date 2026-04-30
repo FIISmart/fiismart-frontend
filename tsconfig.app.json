@@ -20,7 +20,7 @@
     "isolatedModules": true,
     "allowJs": true,
     "baseUrl": ".",
-    "paths": { "@/*": ["./*"] }
+    "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["src", "lib", "components", "hooks"]
+  "include": ["src"]
 }

@@ -7,14 +7,14 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "."),
+      "@": path.resolve(__dirname, "src"),
     },
   },
   server: {
     port: 3000,
     proxy: {
       "/api": {
-        target: process.env.VITE_API_ORIGIN || process.env.NEXT_PUBLIC_API_ORIGIN || "http://localhost:8080",
+        target: process.env.VITE_API_ORIGIN || "http://localhost:8000",
         changeOrigin: true,
       },
     },
