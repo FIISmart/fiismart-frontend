@@ -1,0 +1,218 @@
+/* Landing-feature scoped styles. Imported once from LandingPage. */
+
+@layer components {
+  .landing-btn-primary {
+    background-color: var(--primary);
+    color: #ffffff;
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 1rem;
+    padding: 1rem 2rem;
+    border-radius: var(--radius-md);
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .landing-btn-primary:hover {
+    opacity: 0.9;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  .landing-btn-secondary {
+    background-color: transparent;
+    border: 1px solid var(--border);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 1rem;
+    padding: 1rem 2rem;
+    border-radius: var(--radius-md);
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .landing-btn-secondary:hover {
+    background-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  }
+
+  .landing-badge {
+    background-color: color-mix(in srgb, var(--accent) 40%, transparent);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .landing-badge-purple {
+    background-color: color-mix(in srgb, var(--secondary) 30%, transparent);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .landing-card {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+  }
+  .landing-card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  .landing-section-container {
+    max-width: 80rem;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  @media (min-width: 640px) {
+    .landing-section-container {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    .landing-section-container {
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+  }
+
+  .landing-section-padding {
+    padding-top: 5rem;
+    padding-bottom: 5rem;
+  }
+  @media (min-width: 1024px) {
+    .landing-section-padding {
+      padding-top: 8rem;
+      padding-bottom: 8rem;
+    }
+  }
+
+  .landing-blob {
+    border-radius: 50%;
+    filter: blur(48px);
+    position: absolute;
+    pointer-events: none;
+  }
+
+  .landing-navbar-blur {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .landing-shadow-hero {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  }
+
+  .landing-shadow-card {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  .landing-shadow-card-hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+}
+
+@layer utilities {
+  .landing-text-h1 {
+    font-size: 3.75rem;
+    line-height: 1.1;
+    font-weight: 700;
+  }
+  .landing-text-h2 {
+    font-size: 2.25rem;
+    line-height: 1.2;
+    font-weight: 700;
+  }
+  .landing-text-h3 {
+    font-size: 1.25rem;
+    line-height: 1.3;
+    font-weight: 600;
+  }
+  .landing-text-body-lg {
+    font-size: 1.125rem;
+    line-height: 1.6;
+  }
+  .landing-text-body {
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+  .landing-text-body-sm {
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+  .landing-text-caption {
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+
+  .font-heading {
+    font-family: 'Poppins', 'Poppins Fallback', sans-serif;
+  }
+  .font-body {
+    font-family: 'Inter', 'Inter Fallback', sans-serif;
+  }
+}
+
+/* Keyframes used by the landing page. */
+@keyframes landing-fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes landing-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes landing-countUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-landing-fadeInUp {
+  animation: landing-fadeInUp 0.6s ease-out forwards;
+}
+
+.animate-landing-float {
+  animation: landing-float 4s ease-in-out infinite;
+}
+
+.animate-landing-count {
+  animation: landing-countUp 0.6s ease-out forwards;
+}
