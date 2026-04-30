@@ -8,6 +8,7 @@ import PrivacyPolicyPage from "@/features/auth/components/PrivacyPolicyPage";
 import LandingPage from "@/features/landing/pages/LandingPage";
 import ProfessorDashboardPage from "@/features/dashboard-prof/pages/ProfessorDashboardPage";
 import StudentDashboardPage from "@/features/dashboard-student/pages/StudentDashboardPage";
+import LessonVideoPage from "@/features/lesson-video/pages/LessonVideoPage";
 import CourseBuilderPage from "@/features/course-builder/pages/CourseBuilderPage";
 import CoursesListPage from "@/features/courses/pages/CoursesListPage";
 
@@ -31,7 +32,7 @@ export default function App() {
         <Route path="/student/dashboard" element={<StudentDashboardPage />} />
         <Route
           path="/student/courses/:courseId/lectures/:lectureId"
-          element={<Placeholder name="Lesson video" />}
+          element={<LessonVideoPage />}
         />
         <Route path="/student/quizzes/:quizId" element={<Placeholder name="Quiz player" />} />
       </Route>
