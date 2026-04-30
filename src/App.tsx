@@ -9,14 +9,10 @@ import LandingPage from "@/features/landing/pages/LandingPage";
 import ProfessorDashboardPage from "@/features/dashboard-prof/pages/ProfessorDashboardPage";
 import StudentDashboardPage from "@/features/dashboard-student/pages/StudentDashboardPage";
 import LessonVideoPage from "@/features/lesson-video/pages/LessonVideoPage";
+import QuizPlayerPage from "@/features/quiz/pages/QuizPlayerPage";
 import CourseBuilderPage from "@/features/course-builder/pages/CourseBuilderPage";
 import CoursesListPage from "@/features/courses/pages/CoursesListPage";
 
-/**
- * Top-level routing skeleton. Feature agents in Phase 2 fill the placeholder
- * routes (landing, auth, dashboards, video, quiz) by replacing the matching
- * elements with their real pages. The shape stays put.
- */
 export default function App() {
   return (
     <Routes>
@@ -34,7 +30,7 @@ export default function App() {
           path="/student/courses/:courseId/lectures/:lectureId"
           element={<LessonVideoPage />}
         />
-        <Route path="/student/quizzes/:quizId" element={<Placeholder name="Quiz player" />} />
+        <Route path="/student/quizzes/:quizId" element={<QuizPlayerPage />} />
       </Route>
 
       {/* Professor-only */}
@@ -51,15 +47,3 @@ export default function App() {
     </Routes>
   );
 }
-
-function Placeholder({ name }: { name: string }) {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-edu-bg text-edu-foreground">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold mb-2">{name}</h1>
-        <p className="text-muted-foreground">Feature pending integration.</p>
-      </div>
-    </div>
-  );
-}
-
