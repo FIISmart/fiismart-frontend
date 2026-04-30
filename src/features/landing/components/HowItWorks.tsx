@@ -1,9 +1,9 @@
 import { UserPlus, Search, BookOpen, Award } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface Step {
   number: string;
-  icon: ReactNode;
+  icon: React.ReactNode;
   title: string;
   description: string;
 }
@@ -12,30 +12,30 @@ const steps: Step[] = [
   {
     number: "01",
     icon: <UserPlus size={32} />,
-    title: "Creaza un cont",
+    title: "Crează un cont",
     description:
-      "Inregistreaza-te gratuit in mai putin de 2 minute. Ai nevoie doar de o adresa de email si esti gata.",
+      "Înregistrează-te gratuit în mai puțin de 2 minute. Ai nevoie doar de o adresă de email și ești gata.",
   },
   {
     number: "02",
     icon: <Search size={32} />,
-    title: "Exploreaza cursuri",
+    title: "Explorează cursuri",
     description:
-      "Rasfoieste peste 1200+ cursuri gratuite din toate domeniile si alege ce ti se potriveste.",
+      "Răsfoiește peste 1200+ cursuri gratuite din toate domeniile și alege ce ți se potrivește.",
   },
   {
     number: "03",
     icon: <BookOpen size={32} />,
-    title: "Invata eficient",
+    title: "Învață eficient",
     description:
-      "Urmeaza lectiile video, rezolva quiz-uri interactive si aplica cunostintele in proiecte reale.",
+      "Urmează lecțiile video, rezolvă quiz-uri interactive și aplică cunoștințele în proiecte reale.",
   },
   {
     number: "04",
     icon: <Award size={32} />,
-    title: "Obtine certificat",
+    title: "Obține certificat",
     description:
-      "La finalizarea cursului primesti un certificat recunoscut de angajatori din toata Romania.",
+      "La finalizarea cursului primești un certificat recunoscut de angajatori din toată România.",
   },
 ];
 
@@ -58,42 +58,44 @@ export default function HowItWorks() {
   }, []);
 
   return (
-    <section ref={sectionRef} className="landing-section-padding bg-muted/30 py-20">
-      <div className="fii-container">
+    <section ref={sectionRef} className="section-padding bg-muted/30 py-20">
+      <div className="fii-container max-w-6xl mx-auto px-4">
+
         {/* Header Centrat */}
         <div className="text-center mb-16">
-          <span className="landing-badge mb-4 inline-block bg-secondary/20 text-foreground px-4 py-1 rounded-full text-sm font-medium">
-            Cum functioneaza
+          <span className="badge mb-4 inline-block bg-secondary/20 text-secondary-foreground px-4 py-1 rounded-full text-sm font-medium">
+            Cum funcționează
           </span>
           <h2 className="font-heading text-4xl md:text-5xl font-bold text-foreground mb-4">
-            Incepe in 4 pasi simpli
+            Începe în 4 pași simpli
           </h2>
           <p className="font-body text-lg text-muted-foreground max-w-2xl mx-auto">
-            De la inregistrare la certificare, procesul este simplu si intuitiv.
+            De la înregistrare la certificare, procesul este simplu și intuitiv.
           </p>
         </div>
 
-        {/* Container Pasi Orizontali */}
+        {/* Container Pași Orizontali */}
         <div className="relative mt-12">
-          {/* Linia orizontala de fundal (vizibila doar pe desktop) */}
+          {/* Linia orizontală de fundal (vizibilă doar pe desktop) */}
           <div className="hidden lg:block absolute top-12 left-[10%] right-[10%] h-[2px] bg-border z-0" />
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative z-10">
-            {steps.map((step) => (
+            {steps.map((step, index) => (
               <div
-                key={step.number}
+                key={index}
                 className={`flex flex-col items-center text-center group transition-all duration-700 ${
                   isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
                 }`}
+                style={{ animationDelay: `${index * 0.15}s` }}
               >
-                {/* Iconita cu numar */}
+                {/* Iconița cu număr */}
                 <div className="relative mb-6">
-                  {/* Badge Numar */}
-                  <div className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold shadow-md z-20">
+                  {/* Badge Număr */}
+                  <div className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-[#9b87f5] text-white flex items-center justify-center text-sm font-bold shadow-md z-20">
                     {step.number}
                   </div>
-                  {/* Patratul rotunjit pentru iconita */}
-                  <div className="w-24 h-24 bg-muted rounded-2xl flex items-center justify-center text-foreground border border-border group-hover:-translate-y-2 transition-transform duration-300 shadow-sm">
+                  {/* Pătratul rotunjit pentru iconiță */}
+                  <div className="w-24 h-24 bg-[#F2ECE4] rounded-2xl flex items-center justify-center text-foreground border border-border group-hover:-translate-y-2 transition-transform duration-300 shadow-sm">
                     {step.icon}
                   </div>
                 </div>
@@ -111,6 +113,7 @@ export default function HowItWorks() {
             ))}
           </div>
         </div>
+
       </div>
     </section>
   );

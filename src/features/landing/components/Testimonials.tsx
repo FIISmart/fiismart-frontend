@@ -45,15 +45,15 @@ const testimonials: Testimonial[] = [
 
 export default function Testimonials() {
   return (
-    <section className="landing-section-padding bg-muted/30">
+    <section className="section-padding bg-muted/30">
       <div className="fii-container">
         {/* Header */}
         <div className="text-center mb-16">
-          <span className="landing-badge mb-4">💬 Testimoniale</span>
-          <h2 className="font-heading landing-text-h2 font-bold text-foreground mb-4">
+          <span className="badge mb-4">💬 Testimoniale</span>
+          <h2 className="font-heading text-h2 font-bold text-foreground mb-4">
             Ce spun utilizatorii nostri
           </h2>
-          <p className="font-body landing-text-body-lg text-muted-foreground max-w-xl mx-auto">
+          <p className="font-body text-body-lg text-muted-foreground max-w-xl mx-auto">
             Sute de studenti si profesori ne-au acordat increderea lor. Iata ce spun ei.
           </p>
         </div>
@@ -61,10 +61,7 @@ export default function Testimonials() {
         {/* Testimonial Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {testimonials.map((testimonial) => (
-            <div
-              key={testimonial.id}
-              className="landing-card flex flex-col gap-4 relative overflow-hidden"
-            >
+            <div key={testimonial.id} className="landing-card flex flex-col gap-4 relative overflow-hidden">
               {/* Quote Icon */}
               <Quote
                 size={40}
@@ -84,22 +81,22 @@ export default function Testimonials() {
               </div>
 
               {/* Content */}
-              <p className="font-body landing-text-body text-muted-foreground leading-relaxed relative z-10">
+              <p className="font-body text-body text-muted-foreground leading-relaxed relative z-10">
                 "{testimonial.content}"
               </p>
 
               {/* Author */}
               <div className="flex items-center gap-3 pt-2 border-t border-border mt-auto">
                 <div
-                  className={`w-10 h-10 rounded-full bg-gradient-to-br ${testimonial.color} flex items-center justify-center font-heading font-semibold text-foreground landing-text-body-sm flex-shrink-0`}
+                  className={`w-10 h-10 rounded-full bg-gradient-to-br ${testimonial.color} flex items-center justify-center font-heading font-semibold text-foreground text-body-sm flex-shrink-0`}
                 >
                   {testimonial.initials}
                 </div>
                 <div>
-                  <p className="font-heading font-semibold text-foreground landing-text-body-sm">
+                  <p className="font-heading font-semibold text-foreground text-body-sm">
                     {testimonial.name}
                   </p>
-                  <p className="font-body landing-text-caption text-muted-foreground">
+                  <p className="font-body text-caption text-muted-foreground">
                     {testimonial.role}
                   </p>
                 </div>
