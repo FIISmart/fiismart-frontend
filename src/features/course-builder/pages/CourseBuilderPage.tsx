@@ -11,9 +11,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Plus, GraduationCap, Sparkles, LayoutPanelLeft } from "lucide-react";
-import { CourseHeader } from "@/components/course-builder/course-header";
-import { ModuleCard } from "@/components/course-builder/module-card";
-import { CommentModeration } from "@/components/course-builder/comment-moderation";
+import { CourseHeader } from "@/features/course-builder/components/course-header";
+import { ModuleCard } from "@/features/course-builder/components/module-card";
+import { CommentModeration } from "@/features/course-builder/components/comment-moderation";
 import type { Course, Module, Comment } from "@/lib/course-types";
 import { mapCourseToFE } from "@/lib/course-types";
 import * as api from "@/lib/api";
