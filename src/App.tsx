@@ -6,6 +6,7 @@ import UnauthorizedPage from "@/features/auth/pages/UnauthorizedPage";
 import TermsOfServicePage from "@/features/auth/components/TermsOfServicePage";
 import PrivacyPolicyPage from "@/features/auth/components/PrivacyPolicyPage";
 import LandingPage from "@/features/landing/pages/LandingPage";
+import ProfessorDashboardPage from "@/features/dashboard-prof/pages/ProfessorDashboardPage";
 import CourseBuilderPage from "@/features/course-builder/pages/CourseBuilderPage";
 import CoursesListPage from "@/features/courses/pages/CoursesListPage";
 
@@ -36,7 +37,7 @@ export default function App() {
 
       {/* Professor-only */}
       <Route element={<ProtectedRoute allowedRoles={[UserRole.PROFESSOR]} />}>
-        <Route path="/professor/dashboard" element={<Placeholder name="Professor dashboard" />} />
+        <Route path="/professor/dashboard" element={<ProfessorDashboardPage />} />
         <Route path="/professor/courses" element={<CoursesListPage />} />
         <Route path="/professor/courses/:courseId" element={<CourseBuilderPage />} />
       </Route>
