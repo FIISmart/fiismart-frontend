@@ -1,14 +1,28 @@
 export const API_BASE = import.meta.env.VITE_API_URL || "/api";
 
+/** localStorage key for the bearer token. Mirrored from features/auth/services/auth.service.ts. */
+const TOKEN_KEY = "fiismart_token";
+
+function authHeader(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const token = window.localStorage.getItem(TOKEN_KEY);
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 /**
  * Shared fetch primitive every feature should use to talk to the backend.
- * Sends JSON by default, throws on non-2xx with the server's message when present,
- * and returns `undefined` for 204 No Content.
+ * Sends JSON by default, attaches the bearer token from localStorage when present,
+ * throws on non-2xx with the server's message when present, and returns
+ * `undefined` for 204 No Content.
  */
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...options?.headers },
     ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeader(),
+      ...options?.headers,
+    },
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: res.statusText }));
@@ -264,7 +278,8 @@ async function postMultipart(path: string, file: File): Promise<UploadResponse> 
 
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
-    body: formData, // no Content-Type header — browser sets multipart boundary
+    headers: { ...authHeader() }, // browser sets the multipart Content-Type itself
+    body: formData,
   });
 
   if (!res.ok) {
