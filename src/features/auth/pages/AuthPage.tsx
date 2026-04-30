@@ -54,11 +54,11 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-edu-bg lg:grid lg:grid-cols-2">
+    <div className="min-h-screen w-full bg-edu-bg lg:grid lg:grid-cols-2 overflow-x-hidden">
       {/* ── Left brand panel (hidden on mobile) ── */}
-      <aside className="hidden lg:flex relative overflow-hidden bg-gradient-to-br from-edu-purple via-edu-lavender to-edu-purple text-white">
+      <aside className="hidden lg:flex relative overflow-hidden min-w-0 bg-gradient-to-br from-edu-purple via-edu-lavender to-edu-purple text-white">
         <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_30%_20%,white,transparent_55%)]" />
-        <div className="relative z-10 flex flex-col justify-between p-12 w-full">
+        <div className="relative z-10 flex flex-col justify-between p-12 w-full max-w-full">
           <Link to="/" className="flex items-center gap-3 group">
             <span className="grid place-items-center size-11 rounded-xl bg-white/15 backdrop-blur-sm ring-1 ring-white/30">
               <GraduationCap className="size-6" aria-hidden="true" />
@@ -83,7 +83,7 @@ export default function AuthPage() {
       </aside>
 
       {/* ── Right form panel ── */}
-      <main className="flex items-center justify-center p-6 sm:p-10">
+      <main className="flex items-center justify-center min-w-0 p-6 sm:p-10">
         <div className="w-full max-w-md space-y-6">
           {/* Mobile brand badge */}
           <div className="flex lg:hidden items-center gap-3 justify-center">
