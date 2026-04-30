@@ -30,8 +30,8 @@ export interface LoginPayload {
 }
 
 export interface SignupPayload {
-  firstName: string;
-  lastName: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   password: string;
   role: UserRole;
