@@ -9,6 +9,9 @@ out
 .vite
 *.local
 
+# TypeScript
+*.tsbuildinfo
+
 # Env
 .env
 .env.local
