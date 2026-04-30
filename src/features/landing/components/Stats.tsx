@@ -88,7 +88,7 @@ export default function Stats() {
       ref={sectionRef}
       className="landing-section-padding bg-background border-y border-border"
     >
-      <div className="landing-section-container">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         {/* Header */}
         <div className="text-center mb-16">
           <span className="landing-badge mb-4">📊 Statistici</span>

@@ -9,7 +9,7 @@ export default function Hero() {
       <div className="landing-blob w-80 h-80 bg-accent/40 bottom-10 right-10 z-0" />
       <div className="landing-blob w-64 h-64 bg-primary/20 top-1/2 left-1/3 z-0" />
 
-      <div className="landing-section-container relative z-10 w-full">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full relative z-10 ">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center py-20">
           {/* Left Content */}
           <div className="flex flex-col gap-6 animate-landing-fadeInUp">
