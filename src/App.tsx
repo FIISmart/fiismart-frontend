@@ -7,6 +7,7 @@ import TermsOfServicePage from "@/features/auth/components/TermsOfServicePage";
 import PrivacyPolicyPage from "@/features/auth/components/PrivacyPolicyPage";
 import LandingPage from "@/features/landing/pages/LandingPage";
 import ProfessorDashboardPage from "@/features/dashboard-prof/pages/ProfessorDashboardPage";
+import StudentDashboardPage from "@/features/dashboard-student/pages/StudentDashboardPage";
 import CourseBuilderPage from "@/features/course-builder/pages/CourseBuilderPage";
 import CoursesListPage from "@/features/courses/pages/CoursesListPage";
 
@@ -27,7 +28,7 @@ export default function App() {
 
       {/* Student-only */}
       <Route element={<ProtectedRoute allowedRoles={[UserRole.STUDENT]} />}>
-        <Route path="/student/dashboard" element={<Placeholder name="Student dashboard" />} />
+        <Route path="/student/dashboard" element={<StudentDashboardPage />} />
         <Route
           path="/student/courses/:courseId/lectures/:lectureId"
           element={<Placeholder name="Lesson video" />}
