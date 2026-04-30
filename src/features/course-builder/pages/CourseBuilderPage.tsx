@@ -17,14 +17,15 @@ import { CommentModeration } from "@/features/course-builder/components/comment-
 import type { Course, Module, Comment } from "@/lib/course-types";
 import { mapCourseToFE } from "@/lib/course-types";
 import * as api from "@/lib/api";
+import { useAuth } from "@/features/auth/context/AuthContext";
 import { Toaster, toast } from "sonner";
 import { useSearchParams } from "react-router-dom";
 
-// Hardcoded for now — in production, comes from auth context
-const TEACHER_ID = "aaaaaaaaaaaaaaaaaaaaaaaa";
 const pendingNewCourseCreations = new Map<string, Promise<api.CourseAPI>>();
 
 export default function CourseBuilderPage() {
+  const { user } = useAuth();
+  const teacherId = user?.id;
   const [searchParams] = useSearchParams();
   const [course, setCourse] = useState<Course | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -35,6 +36,7 @@ export default function CourseBuilderPage() {
   // ── Load Course & Modules on Mount ────────────────────
 
   useEffect(() => {
+    if (!teacherId) return;
     async function loadCourse() {
       try {
         const shouldCreateNew = searchParams.get("new") === "1";
@@ -65,7 +67,7 @@ export default function CourseBuilderPage() {
               creationPromise = api.createCourse({
                 title: "Curs Nou",
                 description: "Adaugă o descriere...",
-                teacherId: TEACHER_ID,
+                teacherId: teacherId!,
                 tags: [],
               });
               pendingNewCourseCreations.set(newToken, creationPromise);
@@ -95,14 +97,14 @@ export default function CourseBuilderPage() {
         } else if (selectedCourseId) {
           currentCourseApi = await api.getCourse(selectedCourseId);
         } else {
-          const courses = await api.getCoursesByTeacher(TEACHER_ID);
+          const courses = await api.getCoursesByTeacher(teacherId!);
           if (courses.length > 0) {
             currentCourseApi = courses[0];
           } else {
             currentCourseApi = await api.createCourse({
               title: "Curs Nou",
               description: "Adaugă o descriere...",
-              teacherId: TEACHER_ID,
+              teacherId: teacherId!,
               tags: [],
             });
           }
@@ -123,7 +125,7 @@ export default function CourseBuilderPage() {
       }
     }
     loadCourse();
-  }, [searchParams]);
+  }, [searchParams, teacherId]);
 
   if (isLoading || !course) {
     return (

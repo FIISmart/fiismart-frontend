@@ -5,6 +5,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Plus, GraduationCap, BookOpen, Clock, Users, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import * as api from "@/lib/api";
+import { useAuth } from "@/features/auth/context/AuthContext";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -17,7 +18,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const TEACHER_ID = "aaaaaaaaaaaaaaaaaaaaaaaa";
 const FALLBACK_THUMBNAIL = "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=640&h=360&fit=crop";
 
 type CourseListItem = {
@@ -34,16 +34,19 @@ type CourseListItem = {
 };
 
 export default function CoursesListPage() {
+  const { user } = useAuth();
+  const teacherId = user?.id;
   const newCourseHref = `/?new=1&newToken=${Date.now().toString()}`;
   const [courses, setCourses] = useState<CourseListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deletingCourseId, setDeletingCourseId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!teacherId) return;
     async function loadCourses() {
       setIsLoading(true);
       try {
-        const teacherCourses = await api.getCoursesByTeacher(TEACHER_ID);
+        const teacherCourses = await api.getCoursesByTeacher(teacherId!);
         const mappedCourses = await Promise.all(
           teacherCourses.map(async (course) => {
             const modules = await api.getModules(course.id);
@@ -82,7 +85,7 @@ export default function CoursesListPage() {
     }
 
     loadCourses();
-  }, []);
+  }, [teacherId]);
 
   const handleDeleteCourse = async () => {
     if (!deletingCourseId) return;
