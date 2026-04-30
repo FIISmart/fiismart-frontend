@@ -5,6 +5,7 @@ import AuthPage from "@/features/auth/pages/AuthPage";
 import UnauthorizedPage from "@/features/auth/pages/UnauthorizedPage";
 import TermsOfServicePage from "@/features/auth/components/TermsOfServicePage";
 import PrivacyPolicyPage from "@/features/auth/components/PrivacyPolicyPage";
+import LandingPage from "@/features/landing/pages/LandingPage";
 import CourseBuilderPage from "@/features/course-builder/pages/CourseBuilderPage";
 import CoursesListPage from "@/features/courses/pages/CoursesListPage";
 
@@ -17,7 +18,7 @@ export default function App() {
   return (
     <Routes>
       {/* Public */}
-      <Route path="/" element={<LandingPlaceholder />} />
+      <Route path="/" element={<LandingPage />} />
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/terms" element={<TermsOfServicePage />} />
       <Route path="/privacy" element={<PrivacyPolicyPage />} />
@@ -59,6 +60,3 @@ function Placeholder({ name }: { name: string }) {
   );
 }
 
-function LandingPlaceholder() {
-  return <Placeholder name="Landing" />;
-}
