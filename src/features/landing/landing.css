@@ -1,5 +1,35 @@
 /* Landing-feature scoped styles. Imported once from LandingPage. */
 
+/*
+ * .fii-container — page-width wrapper.
+ * Unlayered on purpose: in Tailwind v4 the preflight `* { padding: 0; margin: 0 }`
+ * lives in @layer base and, on some Chromium/Safari versions, wins the cascade
+ * against `padding-inline`/`margin-inline` rules in @layer utilities (the
+ * physical↔logical alias resolution is browser-dependent under cascade layers).
+ * Unlayered author rules trump every layered rule per the cascade-layers spec,
+ * so this rule survives the preflight regardless of the alias quirk.
+ */
+.fii-container {
+  width: 100%;
+  max-width: 80rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+@media (min-width: 640px) {
+  .fii-container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+@media (min-width: 1024px) {
+  .fii-container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
 @layer components {
   .landing-btn-primary {
     background-color: var(--primary);
