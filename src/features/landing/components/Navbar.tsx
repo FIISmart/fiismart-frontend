@@ -27,9 +27,9 @@ export default function Navbar() {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 landing-navbar-blur ${
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 navbar-blur ${
         isScrolled
-          ? "bg-background/80 landing-shadow-card border-b border-border"
+          ? "bg-background/80 shadow-card border-b border-border"
           : "bg-transparent"
       }`}
     >
@@ -52,7 +52,7 @@ export default function Navbar() {
               <a
                 key={link.label}
                 href={link.href}
-                className="text-muted-foreground hover:text-primary font-body landing-text-body transition-colors duration-150"
+                className="text-muted-foreground hover:text-primary font-body text-body transition-colors duration-150"
               >
                 {link.label}
               </a>
@@ -61,10 +61,10 @@ export default function Navbar() {
 
           {/* Desktop Auth Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Link to="/auth" className="landing-btn-secondary py-2 px-5 text-sm">
+            <Link to="/auth" className="btn-secondary py-2 px-5 text-sm">
               Autentifica-te
             </Link>
-            <Link to="/auth" className="landing-btn-primary py-2 px-5 text-sm">
+            <Link to="/auth" className="btn-primary py-2 px-5 text-sm">
               Incepe Gratuit
             </Link>
           </div>
@@ -87,7 +87,7 @@ export default function Navbar() {
                 <a
                   key={link.label}
                   href={link.href}
-                  className="text-muted-foreground hover:text-primary font-body landing-text-body px-2 py-2 transition-colors"
+                  className="text-muted-foreground hover:text-primary font-body text-body px-2 py-2 transition-colors"
                   onClick={() => setIsMobileOpen(false)}
                 >
                   {link.label}
@@ -96,14 +96,14 @@ export default function Navbar() {
               <div className="flex flex-col gap-2 pt-3 border-t border-border">
                 <Link
                   to="/auth"
-                  className="landing-btn-secondary py-2 px-5 text-sm justify-center"
+                  className="btn-secondary py-2 px-5 text-sm justify-center"
                   onClick={() => setIsMobileOpen(false)}
                 >
                   Autentifica-te
                 </Link>
                 <Link
                   to="/auth"
-                  className="landing-btn-primary py-2 px-5 text-sm justify-center"
+                  className="btn-primary py-2 px-5 text-sm justify-center"
                   onClick={() => setIsMobileOpen(false)}
                 >
                   Incepe Gratuit
