@@ -42,7 +42,7 @@ const features: AboutFeature[] = [
 export default function About() {
   return (
     <section id="comunitate" className="landing-section-padding bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl ml-auto mr-auto pl-4 pr-4 sm:pl-6 sm:pr-6 lg:pl-8 lg:pr-8">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           {/* Left - Text Content */}
           <div>

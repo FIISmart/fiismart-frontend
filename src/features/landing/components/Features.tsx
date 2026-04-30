@@ -109,7 +109,7 @@ export default function Features() {
       ref={sectionRef}
       className="landing-section-padding bg-muted/40"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl ml-auto mr-auto pl-4 pr-4 sm:pl-6 sm:pr-6 lg:pl-8 lg:pr-8">
         {/* Header */}
         <div className="text-center mb-16">
           <span className="landing-badge-purple mb-4">✨ Features</span>

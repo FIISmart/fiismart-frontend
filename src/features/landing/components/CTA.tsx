@@ -12,7 +12,7 @@ export default function CTA() {
       <div className="landing-blob w-64 h-64 bg-secondary/20 bottom-10 right-10 z-0" />
       <div className="landing-blob w-48 h-48 bg-accent/20 top-1/2 right-1/3 z-0" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div className="max-w-7xl ml-auto mr-auto pl-4 pr-4 sm:pl-6 sm:pr-6 lg:pl-8 lg:pr-8 relative z-10">
         <div className="text-center max-w-3xl mx-auto">
           {/* Badge */}
           <div className="w-fit mx-auto mb-6">
