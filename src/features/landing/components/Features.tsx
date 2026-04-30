@@ -1,0 +1,156 @@
+import {
+  BookOpen,
+  Video,
+  FileCheck,
+  Users,
+  Award,
+  Radio,
+  BarChart2,
+  Bot,
+} from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+
+interface Feature {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  color: string;
+}
+
+const features: Feature[] = [
+  {
+    icon: <BookOpen size={24} />,
+    title: "Management Cursuri",
+    description:
+      "Creaza si gestioneaza cursurile tale cu instrumente intuitive si profesionale.",
+    color: "bg-primary/10 text-primary",
+  },
+  {
+    icon: <Video size={24} />,
+    title: "Incalzire Video",
+    description:
+      "Inregistreaza si editeaza lectii video de calitate direct din platforma.",
+    color: "bg-accent/40 text-primary",
+  },
+  {
+    icon: <FileCheck size={24} />,
+    title: "Quiz si Portofoliu",
+    description:
+      "Creeaza evaluari interactive si construieste un portofoliu profesional.",
+    color: "bg-secondary/30 text-primary",
+  },
+  {
+    icon: <Users size={24} />,
+    title: "Marketplace Tutoring",
+    description: "Conecteaza-te cu studenti si profesori din intreaga tara.",
+    color: "bg-primary/10 text-primary",
+  },
+  {
+    icon: <Award size={24} />,
+    title: "Certificari Smart",
+    description:
+      "Obtine certificari recunoscute de angajatori din diverse industrii.",
+    color: "bg-accent/40 text-primary",
+  },
+  {
+    icon: <Radio size={24} />,
+    title: "Inregistrare Exclusiva",
+    description: "Acces la sesiuni live exclusive cu experti din domeniu.",
+    color: "bg-secondary/30 text-primary",
+  },
+  {
+    icon: <BarChart2 size={24} />,
+    title: "Progres & Comunitate",
+    description:
+      "Urmareste progresul tau si conecteaza-te cu alti studenti motivati.",
+    color: "bg-primary/10 text-primary",
+  },
+  {
+    icon: <Bot size={24} />,
+    title: "Chatbot & Recomandari",
+    description:
+      "Asistent AI care iti recomanda cursuri personalizate in functie de obiective.",
+    color: "bg-accent/40 text-primary",
+  },
+];
+
+const delayClasses = [
+  "delay-0",
+  "delay-75",
+  "delay-150",
+  "delay-200",
+  "delay-300",
+  "delay-500",
+  "delay-700",
+  "delay-1000",
+];
+
+export default function Features() {
+  const [isVisible, setIsVisible] = useState(false);
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    if (sectionRef.current) observer.observe(sectionRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <section
+      id="Functionalitati"
+      ref={sectionRef}
+      className="landing-section-padding bg-muted/40"
+    >
+      <div className="landing-section-container">
+        {/* Header */}
+        <div className="text-center mb-16">
+          <span className="landing-badge-purple mb-4">✨ Features</span>
+          <h2 className="font-heading landing-text-h2 font-bold text-foreground mb-4">
+            Tot ce ai nevoie pentru a invata si preda
+          </h2>
+          <p className="font-body landing-text-body-lg text-muted-foreground max-w-2xl mx-auto">
+            O platforma moderna care reuneste toate functionalele esentiale pentru un
+            ecosistem educational complet.
+          </p>
+        </div>
+
+        {/* Features Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {features.map((feature, index) => (
+            <div
+              key={feature.title}
+              className={`landing-card group cursor-pointer transition-all duration-300 ${
+                isVisible
+                  ? `animate-landing-fadeInUp opacity-100 ${delayClasses[index] ?? ""}`
+                  : "opacity-0"
+              }`}
+            >
+              {/* Icon */}
+              <div
+                className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110 ${feature.color}`}
+              >
+                {feature.icon}
+              </div>
+
+              {/* Content */}
+              <h3 className="font-heading landing-text-h3 font-semibold text-foreground mb-2">
+                {feature.title}
+              </h3>
+              <p className="font-body landing-text-body-sm text-muted-foreground leading-relaxed">
+                {feature.description}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
