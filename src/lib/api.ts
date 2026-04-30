@@ -1,6 +1,11 @@
-const API_BASE = import.meta.env.VITE_API_URL || "/api";
+export const API_BASE = import.meta.env.VITE_API_URL || "/api";
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+/**
+ * Shared fetch primitive every feature should use to talk to the backend.
+ * Sends JSON by default, throws on non-2xx with the server's message when present,
+ * and returns `undefined` for 204 No Content.
+ */
+export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     headers: { "Content-Type": "application/json", ...options?.headers },
     ...options,
@@ -12,6 +17,8 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   if (res.status === 204) return undefined as T;
   return res.json();
 }
+
+const request = apiFetch;
 
 // ── Interfaces ──────────────────────────────────────────
 
