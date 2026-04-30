@@ -1,29 +1,88 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
-import type { AuthState, AuthUser } from "../types";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import type {
+  AuthState,
+  AuthUser,
+  LoginPayload,
+  SignupPayload,
+} from "../types";
+import {
+  getCurrentUser,
+  login as loginRequest,
+  logout as logoutRequest,
+  signup as signupRequest,
+} from "../services/auth.service";
 
 interface AuthContextValue extends AuthState {
-  login: (user: AuthUser) => void;
-  logout: () => void;
+  /** Run the login flow. Returns the authenticated user on success. */
+  login: (payload: LoginPayload) => Promise<AuthUser>;
+  /** Run the signup flow. Returns the freshly created user on success. */
+  signup: (payload: SignupPayload) => Promise<AuthUser>;
+  /** Clear the local token + user, best-effort server logout. */
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 /**
- * Stub provider seeded for Phase 1 scaffolding. The auth agent (Phase 2) replaces
- * this with the real implementation that calls /api/auth and persists tokens.
+ * Real auth provider. On mount it reads the bearer token from localStorage
+ * (managed by `auth.service`) and attempts to hydrate the user via /auth/me.
+ * While that call is in flight `isLoading` is true so guards can render a
+ * spinner instead of bouncing the user back to /auth.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Hydrate from localStorage token on first render.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const me = await getCurrentUser();
+      if (!cancelled) {
+        setUser(me);
+        setIsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const login = useCallback(async (payload: LoginPayload): Promise<AuthUser> => {
+    const res = await loginRequest(payload);
+    setUser(res.user);
+    return res.user;
+  }, []);
+
+  const signup = useCallback(async (payload: SignupPayload): Promise<AuthUser> => {
+    const res = await signupRequest(payload);
+    setUser(res.user);
+    return res.user;
+  }, []);
+
+  const logout = useCallback(async (): Promise<void> => {
+    await logoutRequest();
+    setUser(null);
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
       isAuthenticated: user !== null,
-      isLoading: false,
-      login: (next) => setUser(next),
-      logout: () => setUser(null),
+      isLoading,
+      login,
+      signup,
+      logout,
     }),
-    [user]
+    [user, isLoading, login, signup, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
