@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import type { QuizQuestion } from "../types";
 
 interface Props {
@@ -95,7 +95,7 @@ export default function QuizQuestionPage({
                 "border-[#E5E7EB] bg-white hover:border-[#BDA6CE]";
               let circleClasses = "bg-[#F2EAE0] text-[#6A7282]";
               let textClasses = "text-[#4B5563]";
-              let content: JSX.Element | string = OPTION_LABELS[optIdx] ?? "";
+              let content: ReactNode = OPTION_LABELS[optIdx] ?? "";
 
               if (isSubmitted) {
                 if (isThisCorrect) {
