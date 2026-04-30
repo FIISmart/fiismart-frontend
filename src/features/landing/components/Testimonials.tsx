@@ -46,7 +46,7 @@ const testimonials: Testimonial[] = [
 export default function Testimonials() {
   return (
     <section className="landing-section-padding bg-muted/30">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-16">
           <span className="landing-badge mb-4">💬 Testimoniale</span>

@@ -59,7 +59,7 @@ export default function HowItWorks() {
 
   return (
     <section ref={sectionRef} className="landing-section-padding bg-muted/30 py-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header Centrat */}
         <div className="text-center mb-16">
           <span className="landing-badge mb-4 inline-block bg-secondary/20 text-foreground px-4 py-1 rounded-full text-sm font-medium">
