@@ -1,14 +1,7 @@
 import { useState } from "react";
 import { Play, Star, Users, Clock } from "lucide-react";
 
-type Category =
-  | "Toate"
-  | "Programare"
-  | "Design"
-  | "Marketing"
-  | "Business"
-  | "Data"
-  | "Limba";
+type Category = "Toate" | "Programare" | "Design" | "Marketing" | "Business" | "Data" | "Limba";
 
 interface Course {
   id: number;
@@ -22,15 +15,7 @@ interface Course {
   color: string;
 }
 
-const categories: Category[] = [
-  "Toate",
-  "Programare",
-  "Design",
-  "Marketing",
-  "Business",
-  "Data",
-  "Limba",
-];
+const categories: Category[] = ["Toate", "Programare", "Design", "Marketing", "Business", "Data", "Limba"];
 
 const courses: Course[] = [
   {
@@ -108,15 +93,15 @@ export default function Courses() {
       : courses.filter((c) => c.category === activeCategory);
 
   return (
-    <section id="cursuri" className="landing-section-padding bg-background">
+    <section id="cursuri" className="section-padding bg-background">
       <div className="fii-container">
         {/* Header */}
         <div className="text-center mb-10">
-          <span className="landing-badge mb-4">📚 Cursuri Populare</span>
-          <h2 className="font-heading landing-text-h2 font-bold text-foreground mb-4">
+          <span className="badge mb-4">📚 Cursuri Populare</span>
+          <h2 className="font-heading text-h2 font-bold text-foreground mb-4">
             Exploreaza cursurile noastre gratuite
           </h2>
-          <p className="font-body landing-text-body-lg text-muted-foreground max-w-2xl mx-auto">
+          <p className="font-body text-body-lg text-muted-foreground max-w-2xl mx-auto">
             Peste 1200+ cursuri gratuite in toate domeniile. Incepem de la zero si
             ajungem la nivel avansat impreuna.
           </p>
@@ -128,9 +113,9 @@ export default function Courses() {
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
-              className={`font-body font-medium landing-text-body-sm px-5 py-2 rounded-full transition-all duration-300 ${
+              className={`font-body font-medium text-body-sm px-5 py-2 rounded-full transition-all duration-300 ${
                 activeCategory === cat
-                  ? "bg-primary text-white landing-shadow-card"
+                  ? "bg-primary text-white shadow-card"
                   : "bg-muted text-muted-foreground hover:bg-secondary/30 hover:text-foreground border border-border"
               }`}
             >
@@ -142,34 +127,31 @@ export default function Courses() {
         {/* Course Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((course) => (
-            <div key={course.id} className="landing-card group overflow-hidden p-0">
+            <div
+              key={course.id}
+              className="landing-card group overflow-hidden p-0"
+            >
               {/* Thumbnail */}
-              <div
-                className={`relative h-44 bg-gradient-to-br ${course.color} flex items-center justify-center`}
-              >
+              <div className={`relative h-44 bg-gradient-to-br ${course.color} flex items-center justify-center`}>
                 {course.tag && (
-                  <span className="absolute top-3 left-3 bg-primary text-white landing-text-caption font-medium px-3 py-1 rounded-full">
+                  <span className="absolute top-3 left-3 bg-primary text-white text-caption font-medium px-3 py-1 rounded-full">
                     {course.tag}
                   </span>
                 )}
-                <button className="w-12 h-12 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center landing-shadow-card group-hover:scale-110 transition-transform duration-300">
+                <button className="w-12 h-12 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-card group-hover:scale-110 transition-transform duration-300">
                   <Play size={20} className="text-primary ml-0.5" fill="currentColor" />
                 </button>
               </div>
 
               {/* Info */}
               <div className="p-5">
-                <span className="landing-badge landing-text-caption mb-2 py-1 px-3">
-                  {course.category}
-                </span>
+                <span className="badge text-caption mb-2 py-1 px-3">{course.category}</span>
                 <h3 className="font-heading font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">
                   {course.title}
                 </h3>
-                <p className="landing-text-body-sm text-muted-foreground mb-3">
-                  {course.instructor}
-                </p>
+                <p className="text-body-sm text-muted-foreground mb-3">{course.instructor}</p>
 
-                <div className="flex items-center justify-between landing-text-caption text-muted-foreground border-t border-border pt-3">
+                <div className="flex items-center justify-between text-caption text-muted-foreground border-t border-border pt-3">
                   <div className="flex items-center gap-1">
                     <Clock size={12} />
                     <span>{course.duration}</span>

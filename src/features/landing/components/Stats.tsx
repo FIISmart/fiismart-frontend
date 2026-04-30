@@ -29,14 +29,14 @@ interface CounterProps {
   isVisible: boolean;
 }
 
-function Counter({ value, suffix, isVisible }: CounterProps) {
+const Counter = ({ value, suffix, isVisible }: CounterProps) => {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
     if (!isVisible) return;
     const duration = 2000;
-    const stepCount = 60;
-    const increment = value / stepCount;
+    const steps = 60;
+    const increment = value / steps;
     let current = 0;
     const timer = setInterval(() => {
       current += increment;
@@ -46,16 +46,12 @@ function Counter({ value, suffix, isVisible }: CounterProps) {
       } else {
         setCount(Math.floor(current));
       }
-    }, duration / stepCount);
+    }, duration / steps);
     return () => clearInterval(timer);
   }, [isVisible, value]);
 
   const formatted =
-    value >= 1000
-      ? count >= 1000
-        ? Math.floor(count / 100) / 10 + "K"
-        : count.toString()
-      : count.toString();
+    value >= 1000 ? (count >= 1000 ? Math.floor(count / 100) / 10 + "K" : count.toString()) : count.toString();
 
   return (
     <span>
@@ -63,7 +59,7 @@ function Counter({ value, suffix, isVisible }: CounterProps) {
       {suffix}
     </span>
   );
-}
+};
 
 export default function Stats() {
   const [isVisible, setIsVisible] = useState(false);
@@ -84,18 +80,15 @@ export default function Stats() {
   }, []);
 
   return (
-    <section
-      ref={sectionRef}
-      className="landing-section-padding bg-background border-y border-border"
-    >
+    <section ref={sectionRef} className="section-padding bg-background border-y border-border">
       <div className="fii-container">
         {/* Header */}
         <div className="text-center mb-16">
-          <span className="landing-badge mb-4">📊 Statistici</span>
-          <h2 className="font-heading landing-text-h2 font-bold text-foreground mb-4">
+          <span className="badge mb-4">📊 Statistici</span>
+          <h2 className="font-heading text-h2 font-bold text-foreground mb-4">
             Impactul nostru in educatie
           </h2>
-          <p className="font-body landing-text-body-lg text-muted-foreground max-w-2xl mx-auto">
+          <p className="font-body text-body-lg text-muted-foreground max-w-2xl mx-auto">
             Transformam educatia prin tehnologie. Cifrele vorbesc de la sine despre
             calitatea si impactul platformei noastre.
           </p>
@@ -103,8 +96,12 @@ export default function Stats() {
 
         {/* Stats Row 1 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat) => (
-            <div key={stat.label} className="landing-card text-center group">
+          {stats.map((stat, index) => (
+            <div
+              key={index}
+              className="landing-card text-center group"
+              style={{ animationDelay: `${index * 0.1}s` }}
+            >
               <div className="font-heading text-3xl lg:text-4xl font-bold text-primary mb-1">
                 {isVisible ? (
                   <Counter value={stat.value} suffix={stat.suffix} isVisible={isVisible} />
@@ -112,21 +109,17 @@ export default function Stats() {
                   `0${stat.suffix}`
                 )}
               </div>
-              <p className="font-body font-medium text-foreground landing-text-body-sm mb-1">
-                {stat.label}
-              </p>
-              <p className="font-body landing-text-caption text-muted-foreground">
-                {stat.sublabel}
-              </p>
+              <p className="font-body font-medium text-foreground text-body-sm mb-1">{stat.label}</p>
+              <p className="font-body text-caption text-muted-foreground">{stat.sublabel}</p>
             </div>
           ))}
         </div>
 
         {/* Stats Row 2 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          {statsRow2.map((stat) => (
+          {statsRow2.map((stat, index) => (
             <div
-              key={stat.label}
+              key={index}
               className="bg-muted rounded-lg p-5 flex items-center gap-4 border border-border"
             >
               <div className="w-12 h-12 bg-secondary/30 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -140,9 +133,7 @@ export default function Stats() {
                     `0${stat.suffix}`
                   )}
                 </div>
-                <p className="font-body landing-text-body-sm text-muted-foreground">
-                  {stat.label}
-                </p>
+                <p className="font-body text-body-sm text-muted-foreground">{stat.label}</p>
               </div>
             </div>
           ))}
@@ -151,8 +142,7 @@ export default function Stats() {
         {/* Highlight Banner */}
         <div className="bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/20 rounded-xl p-6 flex flex-wrap items-center justify-center gap-4 border border-primary/20">
           <span className="text-foreground font-body font-medium">
-            ✅ Top 100% platforma &nbsp;·&nbsp; 🏆 Studenti campioni &nbsp;·&nbsp; 🔒
-            Verificate de experti
+            ✅ Top 100% platforma &nbsp;·&nbsp; 🏆 Studenti campioni &nbsp;·&nbsp; 🔒 Verificate de experti
           </span>
         </div>
       </div>
