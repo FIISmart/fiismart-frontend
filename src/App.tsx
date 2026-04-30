@@ -40,7 +40,9 @@ export default function App() {
         <Route path="/professor/courses/:courseId" element={<CourseBuilderPage />} />
       </Route>
 
-      {/* Compatibility shim — old route used by current course-builder dev links */}
+      {/* Compatibility shims for legacy / external links */}
+      <Route path="/login" element={<Navigate to="/auth" replace />} />
+      <Route path="/signup" element={<Navigate to="/auth" replace />} />
       <Route path="/cursuri" element={<Navigate to="/professor/courses" replace />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />

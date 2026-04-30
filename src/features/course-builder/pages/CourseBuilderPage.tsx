@@ -14,7 +14,7 @@ import { Plus, GraduationCap, Sparkles, LayoutPanelLeft } from "lucide-react";
 import { CourseHeader } from "@/features/course-builder/components/course-header";
 import { ModuleCard } from "@/features/course-builder/components/module-card";
 import { CommentModeration } from "@/features/course-builder/components/comment-moderation";
-import type { Course, Module, Comment } from "@/lib/course-types";
+import type { Course, Module } from "@/lib/course-types";
 import { mapCourseToFE } from "@/lib/course-types";
 import * as api from "@/lib/api";
 import { useAuth } from "@/features/auth/context/AuthContext";
