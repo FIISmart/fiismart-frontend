@@ -95,6 +95,8 @@ export default function AuthPage() {
             </span>
           </div>
 
+          {import.meta.env.DEV && <DevPreviewLogin onLogin={goAfterAuth} />}
+
           <Card className="border-border/60 shadow-lg">
             <Tabs value={tab} onValueChange={(v) => setTab(v as "login" | "signup")}>
               <CardHeader className="space-y-4">
@@ -424,3 +426,41 @@ const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputProps>(
   }
 );
 PasswordInput.displayName = "PasswordInput";
+
+/**
+ * Dev-only quick login. Renders only when `import.meta.env.DEV` is truthy
+ * (Vite sets this to `false` for production builds, so this UI never ships).
+ * Stamps a mock user via the AuthContext, persists it through reloads, and
+ * navigates to the matching dashboard so testers can walk every protected
+ * route before the real backend is wired up.
+ */
+function DevPreviewLogin({ onLogin }: { onLogin: (user: AuthUser) => void }) {
+  const { loginAsMock } = useAuth();
+  return (
+    <Card className="border-dashed border-amber-400/60 bg-amber-50/40">
+      <CardContent className="p-4 space-y-3">
+        <p className="text-xs font-medium text-amber-900/80">
+          Dev preview — backend not wired. Skip auth and walk the protected pages:
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="text-sm"
+            onClick={() => onLogin(loginAsMock(UserRole.STUDENT))}
+          >
+            Continue as Student
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="text-sm"
+            onClick={() => onLogin(loginAsMock(UserRole.PROFESSOR))}
+          >
+            Continue as Professor
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

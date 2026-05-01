@@ -58,8 +58,8 @@ export default function HowItWorks() {
   }, []);
 
   return (
-    <section ref={sectionRef} className="section-padding bg-muted/30 py-20">
-      <div className="fii-container max-w-6xl mx-auto px-4">
+    <section ref={sectionRef} className="section-padding bg-muted/30">
+      <div className="fii-container">
 
         {/* Header Centrat */}
         <div className="text-center mb-16">

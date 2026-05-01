@@ -13,12 +13,15 @@ import type {
   LoginPayload,
   SignupPayload,
 } from "../types";
+import { UserRole } from "../types";
 import {
   getCurrentUser,
   login as loginRequest,
   logout as logoutRequest,
   signup as signupRequest,
 } from "../services/auth.service";
+
+const MOCK_USER_KEY = "fiismart_mock_user";
 
 interface AuthContextValue extends AuthState {
   /** Run the login flow. Returns the authenticated user on success. */
@@ -27,6 +30,12 @@ interface AuthContextValue extends AuthState {
   signup: (payload: SignupPayload) => Promise<AuthUser>;
   /** Clear the local token + user, best-effort server logout. */
   logout: () => Promise<void>;
+  /**
+   * Dev-only: stamp a mock user (no backend call) and persist it so guards
+   * accept the session across reloads. Use to walk every protected route
+   * before the real backend is wired up.
+   */
+  loginAsMock: (role: UserRole) => AuthUser;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -41,9 +50,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Hydrate from localStorage token on first render.
+  // Hydrate on first render. Order:
+  //  1. If a mock user is persisted in localStorage (dev preview flow),
+  //     adopt it immediately — no network call.
+  //  2. Otherwise call /auth/me with the bearer token if present.
   useEffect(() => {
     let cancelled = false;
+    const mockJson =
+      typeof window !== "undefined" ? window.localStorage.getItem(MOCK_USER_KEY) : null;
+    if (mockJson) {
+      try {
+        setUser(JSON.parse(mockJson) as AuthUser);
+        setIsLoading(false);
+        return;
+      } catch {
+        window.localStorage.removeItem(MOCK_USER_KEY);
+      }
+    }
     (async () => {
       const me = await getCurrentUser();
       if (!cancelled) {
@@ -69,8 +92,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async (): Promise<void> => {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(MOCK_USER_KEY);
+    }
     await logoutRequest();
     setUser(null);
+  }, []);
+
+  const loginAsMock = useCallback((role: UserRole): AuthUser => {
+    const mockUser: AuthUser =
+      role === UserRole.PROFESSOR
+        ? {
+            id: "dev-professor-aaaaaaaaaaaaaaaaaaaaaa",
+            email: "professor@dev.local",
+            firstName: "Dev",
+            lastName: "Professor",
+            displayName: "Dev Professor",
+            role: UserRole.PROFESSOR,
+            emailVerified: true,
+          }
+        : {
+            id: "dev-student-bbbbbbbbbbbbbbbbbbbbbbb",
+            email: "student@dev.local",
+            firstName: "Dev",
+            lastName: "Student",
+            displayName: "Dev Student",
+            role: UserRole.STUDENT,
+            emailVerified: true,
+          };
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(MOCK_USER_KEY, JSON.stringify(mockUser));
+    }
+    setUser(mockUser);
+    return mockUser;
   }, []);
 
   const value = useMemo<AuthContextValue>(
@@ -81,8 +135,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       signup,
       logout,
+      loginAsMock,
     }),
-    [user, isLoading, login, signup, logout]
+    [user, isLoading, login, signup, logout, loginAsMock]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
