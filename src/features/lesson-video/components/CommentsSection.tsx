@@ -38,7 +38,7 @@ export default function CommentsSection({
   );
 
   const fetchComments = useCallback(async () => {
-    if (!lectureId || lectureId.length !== 24) return;
+    if (!lectureId) return;
     try {
       const data = await lessonVideoService.getComments(
         studentId,
