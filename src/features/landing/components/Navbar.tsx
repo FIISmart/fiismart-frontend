@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Menu, X, GraduationCap } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
+import { UserRole } from "@/features/auth/types";
 
 const navLinks = [
   { label: "Functionalitati", href: "#Functionalitati" },
@@ -14,8 +15,10 @@ export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-  // AuthProvider stub is mounted at the app root; this just reads its current state.
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
+  const dashboardHref =
+    user?.role === UserRole.PROFESSOR ? "/professor/dashboard" : "/student/dashboard";
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -23,7 +26,10 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  if (isAuthenticated) return null;
+  const handleLogout = async () => {
+    await logout();
+    navigate("/", { replace: true });
+  };
 
   return (
     <nav
@@ -61,12 +67,29 @@ export default function Navbar() {
 
           {/* Desktop Auth Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Link to="/auth" className="btn-secondary py-2 px-5 text-sm">
-              Autentifica-te
-            </Link>
-            <Link to="/auth" className="btn-primary py-2 px-5 text-sm">
-              Incepe Gratuit
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link to={dashboardHref} className="btn-secondary py-2 px-5 text-sm">
+                  Dashboard
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="btn-primary py-2 px-5 text-sm"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/auth" className="btn-secondary py-2 px-5 text-sm">
+                  Autentifica-te
+                </Link>
+                <Link to="/auth" className="btn-primary py-2 px-5 text-sm">
+                  Incepe Gratuit
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Toggle */}
@@ -94,20 +117,44 @@ export default function Navbar() {
                 </a>
               ))}
               <div className="flex flex-col gap-2 pt-3 border-t border-border">
-                <Link
-                  to="/auth"
-                  className="btn-secondary py-2 px-5 text-sm justify-center"
-                  onClick={() => setIsMobileOpen(false)}
-                >
-                  Autentifica-te
-                </Link>
-                <Link
-                  to="/auth"
-                  className="btn-primary py-2 px-5 text-sm justify-center"
-                  onClick={() => setIsMobileOpen(false)}
-                >
-                  Incepe Gratuit
-                </Link>
+                {isAuthenticated ? (
+                  <>
+                    <Link
+                      to={dashboardHref}
+                      className="btn-secondary py-2 px-5 text-sm justify-center"
+                      onClick={() => setIsMobileOpen(false)}
+                    >
+                      Dashboard
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileOpen(false);
+                        void handleLogout();
+                      }}
+                      className="btn-primary py-2 px-5 text-sm justify-center"
+                    >
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      to="/auth"
+                      className="btn-secondary py-2 px-5 text-sm justify-center"
+                      onClick={() => setIsMobileOpen(false)}
+                    >
+                      Autentifica-te
+                    </Link>
+                    <Link
+                      to="/auth"
+                      className="btn-primary py-2 px-5 text-sm justify-center"
+                      onClick={() => setIsMobileOpen(false)}
+                    >
+                      Incepe Gratuit
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>
