@@ -10,18 +10,30 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, GraduationCap, Sparkles, LayoutPanelLeft } from "lucide-react";
+import { Plus, GraduationCap, Sparkles, LayoutPanelLeft, AlertTriangle, ArrowLeft } from "lucide-react";
 import { CourseHeader } from "@/features/course-builder/components/course-header";
 import { ModuleCard } from "@/features/course-builder/components/module-card";
 import { CommentModeration } from "@/features/course-builder/components/comment-moderation";
+import { Spinner } from "@/components/ui/spinner";
 import type { Course, Module } from "@/lib/course-types";
 import { mapCourseToFE } from "@/lib/course-types";
 import * as api from "@/lib/api";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { Toaster, toast } from "sonner";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 const pendingNewCourseCreations = new Map<string, Promise<api.CourseAPI>>();
+
+type LoadError = {
+  kind: "not-found" | "generic";
+  message: string;
+};
+
+function isNotFoundError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message.toLowerCase();
+  return msg.includes("404") || msg.includes("not found") || msg.includes("nu a fost gas");
+}
 
 export default function CourseBuilderPage() {
   const { user } = useAuth();
@@ -30,6 +42,7 @@ export default function CourseBuilderPage() {
   const [course, setCourse] = useState<Course | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<LoadError | null>(null);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [deleteModuleId, setDeleteModuleId] = useState<string | null>(null);
 
@@ -37,6 +50,9 @@ export default function CourseBuilderPage() {
 
   useEffect(() => {
     if (!teacherId) return;
+    let cancelled = false;
+    setIsLoading(true);
+    setLoadError(null);
     async function loadCourse() {
       try {
         const shouldCreateNew = searchParams.get("new") === "1";
@@ -115,24 +131,73 @@ export default function CourseBuilderPage() {
           commentsData = await api.getComments(currentCourseApi.id);
         } catch { /* No comments */ }
 
+        if (cancelled) return;
         // CourseResponse already includes modules -> mapCourseToFE maps them inline
         setCourse(mapCourseToFE(currentCourseApi, null, commentsData));
       } catch (err) {
+        if (cancelled) return;
         console.error("Failed to load course:", err);
-        toast.error("Eroare la încărcarea cursului");
+        const notFound = isNotFoundError(err);
+        setCourse(null);
+        setLoadError({
+          kind: notFound ? "not-found" : "generic",
+          message:
+            err instanceof Error
+              ? err.message
+              : "A apărut o eroare la încărcarea cursului",
+        });
+        toast.error(
+          notFound
+            ? "Cursul nu a fost găsit"
+            : "Eroare la încărcarea cursului"
+        );
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     }
     loadCourse();
+    return () => {
+      cancelled = true;
+    };
   }, [searchParams, teacherId]);
 
-  if (isLoading || !course) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
+        <Toaster richColors position="top-right" />
         <div className="text-center">
           <GraduationCap className="h-12 w-12 text-primary animate-pulse mx-auto mb-4" />
-          <p className="text-muted-foreground">Se încarcă structura cursului...</p>
+          <div className="flex items-center justify-center gap-2 text-muted-foreground">
+            <Spinner className="size-4" />
+            <p>Se încarcă structura cursului...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!course) {
+    const notFound = loadError?.kind === "not-found";
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <Toaster richColors position="top-right" />
+        <div className="max-w-md w-full text-center bg-card border border-border rounded-2xl p-8">
+          <AlertTriangle className="h-12 w-12 text-destructive/80 mx-auto mb-4" />
+          <h1 className="font-serif font-bold text-2xl mb-2">
+            {notFound ? "Cursul nu a fost găsit" : "Nu am putut încărca cursul"}
+          </h1>
+          <p className="text-muted-foreground text-sm mb-6">
+            {notFound
+              ? "Cursul pe care încerci să îl deschizi nu există sau a fost șters."
+              : loadError?.message ||
+                "A apărut o eroare neașteptată. Încearcă din nou mai târziu."}
+          </p>
+          <Button asChild className="gap-2">
+            <Link to="/professor/courses">
+              <ArrowLeft className="h-4 w-4" />
+              Înapoi la cursurile mele
+            </Link>
+          </Button>
         </div>
       </div>
     );
