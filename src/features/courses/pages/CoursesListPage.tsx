@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Plus, GraduationCap, BookOpen, Clock, Users, Trash2 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import * as api from "@/lib/api";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { toast } from "sonner";
@@ -36,10 +36,28 @@ type CourseListItem = {
 export default function CoursesListPage() {
   const { user } = useAuth();
   const teacherId = user?.id;
-  const newCourseHref = `/?new=1&newToken=${Date.now().toString()}`;
+  const navigate = useNavigate();
   const [courses, setCourses] = useState<CourseListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deletingCourseId, setDeletingCourseId] = useState<string | null>(null);
+  const [isCreatingCourse, setIsCreatingCourse] = useState(false);
+
+  const handleCreateCourse = async () => {
+    if (!teacherId || isCreatingCourse) return;
+    setIsCreatingCourse(true);
+    try {
+      const newCourseApi = await api.createCourse({
+        title: "Curs Nou",
+        description: "Adaugă o descriere...",
+        teacherId,
+        tags: [],
+      });
+      navigate(`/professor/courses/${newCourseApi.id}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Eroare la crearea cursului.");
+      setIsCreatingCourse(false);
+    }
+  };
 
   useEffect(() => {
     if (!teacherId) return;
@@ -117,11 +135,14 @@ export default function CoursesListPage() {
                 </p>
               </div>
             </div>
-            <Button asChild className="gap-2">
-              <Link to={newCourseHref}>
-                <Plus className="h-4 w-4" />
-                Curs Nou
-              </Link>
+            <Button
+              type="button"
+              className="gap-2"
+              onClick={handleCreateCourse}
+              disabled={isCreatingCourse || !teacherId}
+            >
+              <Plus className="h-4 w-4" />
+              {isCreatingCourse ? "Se creează..." : "Curs Nou"}
             </Button>
           </div>
         </div>
@@ -188,7 +209,7 @@ export default function CoursesListPage() {
               <CardFooter className="p-4 pt-0">
                 <div className="w-full flex gap-2">
                   <Button asChild variant="outline" className="flex-1">
-                    <Link to={`/?courseId=${course.id}`}>Editează Cursul</Link>
+                    <Link to={`/professor/courses/${course.id}`}>Editează Cursul</Link>
                   </Button>
                   <Button
                     variant="destructive"
@@ -204,15 +225,19 @@ export default function CoursesListPage() {
           ))}
 
           {/* Add New Course Card */}
-          <Link
-            to={newCourseHref}
-            className="border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center min-h-[320px] text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
+          <button
+            type="button"
+            onClick={handleCreateCourse}
+            disabled={isCreatingCourse || !teacherId}
+            className="border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center min-h-[320px] text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-3">
               <Plus className="h-8 w-8" />
             </div>
-            <span className="font-medium">Creează Curs Nou</span>
-          </Link>
+            <span className="font-medium">
+              {isCreatingCourse ? "Se creează..." : "Creează Curs Nou"}
+            </span>
+          </button>
         </div>
       </main>
 
