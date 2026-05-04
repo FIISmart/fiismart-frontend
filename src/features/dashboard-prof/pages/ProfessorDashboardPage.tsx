@@ -6,6 +6,7 @@ import {
   TrendingUp,
   PlusCircle,
   LayoutDashboard,
+  WifiOff,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/features/auth/context/AuthContext";
@@ -18,20 +19,34 @@ import { QuizTable } from "../components/QuizTable";
 import { CommentList } from "../components/CommentList";
 import type { DashboardOverviewResponse } from "../types";
 
+// Fallback shape returned by the overview endpoint — used when the
+// backend is unreachable so the dashboard chrome still renders.
+const EMPTY_OVERVIEW: DashboardOverviewResponse = {
+  stats: {
+    studentsEnrolled: 0,
+    activeCourses: 0,
+    quizzesCompleted: 0,
+    completionRatePct: 0,
+  },
+  coursesPreview: [],
+  quizzesPreview: [],
+  commentsPreview: [],
+};
+
 export function ProfessorDashboardPage() {
   const { user } = useAuth();
   const teacherId = user?.id;
 
-  const [data, setData] = useState<DashboardOverviewResponse | null>(null);
+  const [data, setData] = useState<DashboardOverviewResponse>(EMPTY_OVERVIEW);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [hasFetchError, setHasFetchError] = useState(false);
 
   useEffect(() => {
     if (!teacherId) return;
 
     let cancelled = false;
     setIsLoading(true);
-    setError(null);
+    setHasFetchError(false);
 
     apiFetch<DashboardOverviewResponse>("/teacher-dashboard/me/overview", {
       headers: {
@@ -41,13 +56,15 @@ export function ProfessorDashboardPage() {
       .then((backendData) => {
         if (cancelled) return;
         setData(backendData);
+        setHasFetchError(false);
         setIsLoading(false);
       })
-      .catch((err: unknown) => {
+      .catch(() => {
         if (cancelled) return;
-        const message =
-          err instanceof Error ? err.message : "Nu am putut aduce datele de la server.";
-        setError(message);
+        // Backend offline / 404 / network error — render dashboard
+        // chrome with an empty state instead of failing loudly.
+        setData(EMPTY_OVERVIEW);
+        setHasFetchError(true);
         setIsLoading(false);
       });
 
@@ -69,19 +86,25 @@ export function ProfessorDashboardPage() {
     <div className="min-h-screen bg-edu-bg text-edu-foreground flex flex-col font-sans">
       <ProfDashboardNavbar />
 
-      {isLoading || !data ? (
+      {isLoading ? (
         <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex justify-center items-center">
-          {error ? (
-            <p className="text-xl text-red-500 font-medium">{error}</p>
-          ) : (
-            <div className="flex items-center gap-3 text-edu-muted-fg">
-              <Spinner className="size-6 text-edu-primary" />
-              <p className="text-xl font-medium animate-pulse">Se încarcă dashboard-ul...</p>
-            </div>
-          )}
+          <div className="flex items-center gap-3 text-edu-muted-fg">
+            <Spinner className="size-6 text-edu-primary" />
+            <p className="text-xl font-medium animate-pulse">Se încarcă dashboard-ul...</p>
+          </div>
         </main>
       ) : (
         <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+          {hasFetchError && (
+            <div
+              role="status"
+              className="mb-6 flex items-center gap-2 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-2.5 text-sm text-amber-800"
+            >
+              <WifiOff size={16} className="shrink-0" />
+              <span>Backend offline — afișăm date demo.</span>
+            </div>
+          )}
+
           <div className="mb-10">
             <h2 className="text-4xl font-bold font-poppins text-edu-foreground">
               Bine ai venit, Profesor!
@@ -154,30 +177,36 @@ export function ProfessorDashboardPage() {
               </a>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {data.coursesPreview.map((course, index) => {
-                const statusAfisat = course.status === "published" ? "Activ" : "Draft";
+            {data.coursesPreview.length === 0 ? (
+              <div className="bg-edu-card border border-edu-border rounded-2xl p-8 text-center text-edu-muted-fg">
+                Nu ai niciun curs creat momentan.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {data.coursesPreview.map((course, index) => {
+                  const statusAfisat = course.status === "published" ? "Activ" : "Draft";
 
-                const culori = [
-                  "bg-gradient-to-br from-edu-primary/80 to-edu-secondary/80",
-                  "bg-gradient-to-br from-edu-accent to-emerald-200",
-                  "bg-gradient-to-br from-pink-300 to-orange-200",
-                ];
-                const gradientAles = culori[index % culori.length];
+                  const culori = [
+                    "bg-gradient-to-br from-edu-primary/80 to-edu-secondary/80",
+                    "bg-gradient-to-br from-edu-accent to-emerald-200",
+                    "bg-gradient-to-br from-pink-300 to-orange-200",
+                  ];
+                  const gradientAles = culori[index % culori.length];
 
-                return (
-                  <CourseCard
-                    key={course.courseId}
-                    title={course.title}
-                    subtitle={course.description}
-                    studentsCount={course.enrollmentCount}
-                    rating={course.avgRating}
-                    status={statusAfisat}
-                    gradientClass={gradientAles}
-                  />
-                );
-              })}
-            </div>
+                  return (
+                    <CourseCard
+                      key={course.courseId}
+                      title={course.title}
+                      subtitle={course.description}
+                      studentsCount={course.enrollmentCount}
+                      rating={course.avgRating}
+                      status={statusAfisat}
+                      gradientClass={gradientAles}
+                    />
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <QuizTable quizzes={data.quizzesPreview} />
