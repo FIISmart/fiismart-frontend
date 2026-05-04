@@ -1,5 +1,8 @@
 /* Landing-feature scoped styles. Imported once from LandingPage. */
 
+/* Anchor cascade-layer order in case this file is parsed before src/index.css. */
+@layer theme, base, components, utilities;
+
 /*
  * .fii-container — page-width wrapper.
  * Unlayered on purpose: in Tailwind v4 the preflight `* { padding: 0; margin: 0 }`

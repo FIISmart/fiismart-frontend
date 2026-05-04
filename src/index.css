@@ -1,3 +1,18 @@
+/*
+ * Anchor the cascade-layer order at the bundle root.
+ *
+ * Tailwind v4's own CSS declares `@layer theme, base, components, utilities;`
+ * inside its imported file, but Vite concatenates other CSS (e.g. landing.css)
+ * via the eager component graph. If any of those files open `@layer
+ * components { ... }` or `@layer utilities { ... }` blocks before Tailwind's
+ * declaration is parsed, the cascade-layers spec registers layers by
+ * first-appearance and `base` ends up last (= highest priority), causing
+ * Tailwind's preflight to clobber every margin/padding/border utility
+ * application-wide. Declaring the master order here locks it in regardless
+ * of how the bundle is concatenated.
+ */
+@layer theme, base, components, utilities;
+
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
