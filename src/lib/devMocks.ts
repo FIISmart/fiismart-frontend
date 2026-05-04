@@ -1,5 +1,5 @@
 /**
- * Dev-only in-memory + localStorage mock layer for the FIISmart course-builder.
+ * Dev-only in-memory + localStorage mock layer for the FIISmart app.
  *
  * Activated from `apiFetch` / `postMultipart` (in `./api.ts`) only when:
  *   - `import.meta.env.DEV === true`, AND
@@ -7,6 +7,11 @@
  *
  * In production builds this module is dynamically imported behind an
  * `import.meta.env.DEV` guard, so Vite tree-shakes it out of the bundle.
+ *
+ * Covers two surface areas:
+ *   1. Teacher-side course builder endpoints (`/courses/...`).
+ *   2. Student-facing endpoints used by the dashboard, the lesson-video page
+ *      and the quiz player (`/dashboard/...`, `/students/...`, `/quizzes/...`).
  */
 import type {
   CourseAPI,
@@ -17,17 +22,68 @@ import type {
   QuizPayload,
   UploadResponse,
 } from "./api";
+import type {
+  Answer,
+  ContinueStudy,
+  Recommendation,
+  StudentCourse,
+  StudentQuiz,
+  StudentStats,
+} from "@/features/dashboard-student/types";
+import type {
+  CourseComment,
+  CourseHeader,
+  LectureDetails,
+  LectureProgressPayload,
+  ModuleSummary,
+  QuizStatus,
+} from "@/features/lesson-video/types";
+import type { Quiz, QuizQuestion } from "@/features/quiz/types";
+import { MOCK_QUESTIONS } from "@/features/quiz/services/quiz.service";
 
 // ── Storage / DB ────────────────────────────────────────
 
 const STORAGE_KEY = "fiismart_dev_mock_db";
-const SCHEMA_VERSION = 1;
+// Bumped from 1 → 2 to invalidate teacher-only DBs that don't yet have
+// student enrollments / lecture progress / lecture comments.
+const SCHEMA_VERSION = 2;
 const DEV_PROFESSOR_ID = "dev-professor-aaaaaaaaaaaaaaaaaaaaaa";
+const DEV_STUDENT_ID = "dev-student-bbbbbbbbbbbbbbbbbbbbbbb";
+
+/** Per-lecture playback state we persist for the demo "resume" flow. */
+interface LectureProgress {
+  positionSecs: number;
+  watchedPercent: number;
+  completed: boolean;
+}
+
+/** Lightweight comment shape used by `/students/.../lectures/.../comments`. */
+interface MockLectureComment {
+  commentId: string;
+  authorId: string;
+  authorName: string;
+  authorRole: string;
+  body: string;
+  timestampSecs?: number;
+  likeCount: number;
+  /** ISO timestamp; we render via {@link timeAgo}. */
+  createdAt: string;
+  /** Set of student ids that liked this comment. */
+  likedBy: string[];
+  isPinned?: boolean;
+}
 
 export interface MockCourseDB {
   schemaVersion: number;
   courses: CourseAPI[];
-  comments: Record<string, CommentAPI[]>; // by courseId
+  /** Teacher-side comments, keyed by courseId. */
+  comments: Record<string, CommentAPI[]>;
+  /** studentId → enrolled courseIds. */
+  enrollments: Record<string, string[]>;
+  /** studentId → courseId → lectureId → progress. */
+  progress: Record<string, Record<string, Record<string, LectureProgress>>>;
+  /** courseId → lectureId → comments. */
+  lectureComments: Record<string, Record<string, MockLectureComment[]>>;
 }
 
 function uuid(): string {
@@ -42,9 +98,32 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+function isoMinutesAgo(mins: number): string {
+  return new Date(Date.now() - mins * 60_000).toISOString();
+}
+
+function timeAgo(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.max(1, Math.floor(diffMs / 60_000));
+  if (mins < 60) return `${mins} min`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} h`;
+  const days = Math.floor(hours / 24);
+  return `${days} z`;
+}
+
 function makeSeedDB(): MockCourseDB {
   const courseAId = uuid();
   const courseBId = uuid();
+
+  // Pick stable lecture ids so we can use one as the "real" YouTube lecture.
+  const lectureA1aId = uuid();
+  const lectureA1bId = uuid();
+  const lectureA2aId = uuid();
+  const lectureA3aId = uuid();
+  const lectureB1aId = uuid();
+  const lectureB1bId = uuid();
+  const lectureB2aId = uuid();
 
   const moduleA1: ModuleResponse = {
     id: uuid(),
@@ -53,14 +132,15 @@ function makeSeedDB(): MockCourseDB {
     order: 0,
     lectures: [
       {
-        id: uuid(),
+        id: lectureA1aId,
         title: "Why TypeScript?",
-        videoUrl: "https://placehold.co/640x360",
+        // Real YouTube embed so the player has something to render in dev.
+        videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
         order: 0,
         durationSecs: 420,
       },
       {
-        id: uuid(),
+        id: lectureA1bId,
         title: "Installing the toolchain",
         videoUrl: null,
         order: 1,
@@ -77,9 +157,9 @@ function makeSeedDB(): MockCourseDB {
     order: 1,
     lectures: [
       {
-        id: uuid(),
+        id: lectureA2aId,
         title: "Intro to generics",
-        videoUrl: "https://placehold.co/640x360",
+        videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
         order: 0,
         durationSecs: 540,
       },
@@ -96,7 +176,7 @@ function makeSeedDB(): MockCourseDB {
     order: 2,
     lectures: [
       {
-        id: uuid(),
+        id: lectureA3aId,
         title: "Discriminated unions",
         videoUrl: null,
         order: 0,
@@ -145,16 +225,16 @@ function makeSeedDB(): MockCourseDB {
     order: 0,
     lectures: [
       {
-        id: uuid(),
+        id: lectureB1aId,
         title: "JSX in 10 minutes",
         videoUrl: null,
         order: 0,
         durationSecs: 600,
       },
       {
-        id: uuid(),
+        id: lectureB1bId,
         title: "Hooks 101",
-        videoUrl: "https://placehold.co/640x360",
+        videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
         order: 1,
         durationSecs: 720,
       },
@@ -169,7 +249,7 @@ function makeSeedDB(): MockCourseDB {
     order: 1,
     lectures: [
       {
-        id: uuid(),
+        id: lectureB2aId,
         title: "useReducer in practice",
         videoUrl: null,
         order: 0,
@@ -192,6 +272,101 @@ function makeSeedDB(): MockCourseDB {
     modules: [moduleB1, moduleB2],
   };
 
+  // Seed lecture comments so the lesson-video page has something to render.
+  const seededLectureComments: Record<string, Record<string, MockLectureComment[]>> = {
+    [courseAId]: {
+      [lectureA1aId]: [
+        {
+          commentId: uuid(),
+          authorId: DEV_PROFESSOR_ID,
+          authorName: "Prof. Ana Popescu",
+          authorRole: "TEACHER",
+          body: "Bun venit la primul curs! Lasă întrebări mai jos pe parcursul lecturii.",
+          timestampSecs: 12,
+          likeCount: 4,
+          createdAt: isoMinutesAgo(60 * 24),
+          likedBy: [],
+          isPinned: true,
+        },
+        {
+          commentId: uuid(),
+          authorId: "dev-student-cccccccccccccccccccccccc",
+          authorName: "Mihai Ionescu",
+          authorRole: "STUDENT",
+          body: "La 0:45 nu am înțeles distincția dintre `any` și `unknown`. Cineva poate explica?",
+          timestampSecs: 45,
+          likeCount: 2,
+          createdAt: isoMinutesAgo(180),
+          likedBy: [DEV_STUDENT_ID],
+        },
+        {
+          commentId: uuid(),
+          authorId: "dev-student-dddddddddddddddddddddddd",
+          authorName: "Elena Marin",
+          authorRole: "STUDENT",
+          body: "Mulțumesc! Foarte clar explicat, am înțeles imediat.",
+          timestampSecs: 120,
+          likeCount: 1,
+          createdAt: isoMinutesAgo(45),
+          likedBy: [],
+        },
+      ],
+      [lectureA2aId]: [
+        {
+          commentId: uuid(),
+          authorId: "dev-student-cccccccccccccccccccccccc",
+          authorName: "Mihai Ionescu",
+          authorRole: "STUDENT",
+          body: "Genericii sunt magici, mai ales constraint-urile cu `extends`.",
+          timestampSecs: 30,
+          likeCount: 3,
+          createdAt: isoMinutesAgo(90),
+          likedBy: [],
+        },
+      ],
+    },
+    [courseBId]: {
+      [lectureB1bId]: [
+        {
+          commentId: uuid(),
+          authorId: DEV_PROFESSOR_ID,
+          authorName: "Prof. Ana Popescu",
+          authorRole: "TEACHER",
+          body: "Atenție la dependency array — exemplul de la 2:10 e foarte des întâlnit la interviuri.",
+          timestampSecs: 130,
+          likeCount: 5,
+          createdAt: isoMinutesAgo(60 * 6),
+          likedBy: [],
+          isPinned: true,
+        },
+        {
+          commentId: uuid(),
+          authorId: "dev-student-eeeeeeeeeeeeeeeeeeeeeeee",
+          authorName: "Andrei Pop",
+          authorRole: "STUDENT",
+          body: "Există un repo oficial cu exemplele din lecție?",
+          likeCount: 0,
+          createdAt: isoMinutesAgo(20),
+          likedBy: [],
+        },
+      ],
+    },
+  };
+
+  // Seed some "in-progress" playback so the sidebar shows watched-percent bars
+  // and the player resumes from a reasonable spot.
+  const seededProgress: Record<string, Record<string, Record<string, LectureProgress>>> = {
+    [DEV_STUDENT_ID]: {
+      [courseAId]: {
+        [lectureA1aId]: { positionSecs: 78, watchedPercent: 35, completed: false },
+        [lectureA1bId]: { positionSecs: 360, watchedPercent: 100, completed: true },
+      },
+      [courseBId]: {
+        [lectureB1aId]: { positionSecs: 120, watchedPercent: 20, completed: false },
+      },
+    },
+  };
+
   return {
     schemaVersion: SCHEMA_VERSION,
     courses: [courseA, courseB],
@@ -199,6 +374,11 @@ function makeSeedDB(): MockCourseDB {
       [courseAId]: [],
       [courseBId]: [],
     },
+    enrollments: {
+      [DEV_STUDENT_ID]: [courseAId, courseBId],
+    },
+    progress: seededProgress,
+    lectureComments: seededLectureComments,
   };
 }
 
@@ -254,6 +434,130 @@ function findCourse(id: string): CourseAPI | undefined {
 
 function findModule(course: CourseAPI, moduleId: string): ModuleResponse | undefined {
   return (course.modules ?? []).find((m) => m.id === moduleId);
+}
+
+function findLecture(
+  course: CourseAPI,
+  lectureId: string,
+): { module: ModuleResponse; lecture: LectureAPI } | undefined {
+  for (const mod of course.modules ?? []) {
+    const lecture = mod.lectures.find((l) => l.id === lectureId);
+    if (lecture) return { module: mod, lecture };
+  }
+  return undefined;
+}
+
+function getProgress(
+  studentId: string,
+  courseId: string,
+  lectureId: string,
+): LectureProgress | undefined {
+  return db.progress[studentId]?.[courseId]?.[lectureId];
+}
+
+function setProgress(
+  studentId: string,
+  courseId: string,
+  lectureId: string,
+  next: LectureProgress,
+): void {
+  if (!db.progress[studentId]) db.progress[studentId] = {};
+  if (!db.progress[studentId][courseId]) db.progress[studentId][courseId] = {};
+  db.progress[studentId][courseId][lectureId] = next;
+}
+
+/** Find a comment by id across every lecture; returns the parent course/lecture too. */
+function findLectureComment(
+  commentId: string,
+): { courseId: string; lectureId: string; comment: MockLectureComment } | undefined {
+  for (const courseId of Object.keys(db.lectureComments)) {
+    const byLecture = db.lectureComments[courseId];
+    for (const lectureId of Object.keys(byLecture)) {
+      const comment = byLecture[lectureId].find((c) => c.commentId === commentId);
+      if (comment) return { courseId, lectureId, comment };
+    }
+  }
+  return undefined;
+}
+
+function toCourseComment(
+  c: MockLectureComment,
+  studentId: string,
+): CourseComment {
+  return {
+    commentId: c.commentId,
+    authorName: c.authorName,
+    authorRole: c.authorRole,
+    body: c.body,
+    timestampSecs: c.timestampSecs,
+    likeCount: c.likeCount,
+    timeAgo: timeAgo(c.createdAt),
+    likedByMe: c.likedBy.includes(studentId),
+    isPinned: c.isPinned,
+  };
+}
+
+function lectureToSummary(
+  lecture: LectureAPI,
+  studentId: string,
+  courseId: string,
+): ModuleSummary["lectures"][number] {
+  const progress = getProgress(studentId, courseId, lecture.id);
+  return {
+    lectureId: lecture.id,
+    title: lecture.title,
+    order: lecture.order,
+    durationSecs: lecture.durationSecs,
+    completed: progress?.completed ?? false,
+    watchedPercent: progress?.watchedPercent ?? 0,
+    lastPositionSecs: progress?.positionSecs ?? 0,
+  };
+}
+
+function quizToStatus(quiz: QuizAPI): QuizStatus {
+  return {
+    quizId: quiz.id,
+    attemptCount: 0,
+    lastScore: 0,
+    passed: false,
+    statusLabel: "Disponibil",
+  };
+}
+
+/**
+ * Build a stable mock {@link Quiz} for the player. Returns the seeded quiz from
+ * a course if `quizId` matches one, otherwise falls back to {@link MOCK_QUESTIONS}
+ * so any unknown id still produces a usable 5-question quiz.
+ */
+function buildMockQuiz(quizId: string): Quiz {
+  for (const course of db.courses) {
+    for (const mod of course.modules ?? []) {
+      if (mod.quiz?.id === quizId) {
+        const questions: QuizQuestion[] = mod.quiz.questions
+          .filter((q) => typeof q.correctIdx === "number")
+          .map((q) => ({
+            id: q.id,
+            text: q.text,
+            options: q.options,
+            correctIdx: q.correctIdx as number,
+            explanation: q.explanation ?? undefined,
+          }));
+        if (questions.length === 0) {
+          return {
+            id: mod.quiz.id,
+            title: mod.quiz.title,
+            questions: MOCK_QUESTIONS.slice(0, 5),
+          };
+        }
+        return { id: mod.quiz.id, title: mod.quiz.title, questions };
+      }
+    }
+  }
+  return {
+    id: quizId,
+    title: "Web Development Quiz",
+    questions: MOCK_QUESTIONS.slice(0, 5),
+  };
 }
 
 function parseBody<T>(init?: RequestInit): T | undefined {
@@ -604,6 +908,314 @@ const routes: Route[] = [
       };
       return response;
     },
+  },
+
+  // ── Student dashboard ──────────────────────────────────
+  // GET /dashboard/:studentId/stats
+  {
+    method: "GET",
+    pattern: /^\/dashboard\/([^/]+)\/stats$/,
+    handle: (m) => {
+      const enrolled = db.enrollments[m[1]] ?? [];
+      const stats: StudentStats = {
+        firstName: "Teo",
+        lastName: "Student",
+        name: "Teo Student",
+        enrolledCourses: Math.max(enrolled.length, 5),
+        activeCourses: 3,
+        quizzesCompleted: 12,
+        streakDays: 7,
+      };
+      return stats;
+    },
+  },
+  // GET /dashboard/:studentId/courses
+  {
+    method: "GET",
+    pattern: /^\/dashboard\/([^/]+)\/courses$/,
+    handle: (m) => {
+      const studentId = m[1];
+      const ids = db.enrollments[studentId] ?? [];
+      const enrolled = ids
+        .map((id) => findCourse(id))
+        .filter((c): c is CourseAPI => Boolean(c));
+      const list: StudentCourse[] = enrolled.map((c, idx) => {
+        // Derive a rough overall progress from per-lecture watched %s.
+        const lectures = (c.modules ?? []).flatMap((mod) => mod.lectures);
+        const watched = lectures.reduce((sum, l) => {
+          const p = getProgress(studentId, c.id, l.id)?.watchedPercent ?? 0;
+          return sum + p;
+        }, 0);
+        const overall =
+          lectures.length === 0 ? 0 : Math.round(watched / lectures.length);
+        return {
+          title: c.title,
+          overallProgress: overall,
+          enrollmentCount: 120 + idx * 37,
+          avgRating: 4.5 + idx * 0.2,
+        };
+      });
+      return list;
+    },
+  },
+  // GET /dashboard/:studentId/quizzes
+  {
+    method: "GET",
+    pattern: /^\/dashboard\/([^/]+)\/quizzes$/,
+    handle: () => {
+      const list: StudentQuiz[] = [
+        {
+          titluQuiz: "Patterns checkpoint",
+          numeCurs: "TypeScript Mastery",
+          incercari: 2,
+          scor: 85,
+          status: "Promovat",
+        },
+        {
+          titluQuiz: "React Fundamentals quiz",
+          numeCurs: "Building Modern React Apps",
+          incercari: 1,
+          scor: 60,
+          status: "Repetă",
+        },
+        {
+          titluQuiz: "JavaScript essentials",
+          numeCurs: "Web Development",
+          incercari: 3,
+          scor: 92,
+          status: "Promovat",
+        },
+      ];
+      return list;
+    },
+  },
+  // GET /dashboard/:studentId/answers
+  {
+    method: "GET",
+    pattern: /^\/dashboard\/([^/]+)\/answers$/,
+    handle: () => {
+      const list: Answer[] = [
+        {
+          autorRaspuns: "Prof. Ana Popescu",
+          intrebare: "Care e diferența dintre `interface` și `type` în TS?",
+          raspuns:
+            "Pe scurt: `interface` se poate extinde declarativ și e gândită pentru forme de obiecte; `type` e mai general (uniuni, tupluri, mapped types).",
+        },
+        {
+          autorRaspuns: "Mihai Ionescu",
+          intrebare: "Unde găsesc exemplele din lecția 2?",
+          raspuns: "În repo-ul cursului, folder `examples/module-2/`.",
+        },
+      ];
+      return list;
+    },
+  },
+  // GET /dashboard/:studentId/continue
+  {
+    method: "GET",
+    pattern: /^\/dashboard\/([^/]+)\/continue$/,
+    handle: (m) => {
+      const ids = db.enrollments[m[1]] ?? [];
+      const first = ids.map((id) => findCourse(id)).find((c) => Boolean(c));
+      if (!first) return null;
+      const cont: ContinueStudy = {
+        titluCurs: first.title,
+        cursId: first.id,
+      };
+      return cont;
+    },
+  },
+  // GET /dashboard/:studentId/recommendations
+  {
+    method: "GET",
+    pattern: /^\/dashboard\/([^/]+)\/recommendations$/,
+    handle: () => {
+      const featured = db.courses[1] ?? db.courses[0];
+      if (!featured) return null;
+      const rec: Recommendation = {
+        title: featured.title,
+        description: featured.description,
+        courseId: featured.id,
+      };
+      return rec;
+    },
+  },
+
+  // ── Lesson video ───────────────────────────────────────
+  // GET /students/:studentId/courses/:courseId
+  {
+    method: "GET",
+    pattern: /^\/students\/([^/]+)\/courses\/([^/]+)$/,
+    handle: (m) => {
+      const studentId = m[1];
+      const course = findCourse(m[2]);
+      if (!course) return undefined;
+      const lectures = (course.modules ?? []).flatMap((mod) => mod.lectures);
+      const watched = lectures.reduce((sum, l) => {
+        const p = getProgress(studentId, course.id, l.id)?.watchedPercent ?? 0;
+        return sum + p;
+      }, 0);
+      const overall =
+        lectures.length === 0 ? 0 : Math.round(watched / lectures.length);
+      const header: CourseHeader = {
+        courseId: course.id,
+        title: course.title,
+        description: course.description,
+        teacher: {
+          teacherId: course.teacherId,
+          displayName: "Prof. Ana Popescu",
+        },
+        overallProgress: overall,
+      };
+      return header;
+    },
+  },
+  // GET /students/:studentId/courses/:courseId/modules
+  {
+    method: "GET",
+    pattern: /^\/students\/([^/]+)\/courses\/([^/]+)\/modules$/,
+    handle: (m) => {
+      const studentId = m[1];
+      const course = findCourse(m[2]);
+      if (!course) return undefined;
+      const summaries: ModuleSummary[] = (course.modules ?? []).map((mod) => ({
+        moduleId: mod.id,
+        title: mod.title,
+        order: mod.order + 1,
+        lectures: mod.lectures.map((l) => lectureToSummary(l, studentId, course.id)),
+        quiz: mod.quiz ? quizToStatus(mod.quiz) : undefined,
+      }));
+      return summaries;
+    },
+  },
+  // GET /students/:studentId/courses/:courseId/lectures/:lectureId
+  {
+    method: "GET",
+    pattern: /^\/students\/([^/]+)\/courses\/([^/]+)\/lectures\/([^/]+)$/,
+    handle: (m) => {
+      const studentId = m[1];
+      const course = findCourse(m[2]);
+      if (!course) return undefined;
+      const found = findLecture(course, m[3]);
+      if (!found) return undefined;
+      const progress = getProgress(studentId, course.id, found.lecture.id);
+      const details: LectureDetails = {
+        lectureId: found.lecture.id,
+        title: found.lecture.title,
+        videoUrl: found.lecture.videoUrl ?? "https://www.youtube.com/embed/dQw4w9WgXcQ",
+        durationSecs: found.lecture.durationSecs,
+        order: found.lecture.order,
+        positionSecs: progress?.positionSecs ?? 0,
+        watchedPercent: progress?.watchedPercent ?? 0,
+        completed: progress?.completed ?? false,
+      };
+      return details;
+    },
+  },
+  // GET /students/:studentId/courses/:courseId/lectures/:lectureId/comments
+  {
+    method: "GET",
+    pattern: /^\/students\/([^/]+)\/courses\/([^/]+)\/lectures\/([^/]+)\/comments$/,
+    handle: (m, parsed) => {
+      const studentId = m[1];
+      const courseId = m[2];
+      const lectureId = m[3];
+      const list = db.lectureComments[courseId]?.[lectureId] ?? [];
+      const sortBy = parsed.query.get("sortBy") ?? "recent";
+      const sorted = [...list].sort((a, b) => {
+        if (sortBy === "popular") return b.likeCount - a.likeCount;
+        if (sortBy === "oldest") {
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        }
+        // default: recent
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+      // Pinned items always float to the top.
+      sorted.sort((a, b) => Number(b.isPinned ?? false) - Number(a.isPinned ?? false));
+      return sorted.map((c) => toCourseComment(c, studentId));
+    },
+  },
+  // POST /students/:studentId/courses/:courseId/lectures/:lectureId/comments
+  {
+    method: "POST",
+    pattern: /^\/students\/([^/]+)\/courses\/([^/]+)\/lectures\/([^/]+)\/comments$/,
+    handle: (m, _p, init) => {
+      const studentId = m[1];
+      const courseId = m[2];
+      const lectureId = m[3];
+      const body = parseBody<{
+        body?: string;
+        timestampSecs?: number;
+        videoTimestamp?: number;
+      }>(init) ?? {};
+      const created: MockLectureComment = {
+        commentId: uuid(),
+        authorId: studentId,
+        authorName: "Teo Student",
+        authorRole: "STUDENT",
+        body: body.body ?? "",
+        timestampSecs: body.timestampSecs ?? body.videoTimestamp,
+        likeCount: 0,
+        createdAt: nowIso(),
+        likedBy: [],
+      };
+      if (!db.lectureComments[courseId]) db.lectureComments[courseId] = {};
+      if (!db.lectureComments[courseId][lectureId]) {
+        db.lectureComments[courseId][lectureId] = [];
+      }
+      db.lectureComments[courseId][lectureId].unshift(created);
+      commit();
+      return toCourseComment(created, studentId);
+    },
+  },
+  // POST /students/:studentId/comments/:commentId/like
+  {
+    method: "POST",
+    pattern: /^\/students\/([^/]+)\/comments\/([^/]+)\/like$/,
+    handle: (m) => {
+      const studentId = m[1];
+      const commentId = m[2];
+      const found = findLectureComment(commentId);
+      if (!found) return undefined;
+      const { comment } = found;
+      const idx = comment.likedBy.indexOf(studentId);
+      if (idx >= 0) {
+        comment.likedBy.splice(idx, 1);
+        comment.likeCount = Math.max(0, comment.likeCount - 1);
+      } else {
+        comment.likedBy.push(studentId);
+        comment.likeCount += 1;
+      }
+      commit();
+      return undefined;
+    },
+  },
+  // PUT /students/:studentId/courses/:courseId/lectures/:lectureId/progress
+  {
+    method: "PUT",
+    pattern: /^\/students\/([^/]+)\/courses\/([^/]+)\/lectures\/([^/]+)\/progress$/,
+    handle: (m, _p, init) => {
+      const studentId = m[1];
+      const courseId = m[2];
+      const lectureId = m[3];
+      const body = parseBody<LectureProgressPayload>(init);
+      if (!body) return undefined;
+      setProgress(studentId, courseId, lectureId, {
+        positionSecs: Math.max(0, Math.floor(body.positionSecs ?? 0)),
+        watchedPercent: Math.max(0, Math.min(100, Math.floor(body.watchedPercent ?? 0))),
+        completed: Boolean(body.completed),
+      });
+      commit();
+      return undefined;
+    },
+  },
+
+  // ── Quiz player ────────────────────────────────────────
+  // GET /quizzes/:quizId
+  {
+    method: "GET",
+    pattern: /^\/quizzes\/([^/]+)$/,
+    handle: (m) => buildMockQuiz(m[1]),
   },
 ];
 
