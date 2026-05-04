@@ -14,22 +14,57 @@ function authHeader(): Record<string, string> {
  * Sends JSON by default, attaches the bearer token from localStorage when present,
  * throws on non-2xx with the server's message when present, and returns
  * `undefined` for 204 No Content.
+ *
+ * In dev (`import.meta.env.DEV`), if the real backend errors (e.g. 404 because
+ * the API is offline), we dynamically import the dev mock layer and try to
+ * resolve the request against it. The dev module is guarded by the `DEV` flag
+ * so it gets tree-shaken out of production bundles.
  */
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeader(),
-      ...options?.headers,
-    },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeader(),
+        ...options?.headers,
+      },
+    });
+  } catch (networkErr) {
+    if (import.meta.env.DEV) {
+      const mocked = await tryDevMockRequest(path, options);
+      if (mocked !== undefined) return mocked as T;
+    }
+    throw networkErr;
+  }
   if (!res.ok) {
+    if (import.meta.env.DEV) {
+      const mocked = await tryDevMockRequest(path, options);
+      if (mocked !== undefined) return mocked as T;
+    }
     const err = await res.json().catch(() => ({ message: res.statusText }));
     throw new Error(err.message || `Request failed: ${res.status}`);
   }
   if (res.status === 204) return undefined as T;
   return res.json();
+}
+
+/**
+ * Dev-only helper. Dynamically loads `./devMocks` (so it's code-split out of
+ * the prod bundle) and asks it to resolve the request. Returns whatever the
+ * mock returns: `undefined` when no rule matched, otherwise the mock body.
+ */
+async function tryDevMockRequest(
+  path: string,
+  options?: RequestInit,
+): Promise<unknown | undefined> {
+  try {
+    const mod = await import("./devMocks");
+    return mod.tryDevMock(path, options);
+  } catch {
+    return undefined;
+  }
 }
 
 const request = apiFetch;
@@ -276,13 +311,26 @@ async function postMultipart(path: string, file: File): Promise<UploadResponse> 
   const formData = new FormData();
   formData.append("file", file);
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    headers: { ...authHeader() }, // browser sets the multipart Content-Type itself
-    body: formData,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      method: "POST",
+      headers: { ...authHeader() }, // browser sets the multipart Content-Type itself
+      body: formData,
+    });
+  } catch (networkErr) {
+    if (import.meta.env.DEV) {
+      const mocked = await tryDevMockRequest(path, { method: "POST" });
+      if (mocked !== undefined) return mocked as UploadResponse;
+    }
+    throw networkErr;
+  }
 
   if (!res.ok) {
+    if (import.meta.env.DEV) {
+      const mocked = await tryDevMockRequest(path, { method: "POST" });
+      if (mocked !== undefined) return mocked as UploadResponse;
+    }
     const err = await res.json().catch(() => ({ message: res.statusText }));
     throw new Error(err.message || `Upload failed: ${res.status}`);
   }
