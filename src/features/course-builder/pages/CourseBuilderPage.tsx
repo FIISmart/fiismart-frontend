@@ -30,6 +30,11 @@ type LoadError = {
 };
 
 function isNotFoundError(err: unknown): boolean {
+  // Prefer a typed status code if the error carries one, otherwise fall back
+  // to substring match on the message (apiFetch throws plain Error today).
+  const status = (err as { status?: number; statusCode?: number } | null)?.status
+    ?? (err as { status?: number; statusCode?: number } | null)?.statusCode;
+  if (status === 404) return true;
   if (!(err instanceof Error)) return false;
   const msg = err.message.toLowerCase();
   return msg.includes("404") || msg.includes("not found") || msg.includes("nu a fost gas");
@@ -178,8 +183,17 @@ export default function CourseBuilderPage() {
 
   if (!course) {
     const notFound = loadError?.kind === "not-found";
+    // Surface the underlying error to the console for debugging, but keep the
+    // user-facing copy generic so we don't leak stack-ish strings into the UI.
+    if (loadError && !notFound) {
+      console.error("[course-builder] load failed:", loadError.message);
+    }
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <div
+        role="alert"
+        aria-live="assertive"
+        className="min-h-screen bg-background flex items-center justify-center px-4"
+      >
         <Toaster richColors position="top-right" />
         <div className="max-w-md w-full text-center bg-card border border-border rounded-2xl p-8">
           <AlertTriangle className="h-12 w-12 text-destructive/80 mx-auto mb-4" />
@@ -189,8 +203,7 @@ export default function CourseBuilderPage() {
           <p className="text-muted-foreground text-sm mb-6">
             {notFound
               ? "Cursul pe care încerci să îl deschizi nu există sau a fost șters."
-              : loadError?.message ||
-                "A apărut o eroare neașteptată. Încearcă din nou mai târziu."}
+              : "A apărut o eroare neașteptată. Încearcă din nou mai târziu."}
           </p>
           <Button asChild className="gap-2">
             <Link to="/professor/courses">

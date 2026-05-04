@@ -140,6 +140,7 @@ export default function CoursesListPage() {
               className="gap-2"
               onClick={handleCreateCourse}
               disabled={isCreatingCourse || !teacherId}
+              aria-busy={isCreatingCourse}
             >
               <Plus className="h-4 w-4" />
               {isCreatingCourse ? "Se creează..." : "Curs Nou"}
@@ -229,6 +230,7 @@ export default function CoursesListPage() {
             type="button"
             onClick={handleCreateCourse}
             disabled={isCreatingCourse || !teacherId}
+            aria-busy={isCreatingCourse}
             className="border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center min-h-[320px] text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-3">

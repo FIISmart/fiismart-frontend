@@ -98,10 +98,11 @@ export function ProfessorDashboardPage() {
           {hasFetchError && (
             <div
               role="status"
+              aria-live="polite"
               className="mb-6 flex items-center gap-2 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-2.5 text-sm text-amber-800"
             >
               <WifiOff size={16} className="shrink-0" />
-              <span>Backend offline — afișăm date demo.</span>
+              <span>Backend offline — vei vedea o vizualizare goală.</span>
             </div>
           )}
 
