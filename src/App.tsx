@@ -12,9 +12,11 @@ import LessonVideoPage from "@/features/lesson-video/pages/LessonVideoPage";
 import QuizPlayerPage from "@/features/quiz/pages/QuizPlayerPage";
 import CourseBuilderPage from "@/features/course-builder/pages/CourseBuilderPage";
 import CoursesListPage from "@/features/courses/pages/CoursesListPage";
+import { DevNav } from "@/components/DevNav";
 
 export default function App() {
   return (
+    <>
     <Routes>
       {/* Public */}
       <Route path="/" element={<LandingPage />} />
@@ -47,5 +49,7 @@ export default function App() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    <DevNav />
+    </>
   );
 }
