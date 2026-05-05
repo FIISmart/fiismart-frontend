@@ -10,7 +10,7 @@ export interface AuthUser {
   email: string;
   firstName: string;
   lastName: string;
-  /** Optional convenience field — backend may return a single display name. */
+  /** Câmp de conveniență — backend-ul returnează și displayName. */
   displayName?: string;
   role: UserRole;
   emailVerified?: boolean;
@@ -30,24 +30,41 @@ export interface LoginPayload {
 }
 
 export interface SignupPayload {
-  firstName?: string;
-  lastName?: string;
+  firstName: string;
+  lastName: string;
   email: string;
   password: string;
   role: UserRole;
 }
 
+export interface VerifyEmailPayload {
+  email: string;
+  code: string;
+}
+
+export interface ForgotPasswordPayload {
+  email: string;
+}
+
+export interface ResetPasswordPayload {
+  email: string;
+  code: string;
+  newPassword: string;
+}
+
 // ── API response shapes ──────────────────────────────────────────
 
-/**
- * Shape returned by `/auth/login` and `/auth/signup`. The backend on the
- * source branch returns Cognito-style tokens alongside the user; we keep the
- * accessToken and use it as our persisted bearer.
- */
 export interface AuthResponse {
   accessToken: string;
   refreshToken?: string;
   tokenType?: string;
   expiresIn?: number;
   user: AuthUser;
+}
+
+/**
+ * Răspuns la /auth/signup — fără tokens; utilizatorul trebuie să verifice email-ul.
+ */
+export interface RegisterResponse {
+  message: string;
 }

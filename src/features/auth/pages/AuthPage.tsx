@@ -4,7 +4,9 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Eye, EyeOff, GraduationCap, Loader2 } from "lucide-react";
+import { Eye, EyeOff, GraduationCap, Loader2, Mail } from "lucide-react";
+import { isCognitoConfigured } from "@/lib/cognito-config";
+import { buildLoginUrl } from "../services/cognito.service";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -30,11 +32,18 @@ import { UserRole, type AuthUser } from "../types";
 import {
   loginSchema,
   signupSchema,
+  verifyEmailSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
   type LoginValues,
   type SignupValues,
+  type VerifyEmailValues,
+  type ForgotPasswordValues,
+  type ResetPasswordValues,
 } from "../utils/validation";
 
 type LocationState = { from?: { pathname?: string } } | null;
+type AuthView = "tabs" | "verify-email" | "forgot-password" | "reset-password";
 
 function dashboardFor(role: UserRole): string {
   return role === UserRole.PROFESSOR ? "/professor/dashboard" : "/student/dashboard";
@@ -43,8 +52,12 @@ function dashboardFor(role: UserRole): string {
 export default function AuthPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, signup } = useAuth();
-  const [tab, setTab] = useState<"login" | "signup">("login");
+  const { login, signup, verifyEmail, resendVerification, forgotPassword, resetPassword } = useAuth();
+
+  const [tab, setTab]           = useState<"login" | "signup">("login");
+  const [view, setView]         = useState<AuthView>("tabs");
+  const [pendingEmail, setPendingEmail] = useState("");
+  const [pendingPassword, setPendingPassword] = useState("");
 
   const goAfterAuth = (user: AuthUser) => {
     const state = location.state as LocationState;
@@ -53,9 +66,42 @@ export default function AuthPage() {
     navigate(target, { replace: true });
   };
 
+  const handleSignupSuccess = (email: string, password: string) => {
+    setPendingEmail(email);
+    setPendingPassword(password);
+    setView("verify-email");
+  };
+
+  const handleVerifySuccess = async () => {
+    try {
+      const user = await login({ email: pendingEmail, password: pendingPassword });
+      setPendingPassword("");
+      toast.success(`Bine ai venit, ${user.firstName || user.email}!`);
+      goAfterAuth(user);
+    } catch {
+      setPendingPassword("");
+      toast.success("Email verificat! Te poți autentifica acum.");
+      setTab("login");
+      setView("tabs");
+    }
+  };
+
+  const handleForgotPassword = () => setView("forgot-password");
+
+  const handleResetCodeSent = (email: string) => {
+    setPendingEmail(email);
+    setView("reset-password");
+  };
+
+  const handleResetSuccess = () => {
+    toast.success("Parola a fost resetată. Te poți autentifica cu noua parolă.");
+    setView("tabs");
+    setTab("login");
+  };
+
   return (
     <div className="min-h-screen w-full bg-edu-bg lg:grid lg:grid-cols-2 overflow-x-hidden">
-      {/* ── Left brand panel (hidden on mobile) ── */}
+      {/* ── Left brand panel ── */}
       <aside className="hidden lg:flex relative overflow-hidden min-w-0 bg-gradient-to-br from-edu-purple via-edu-lavender to-edu-purple text-white">
         <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_30%_20%,white,transparent_55%)]" />
         <div className="relative z-10 flex flex-col justify-between p-12 w-full max-w-full">
@@ -65,7 +111,6 @@ export default function AuthPage() {
             </span>
             <span className="text-xl font-semibold tracking-tight">FIISmart</span>
           </Link>
-
           <div className="space-y-6 max-w-md">
             <h1 className="text-4xl xl:text-5xl font-serif font-semibold leading-tight">
               Învață. Predă. Conectează.
@@ -75,7 +120,6 @@ export default function AuthPage() {
               într-un singur loc — pentru studenți și profesori deopotrivă.
             </p>
           </div>
-
           <p className="text-xs text-white/70">
             &copy; {new Date().getFullYear()} FIISmart &middot; Faculty of Computer Science, UAIC
           </p>
@@ -90,58 +134,84 @@ export default function AuthPage() {
             <span className="grid place-items-center size-10 rounded-xl bg-edu-purple text-white">
               <GraduationCap className="size-5" aria-hidden="true" />
             </span>
-            <span className="text-xl font-semibold tracking-tight text-edu-foreground">
-              FIISmart
-            </span>
+            <span className="text-xl font-semibold tracking-tight text-edu-foreground">FIISmart</span>
           </div>
 
-          {import.meta.env.DEV && <DevPreviewLogin onLogin={goAfterAuth} />}
+          {import.meta.env.DEV && view === "tabs" && <DevPreviewLogin onLogin={goAfterAuth} />}
 
-          <Card className="border-border/60 shadow-lg">
-            <Tabs value={tab} onValueChange={(v) => setTab(v as "login" | "signup")}>
-              <CardHeader className="space-y-4">
-                <div className="space-y-1">
-                  <CardTitle className="text-2xl font-serif">Bine ai venit</CardTitle>
-                  <CardDescription>
-                    Autentifică-te sau creează un cont nou pentru a continua.
-                  </CardDescription>
-                </div>
-                <TabsList className="grid grid-cols-2 w-full">
-                  <TabsTrigger value="login">Login</TabsTrigger>
-                  <TabsTrigger value="signup">Sign up</TabsTrigger>
-                </TabsList>
-              </CardHeader>
+          {view === "tabs" && isCognitoConfigured && <GoogleLoginButton />}
 
-              <CardContent>
-                <TabsContent value="login" className="mt-0">
-                  <LoginForm
-                    onSuccess={goAfterAuth}
-                    onSwitchToSignup={() => setTab("signup")}
-                    submit={login}
-                  />
-                </TabsContent>
+          {/* ── Login / Signup tabs ── */}
+          {view === "tabs" && (
+            <Card className="border-border/60 shadow-lg">
+              <Tabs value={tab} onValueChange={(v) => setTab(v as "login" | "signup")}>
+                <CardHeader className="space-y-4">
+                  <div className="space-y-1">
+                    <CardTitle className="text-2xl font-serif">Bine ai venit</CardTitle>
+                    <CardDescription>
+                      Autentifică-te sau creează un cont nou pentru a continua.
+                    </CardDescription>
+                  </div>
+                  <TabsList className="grid grid-cols-2 w-full">
+                    <TabsTrigger value="login">Login</TabsTrigger>
+                    <TabsTrigger value="signup">Sign up</TabsTrigger>
+                  </TabsList>
+                </CardHeader>
+                <CardContent>
+                  <TabsContent value="login" className="mt-0">
+                    <LoginForm
+                      onSuccess={goAfterAuth}
+                      onSwitchToSignup={() => setTab("signup")}
+                      onForgotPassword={handleForgotPassword}
+                      submit={login}
+                    />
+                  </TabsContent>
+                  <TabsContent value="signup" className="mt-0">
+                    <SignupForm
+                      onSuccess={handleSignupSuccess}
+                      onSwitchToLogin={() => setTab("login")}
+                      submit={signup}
+                    />
+                  </TabsContent>
+                </CardContent>
+              </Tabs>
+            </Card>
+          )}
 
-                <TabsContent value="signup" className="mt-0">
-                  <SignupForm
-                    onSuccess={goAfterAuth}
-                    onSwitchToLogin={() => setTab("login")}
-                    submit={signup}
-                  />
-                </TabsContent>
-              </CardContent>
-            </Tabs>
-          </Card>
+          {/* ── Verificare email ── */}
+          {view === "verify-email" && (
+            <VerifyEmailForm
+              email={pendingEmail}
+              onSuccess={handleVerifySuccess}
+              onResend={resendVerification}
+              submitVerify={verifyEmail}
+            />
+          )}
+
+          {/* ── Forgot password ── */}
+          {view === "forgot-password" && (
+            <ForgotPasswordForm
+              onCodeSent={handleResetCodeSent}
+              onBack={() => setView("tabs")}
+              submit={forgotPassword}
+            />
+          )}
+
+          {/* ── Reset password ── */}
+          {view === "reset-password" && (
+            <ResetPasswordForm
+              email={pendingEmail}
+              onSuccess={handleResetSuccess}
+              onBack={() => setView("forgot-password")}
+              submit={resetPassword}
+            />
+          )}
 
           <p className="text-xs text-muted-foreground text-center">
             Continuând, accepți{" "}
-            <Link to="/terms" className="underline hover:text-edu-purple">
-              Termenii Serviciului
-            </Link>{" "}
+            <Link to="/terms" className="underline hover:text-edu-purple">Termenii Serviciului</Link>{" "}
             și{" "}
-            <Link to="/privacy" className="underline hover:text-edu-purple">
-              Politica de Confidențialitate
-            </Link>
-            .
+            <Link to="/privacy" className="underline hover:text-edu-purple">Politica de Confidențialitate</Link>.
           </p>
         </div>
       </main>
@@ -154,16 +224,13 @@ export default function AuthPage() {
 interface LoginFormProps {
   onSuccess: (user: AuthUser) => void;
   onSwitchToSignup: () => void;
+  onForgotPassword: () => void;
   submit: (payload: LoginValues) => Promise<AuthUser>;
 }
 
-function LoginForm({ onSuccess, onSwitchToSignup, submit }: LoginFormProps) {
+function LoginForm({ onSuccess, onSwitchToSignup, onForgotPassword, submit }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<LoginValues>({
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
   });
@@ -174,8 +241,7 @@ function LoginForm({ onSuccess, onSwitchToSignup, submit }: LoginFormProps) {
       toast.success(`Bine ai revenit, ${user.firstName || user.email}!`);
       onSuccess(user);
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Autentificare eșuată. Verifică datele.";
+      const message = err instanceof Error ? err.message : "Autentificare eșuată. Verifică datele.";
       toast.error(message);
     }
   });
@@ -184,64 +250,29 @@ function LoginForm({ onSuccess, onSwitchToSignup, submit }: LoginFormProps) {
     <form onSubmit={onSubmit} className="space-y-4" noValidate>
       <div className="space-y-2">
         <Label htmlFor="login-email">Email</Label>
-        <Input
-          id="login-email"
-          type="email"
-          autoComplete="email"
-          placeholder="nume@uaic.ro"
-          aria-invalid={!!errors.email}
-          {...register("email")}
-        />
-        {errors.email && (
-          <p className="text-xs text-destructive">{errors.email.message}</p>
-        )}
+        <Input id="login-email" type="email" autoComplete="email" placeholder="nume@uaic.ro"
+          aria-invalid={!!errors.email} {...register("email")} />
+        {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
       </div>
-
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label htmlFor="login-password">Parolă</Label>
-          <button
-            type="button"
-            className="text-xs text-edu-purple hover:underline"
-            onClick={() =>
-              toast.info("Recuperarea parolei va fi disponibilă în curând.")
-            }
-          >
+          <button type="button" className="text-xs text-edu-purple hover:underline"
+            onClick={onForgotPassword}>
             Ai uitat parola?
           </button>
         </div>
-        <PasswordInput
-          id="login-password"
-          autoComplete="current-password"
-          placeholder="••••••••"
-          aria-invalid={!!errors.password}
-          show={showPassword}
-          onToggleShow={() => setShowPassword((v) => !v)}
-          {...register("password")}
-        />
-        {errors.password && (
-          <p className="text-xs text-destructive">{errors.password.message}</p>
-        )}
+        <PasswordInput id="login-password" autoComplete="current-password" placeholder="••••••••"
+          aria-invalid={!!errors.password} show={showPassword}
+          onToggleShow={() => setShowPassword((v) => !v)} {...register("password")} />
+        {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
       </div>
-
       <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? (
-          <>
-            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            Se autentifică…
-          </>
-        ) : (
-          "Login"
-        )}
+        {isSubmitting ? <><Loader2 className="size-4 animate-spin" />Se autentifică…</> : "Login"}
       </Button>
-
       <p className="text-sm text-muted-foreground text-center">
         Nu ai cont?{" "}
-        <button
-          type="button"
-          onClick={onSwitchToSignup}
-          className="text-edu-purple hover:underline font-medium"
-        >
+        <button type="button" onClick={onSwitchToSignup} className="text-edu-purple hover:underline font-medium">
           Creează unul
         </button>
       </p>
@@ -252,40 +283,28 @@ function LoginForm({ onSuccess, onSwitchToSignup, submit }: LoginFormProps) {
 // ── Signup form ──────────────────────────────────────────────────────────────
 
 interface SignupFormProps {
-  onSuccess: (user: AuthUser) => void;
+  onSuccess: (email: string, password: string) => void;
   onSwitchToLogin: () => void;
-  submit: (payload: SignupValues) => Promise<AuthUser>;
+  submit: (payload: SignupValues) => Promise<{ message: string }>;
 }
 
 function SignupForm({ onSuccess, onSwitchToLogin, submit }: SignupFormProps) {
   const [showPassword, setShowPassword] = useState(false);
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors, isSubmitting },
-  } = useForm<SignupValues>({
-    resolver: zodResolver(signupSchema),
-    defaultValues: {
-      firstName: "",
-      lastName: "",
-      email: "",
-      password: "",
-      role: UserRole.STUDENT,
-    },
-  });
+  const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } =
+    useForm<SignupValues>({
+      resolver: zodResolver(signupSchema),
+      defaultValues: { firstName: "", lastName: "", email: "", password: "", role: UserRole.STUDENT },
+    });
 
   const role = watch("role");
 
   const onSubmit = handleSubmit(async (values) => {
     try {
-      const user = await submit(values);
-      toast.success(`Cont creat. Bine ai venit, ${user.firstName || user.email}!`);
-      onSuccess(user);
+      await submit(values);
+      toast.success("Cont creat! Verifică email-ul pentru codul de confirmare.");
+      onSuccess(values.email, values.password);
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Înregistrare eșuată. Încearcă din nou.";
+      const message = err instanceof Error ? err.message : "Înregistrare eșuată. Încearcă din nou.";
       toast.error(message);
     }
   });
@@ -295,69 +314,34 @@ function SignupForm({ onSuccess, onSwitchToLogin, submit }: SignupFormProps) {
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
           <Label htmlFor="signup-firstName">Prenume</Label>
-          <Input
-            id="signup-firstName"
-            autoComplete="given-name"
-            placeholder="Ana"
-            aria-invalid={!!errors.firstName}
-            {...register("firstName")}
-          />
-          {errors.firstName && (
-            <p className="text-xs text-destructive">{errors.firstName.message}</p>
-          )}
+          <Input id="signup-firstName" autoComplete="given-name" placeholder="Ana"
+            aria-invalid={!!errors.firstName} {...register("firstName")} />
+          {errors.firstName && <p className="text-xs text-destructive">{errors.firstName.message}</p>}
         </div>
         <div className="space-y-2">
           <Label htmlFor="signup-lastName">Nume</Label>
-          <Input
-            id="signup-lastName"
-            autoComplete="family-name"
-            placeholder="Popescu"
-            aria-invalid={!!errors.lastName}
-            {...register("lastName")}
-          />
-          {errors.lastName && (
-            <p className="text-xs text-destructive">{errors.lastName.message}</p>
-          )}
+          <Input id="signup-lastName" autoComplete="family-name" placeholder="Popescu"
+            aria-invalid={!!errors.lastName} {...register("lastName")} />
+          {errors.lastName && <p className="text-xs text-destructive">{errors.lastName.message}</p>}
         </div>
       </div>
-
       <div className="space-y-2">
         <Label htmlFor="signup-email">Email</Label>
-        <Input
-          id="signup-email"
-          type="email"
-          autoComplete="email"
-          placeholder="nume@uaic.ro"
-          aria-invalid={!!errors.email}
-          {...register("email")}
-        />
-        {errors.email && (
-          <p className="text-xs text-destructive">{errors.email.message}</p>
-        )}
+        <Input id="signup-email" type="email" autoComplete="email" placeholder="nume@uaic.ro"
+          aria-invalid={!!errors.email} {...register("email")} />
+        {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
       </div>
-
       <div className="space-y-2">
         <Label htmlFor="signup-password">Parolă</Label>
-        <PasswordInput
-          id="signup-password"
-          autoComplete="new-password"
-          placeholder="Min. 8 caractere, o majusculă, o cifră"
-          aria-invalid={!!errors.password}
-          show={showPassword}
-          onToggleShow={() => setShowPassword((v) => !v)}
-          {...register("password")}
-        />
-        {errors.password && (
-          <p className="text-xs text-destructive">{errors.password.message}</p>
-        )}
+        <PasswordInput id="signup-password" autoComplete="new-password"
+          placeholder="Min. 8 car., o majusculă, o cifră, un simbol"
+          aria-invalid={!!errors.password} show={showPassword}
+          onToggleShow={() => setShowPassword((v) => !v)} {...register("password")} />
+        {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
       </div>
-
       <div className="space-y-2">
         <Label htmlFor="signup-role">Rol</Label>
-        <Select
-          value={role}
-          onValueChange={(v) => setValue("role", v as UserRole, { shouldValidate: true })}
-        >
+        <Select value={role} onValueChange={(v) => setValue("role", v as UserRole, { shouldValidate: true })}>
           <SelectTrigger id="signup-role" aria-invalid={!!errors.role}>
             <SelectValue placeholder="Alege un rol" />
           </SelectTrigger>
@@ -366,29 +350,14 @@ function SignupForm({ onSuccess, onSwitchToLogin, submit }: SignupFormProps) {
             <SelectItem value={UserRole.PROFESSOR}>Profesor</SelectItem>
           </SelectContent>
         </Select>
-        {errors.role && (
-          <p className="text-xs text-destructive">{errors.role.message}</p>
-        )}
+        {errors.role && <p className="text-xs text-destructive">{errors.role.message}</p>}
       </div>
-
       <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? (
-          <>
-            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            Se creează contul…
-          </>
-        ) : (
-          "Creează cont"
-        )}
+        {isSubmitting ? <><Loader2 className="size-4 animate-spin" />Se creează contul…</> : "Creează cont"}
       </Button>
-
       <p className="text-sm text-muted-foreground text-center">
         Ai deja cont?{" "}
-        <button
-          type="button"
-          onClick={onSwitchToLogin}
-          className="text-edu-purple hover:underline font-medium"
-        >
+        <button type="button" onClick={onSwitchToLogin} className="text-edu-purple hover:underline font-medium">
           Autentifică-te
         </button>
       </p>
@@ -396,7 +365,195 @@ function SignupForm({ onSuccess, onSwitchToLogin, submit }: SignupFormProps) {
   );
 }
 
-// ── Shared password input with show/hide toggle ──────────────────────────────
+// ── Verify email form ────────────────────────────────────────────────────────
+
+interface VerifyEmailFormProps {
+  email: string;
+  onSuccess: () => Promise<void>;
+  onResend: (email: string) => Promise<{ message: string }>;
+  submitVerify: (email: string, code: string) => Promise<{ message: string }>;
+}
+
+function VerifyEmailForm({ email, onSuccess, onResend, submitVerify }: VerifyEmailFormProps) {
+  const { register, handleSubmit, formState: { errors, isSubmitting } } =
+    useForm<VerifyEmailValues>({
+      resolver: zodResolver(verifyEmailSchema),
+      defaultValues: { code: "" },
+    });
+
+  const onSubmit = handleSubmit(async ({ code }) => {
+    try {
+      await submitVerify(email, code);
+      await onSuccess();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Cod invalid sau expirat.";
+      toast.error(message);
+    }
+  });
+
+  const handleResend = async () => {
+    try {
+      await onResend(email);
+      toast.success("Cod retrimis! Verifică email-ul.");
+    } catch {
+      toast.error("Nu s-a putut retrimite codul. Încearcă din nou.");
+    }
+  };
+
+  return (
+    <Card className="border-border/60 shadow-lg">
+      <CardHeader className="space-y-2">
+        <div className="flex items-center gap-3">
+          <span className="grid place-items-center size-10 rounded-xl bg-edu-purple/10 text-edu-purple">
+            <Mail className="size-5" />
+          </span>
+          <div>
+            <CardTitle className="text-xl font-serif">Verifică email-ul</CardTitle>
+            <CardDescription>Am trimis un cod de 6 cifre la <strong>{email}</strong></CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={onSubmit} className="space-y-4" noValidate>
+          <div className="space-y-2">
+            <Label htmlFor="verify-code">Cod de verificare</Label>
+            <Input id="verify-code" placeholder="123456" maxLength={6}
+              aria-invalid={!!errors.code} {...register("code")} />
+            {errors.code && <p className="text-xs text-destructive">{errors.code.message}</p>}
+          </div>
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? <><Loader2 className="size-4 animate-spin" />Se verifică…</> : "Confirmă email"}
+          </Button>
+          <p className="text-sm text-muted-foreground text-center">
+            Nu ai primit codul?{" "}
+            <button type="button" onClick={handleResend} className="text-edu-purple hover:underline font-medium">
+              Retrimite
+            </button>
+          </p>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Forgot password form ─────────────────────────────────────────────────────
+
+interface ForgotPasswordFormProps {
+  onCodeSent: (email: string) => void;
+  onBack: () => void;
+  submit: (email: string) => Promise<{ message: string }>;
+}
+
+function ForgotPasswordForm({ onCodeSent, onBack, submit }: ForgotPasswordFormProps) {
+  const { register, handleSubmit, getValues, formState: { errors, isSubmitting } } =
+    useForm<ForgotPasswordValues>({
+      resolver: zodResolver(forgotPasswordSchema),
+      defaultValues: { email: "" },
+    });
+
+  const onSubmit = handleSubmit(async ({ email }) => {
+    try {
+      await submit(email);
+      toast.success("Cod trimis! Verifică email-ul.");
+      onCodeSent(email);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "A apărut o eroare. Încearcă din nou.";
+      toast.error(message);
+    }
+  });
+
+  return (
+    <Card className="border-border/60 shadow-lg">
+      <CardHeader>
+        <CardTitle className="text-xl font-serif">Resetare parolă</CardTitle>
+        <CardDescription>Introdu email-ul și îți vom trimite un cod de resetare.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={onSubmit} className="space-y-4" noValidate>
+          <div className="space-y-2">
+            <Label htmlFor="forgot-email">Email</Label>
+            <Input id="forgot-email" type="email" placeholder="nume@uaic.ro"
+              aria-invalid={!!errors.email} {...register("email")} />
+            {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+          </div>
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? <><Loader2 className="size-4 animate-spin" />Se trimite…</> : "Trimite cod"}
+          </Button>
+          <p className="text-sm text-muted-foreground text-center">
+            <button type="button" onClick={onBack} className="text-edu-purple hover:underline font-medium">
+              Înapoi la login
+            </button>
+          </p>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Reset password form ──────────────────────────────────────────────────────
+
+interface ResetPasswordFormProps {
+  email: string;
+  onSuccess: () => void;
+  onBack: () => void;
+  submit: (email: string, code: string, newPassword: string) => Promise<{ message: string }>;
+}
+
+function ResetPasswordForm({ email, onSuccess, onBack, submit }: ResetPasswordFormProps) {
+  const [showPassword, setShowPassword] = useState(false);
+  const { register, handleSubmit, formState: { errors, isSubmitting } } =
+    useForm<ResetPasswordValues>({
+      resolver: zodResolver(resetPasswordSchema),
+      defaultValues: { code: "", newPassword: "" },
+    });
+
+  const onSubmit = handleSubmit(async ({ code, newPassword }) => {
+    try {
+      await submit(email, code, newPassword);
+      onSuccess();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Resetare eșuată. Verifică codul și încearcă din nou.";
+      toast.error(message);
+    }
+  });
+
+  return (
+    <Card className="border-border/60 shadow-lg">
+      <CardHeader>
+        <CardTitle className="text-xl font-serif">Parolă nouă</CardTitle>
+        <CardDescription>Introdu codul primit pe <strong>{email}</strong> și noua parolă.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={onSubmit} className="space-y-4" noValidate>
+          <div className="space-y-2">
+            <Label htmlFor="reset-code">Cod de verificare</Label>
+            <Input id="reset-code" placeholder="123456" maxLength={6}
+              aria-invalid={!!errors.code} {...register("code")} />
+            {errors.code && <p className="text-xs text-destructive">{errors.code.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="reset-password">Parolă nouă</Label>
+            <PasswordInput id="reset-password" autoComplete="new-password"
+              placeholder="Min. 8 car., o majusculă, o cifră, un simbol"
+              aria-invalid={!!errors.newPassword} show={showPassword}
+              onToggleShow={() => setShowPassword((v) => !v)} {...register("newPassword")} />
+            {errors.newPassword && <p className="text-xs text-destructive">{errors.newPassword.message}</p>}
+          </div>
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? <><Loader2 className="size-4 animate-spin" />Se resetează…</> : "Resetează parola"}
+          </Button>
+          <p className="text-sm text-muted-foreground text-center">
+            <button type="button" onClick={onBack} className="text-edu-purple hover:underline font-medium">
+              Înapoi
+            </button>
+          </p>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Shared password input ────────────────────────────────────────────────────
 
 type PasswordInputProps = React.InputHTMLAttributes<HTMLInputElement> & {
   show: boolean;
@@ -404,59 +561,67 @@ type PasswordInputProps = React.InputHTMLAttributes<HTMLInputElement> & {
 };
 
 const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputProps>(
-  ({ show, onToggleShow, className, ...props }, ref) => {
-    return (
-      <div className="relative">
-        <Input
-          ref={ref}
-          type={show ? "text" : "password"}
-          className={`pr-10 ${className ?? ""}`}
-          {...props}
-        />
-        <button
-          type="button"
-          onClick={onToggleShow}
-          aria-label={show ? "Hide password" : "Show password"}
-          className="absolute inset-y-0 right-2 my-auto grid place-items-center size-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-        >
-          {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-        </button>
-      </div>
-    );
-  }
+  ({ show, onToggleShow, className, ...props }, ref) => (
+    <div className="relative">
+      <Input ref={ref} type={show ? "text" : "password"} className={`pr-10 ${className ?? ""}`} {...props} />
+      <button type="button" onClick={onToggleShow}
+        aria-label={show ? "Hide password" : "Show password"}
+        className="absolute inset-y-0 right-2 my-auto grid place-items-center size-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors">
+        {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+      </button>
+    </div>
+  )
 );
 PasswordInput.displayName = "PasswordInput";
 
-/**
- * Dev-only quick login. Renders only when `import.meta.env.DEV` is truthy
- * (Vite sets this to `false` for production builds, so this UI never ships).
- * Stamps a mock user via the AuthContext, persists it through reloads, and
- * navigates to the matching dashboard so testers can walk every protected
- * route before the real backend is wired up.
- */
+// ── Google / Cognito login button ────────────────────────────────────────────
+
+function GoogleLoginButton() {
+  const [loading, setLoading] = useState(false);
+  const handleClick = async () => {
+    setLoading(true);
+    try {
+      const url = await buildLoginUrl();
+      window.location.href = url;
+    } catch {
+      toast.error("Nu s-a putut iniția login-ul cu Google. Încearcă din nou.");
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Button type="button" variant="outline" className="w-full flex items-center gap-3"
+      onClick={handleClick} disabled={loading}>
+      {loading ? <Loader2 className="size-4 animate-spin" /> : (
+        <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+        </svg>
+      )}
+      Continuă cu Google
+    </Button>
+  );
+}
+
+// ── Dev preview login ────────────────────────────────────────────────────────
+
 function DevPreviewLogin({ onLogin }: { onLogin: (user: AuthUser) => void }) {
   const { loginAsMock } = useAuth();
   return (
     <Card className="border-dashed border-amber-400/60 bg-amber-50/40">
       <CardContent className="p-4 space-y-3">
         <p className="text-xs font-medium text-amber-900/80">
-          Dev preview — backend not wired. Skip auth and walk the protected pages:
+          Dev preview — skip auth și navighează paginile protejate:
         </p>
         <div className="grid grid-cols-2 gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            className="text-sm"
-            onClick={() => onLogin(loginAsMock(UserRole.STUDENT))}
-          >
+          <Button type="button" variant="outline" className="text-sm"
+            onClick={() => onLogin(loginAsMock(UserRole.STUDENT))}>
             Continue as Student
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="text-sm"
-            onClick={() => onLogin(loginAsMock(UserRole.PROFESSOR))}
-          >
+          <Button type="button" variant="outline" className="text-sm"
+            onClick={() => onLogin(loginAsMock(UserRole.PROFESSOR))}>
             Continue as Professor
           </Button>
         </div>

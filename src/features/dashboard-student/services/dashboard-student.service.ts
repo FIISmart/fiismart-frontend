@@ -8,32 +8,26 @@ import type {
   StudentStats,
 } from "../types";
 
-/**
- * Thin wrappers around the backend dashboard endpoints. Each call funnels
- * through the shared `apiFetch` primitive so error handling, base URL
- * resolution, and JSON parsing stay consistent across features.
- */
-
 export function getStats(studentId: string) {
-  return apiFetch<StudentStats>(`/dashboard/${studentId}/stats`);
+  return apiFetch<StudentStats>(`/student-dashboard/${studentId}/stats`);
 }
 
 export function getCourses(studentId: string) {
-  return apiFetch<StudentCourse[]>(`/dashboard/${studentId}/courses`);
+  return apiFetch<StudentCourse[]>(`/student-dashboard/${studentId}/courses`);
 }
 
 export function getQuizzes(studentId: string) {
-  return apiFetch<StudentQuiz[]>(`/dashboard/${studentId}/quizzes`);
+  return apiFetch<StudentQuiz[]>(`/student-dashboard/${studentId}/quizzes`);
 }
 
 export function getAnswers(studentId: string) {
-  return apiFetch<Answer[]>(`/dashboard/${studentId}/answers`);
+  return apiFetch<Answer[]>(`/student-dashboard/${studentId}/answers`);
 }
 
 export function getContinue(studentId: string) {
-  return apiFetch<ContinueStudy | null>(`/dashboard/${studentId}/continue`);
+  return apiFetch<ContinueStudy | null>(`/student-dashboard/${studentId}/continue`);
 }
 
 export function getRecommendations(studentId: string) {
-  return apiFetch<Recommendation | null>(`/dashboard/${studentId}/recommendations`);
+  return apiFetch<Recommendation | null>(`/student-dashboard/${studentId}/recommendations`);
 }

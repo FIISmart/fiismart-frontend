@@ -11,6 +11,7 @@ import type {
   AuthState,
   AuthUser,
   LoginPayload,
+  RegisterResponse,
   SignupPayload,
 } from "../types";
 import { UserRole } from "../types";
@@ -19,41 +20,39 @@ import {
   login as loginRequest,
   logout as logoutRequest,
   signup as signupRequest,
+  verifyEmail as verifyEmailRequest,
+  resendVerification as resendVerificationRequest,
+  forgotPassword as forgotPasswordRequest,
+  resetPassword as resetPasswordRequest,
+  setToken,
+  setRefreshToken,
 } from "../services/auth.service";
+import { exchangeCode } from "../services/cognito.service";
+import { apiFetch } from "@/lib/api";
 
 const MOCK_USER_KEY = "fiismart_mock_user";
 
 interface AuthContextValue extends AuthState {
-  /** Run the login flow. Returns the authenticated user on success. */
   login: (payload: LoginPayload) => Promise<AuthUser>;
-  /** Run the signup flow. Returns the freshly created user on success. */
-  signup: (payload: SignupPayload) => Promise<AuthUser>;
-  /** Clear the local token + user, best-effort server logout. */
+  /** Înregistrare — returnează mesaj, fără auto-login (trebuie verificat email-ul). */
+  signup: (payload: SignupPayload) => Promise<RegisterResponse>;
+  verifyEmail: (email: string, code: string) => Promise<{ message: string }>;
+  resendVerification: (email: string) => Promise<{ message: string }>;
+  forgotPassword: (email: string) => Promise<{ message: string }>;
+  resetPassword: (email: string, code: string, newPassword: string) => Promise<{ message: string }>;
   logout: () => Promise<void>;
-  /**
-   * Dev-only: stamp a mock user (no backend call) and persist it so guards
-   * accept the session across reloads. Use to walk every protected route
-   * before the real backend is wired up.
-   */
+  /** Completează fluxul Cognito PKCE: schimbă codul, stochează JWT, hidratează user-ul. */
+  loginWithCognito: (code: string, state: string) => Promise<AuthUser>;
+  /** Dev-only: setează un utilizator mock fără backend. */
   loginAsMock: (role: UserRole) => AuthUser;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-/**
- * Real auth provider. On mount it reads the bearer token from localStorage
- * (managed by `auth.service`) and attempts to hydrate the user via /auth/me.
- * While that call is in flight `isLoading` is true so guards can render a
- * spinner instead of bouncing the user back to /auth.
- */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Hydrate on first render. Order:
-  //  1. If a mock user is persisted in localStorage (dev preview flow),
-  //     adopt it immediately — no network call.
-  //  2. Otherwise call /auth/me with the bearer token if present.
   useEffect(() => {
     let cancelled = false;
     const mockJson =
@@ -85,11 +84,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return res.user;
   }, []);
 
-  const signup = useCallback(async (payload: SignupPayload): Promise<AuthUser> => {
-    const res = await signupRequest(payload);
-    setUser(res.user);
-    return res.user;
+  const signup = useCallback(async (payload: SignupPayload): Promise<RegisterResponse> => {
+    return signupRequest(payload);
+    // Nu setăm user — utilizatorul trebuie să verifice email-ul înainte de login.
   }, []);
+
+  const verifyEmail = useCallback(
+    async (email: string, code: string) => verifyEmailRequest(email, code),
+    []
+  );
+
+  const resendVerification = useCallback(
+    async (email: string) => resendVerificationRequest(email),
+    []
+  );
+
+  const forgotPassword = useCallback(
+    async (email: string) => forgotPasswordRequest(email),
+    []
+  );
+
+  const resetPassword = useCallback(
+    async (email: string, code: string, newPassword: string) =>
+      resetPasswordRequest(email, code, newPassword),
+    []
+  );
 
   const logout = useCallback(async (): Promise<void> => {
     if (typeof window !== "undefined") {
@@ -98,6 +117,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await logoutRequest();
     setUser(null);
   }, []);
+
+  const loginWithCognito = useCallback(
+    async (code: string, state: string): Promise<AuthUser> => {
+      const tokens = await exchangeCode(code, state);
+      setToken(tokens.accessToken, "cognito");
+      if (tokens.refreshToken) setRefreshToken(tokens.refreshToken);
+
+      const me = await apiFetch<AuthUser>("/auth/me", {
+        headers: { Authorization: `Bearer ${tokens.accessToken}` },
+      });
+      setUser(me);
+      return me;
+    },
+    []
+  );
 
   const loginAsMock = useCallback((role: UserRole): AuthUser => {
     const mockUser: AuthUser =
@@ -134,10 +168,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       login,
       signup,
+      verifyEmail,
+      resendVerification,
+      forgotPassword,
+      resetPassword,
       logout,
+      loginWithCognito,
       loginAsMock,
     }),
-    [user, isLoading, login, signup, logout, loginAsMock]
+    [user, isLoading, login, signup, verifyEmail, resendVerification,
+     forgotPassword, resetPassword, logout, loginWithCognito, loginAsMock]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
