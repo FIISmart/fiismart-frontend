@@ -186,8 +186,9 @@ export function ModuleCard({
 
       setIsEditing(false);
       toast.success("Modul actualizat");
-    } catch {
-      toast.error("Eroare la salvarea modulului");
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Eroare la salvarea modulului");
     }
   };
 
@@ -217,8 +218,9 @@ export function ModuleCard({
         });
         toast.success("Lectie adaugata");
       }
-    } catch {
-      toast.error("Eroare la salvarea lectiei");
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Eroare la salvarea lectiei");
     }
     setLessonEditorOpen(false);
     setEditingLesson(undefined);
@@ -229,8 +231,9 @@ export function ModuleCard({
       await api.deleteLectureFromModule(courseId, module.id, lessonId);
       onUpdate(reindexModule({ ...module, lessons: module.lessons.filter((l) => l.id !== lessonId) }));
       toast.success("Lectie stearsa");
-    } catch {
-      toast.error("Eroare la stergerea lectiei");
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Eroare la stergerea lectiei");
     }
   };
 
@@ -259,6 +262,7 @@ export function ModuleCard({
       setEditingQuiz(undefined);
       toast.success("Quiz salvat.");
     } catch (err) {
+      console.error(err);
       toast.error(err instanceof Error ? err.message : "Eroare la salvarea quiz-ului");
     }
   };
@@ -271,6 +275,7 @@ export function ModuleCard({
       setEditingQuiz(undefined);
       toast.success("Quiz eliminat din modul.");
     } catch (err) {
+      console.error(err);
       toast.error(err instanceof Error ? err.message : "Eroare la stergerea quiz-ului");
     }
   };
