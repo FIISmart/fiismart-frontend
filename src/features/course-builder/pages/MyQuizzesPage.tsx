@@ -162,14 +162,30 @@ export default function MyQuizzesPage() {
 
   const confirmDelete = async () => {
     if (!deletingQuiz) return;
-    if (deletingQuiz.quizScope === "module" && deletingQuiz.moduleId) {
-      await deleteModuleQuiz(deletingQuiz.courseId, deletingQuiz.moduleId);
-    } else {
-      await deleteCourseQuiz(deletingQuiz.courseId);
+    try {
+      if (deletingQuiz.quizScope === "module" && deletingQuiz.moduleId) {
+        await deleteModuleQuiz(deletingQuiz.courseId, deletingQuiz.moduleId);
+      } else if (
+        deletingQuiz.quizScope === "lecture" &&
+        deletingQuiz.moduleId &&
+        deletingQuiz.lectureId
+      ) {
+        await deleteLectureQuiz(
+          deletingQuiz.courseId,
+          deletingQuiz.moduleId,
+          deletingQuiz.lectureId,
+        );
+      } else if (deletingQuiz.quizScope === "course_final") {
+        await deleteCourseFinalQuiz(deletingQuiz.courseId);
+      } else {
+        throw new Error("Context invalid pentru stergerea quiz-ului.");
+      }
+      setDeletingQuiz(null);
+      toast.success("Quiz sters.");
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Eroare la stergerea quiz-ului");
     }
-    setDeletingQuiz(null);
-    toast.success("Quiz sters.");
-    await load();
   };
 
   return (
