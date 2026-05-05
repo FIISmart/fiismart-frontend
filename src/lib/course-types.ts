@@ -22,6 +22,7 @@ export interface QuizQuestion {
 export interface Quiz {
   id: string;
   title: string;
+  order?: number;
   passingScore?: number;
   timeLimit?: number;
   shuffleQuestions?: boolean;
@@ -33,6 +34,9 @@ export interface Module {
   title: string;
   description?: string;
   lessons: Lesson[];
+  // New frontend model: a module can have multiple quizzes.
+  quizzes?: Quiz[];
+  // Backward compatibility with current backend payload.
   quiz?: Quiz;
   order: number;
   isExpanded?: boolean; 
@@ -88,20 +92,36 @@ export function mapCommentToFE(c: any): Comment {
   };
 }
 
-export function mapCourseToFE(course: any, _quiz?: any, comments?: any): Course {
+export function mapCourseToFE(course: any, quizzes?: any[] | null, comments?: any): Course {
   // The backend CourseResponse already includes the modules list — no need for a
   // separate /builder/modules round-trip. Map nested lectures on the spot.
+  const moduleQuizzes = Array.isArray(quizzes)
+    ? quizzes.filter((quiz) => quiz.quizScope === "module" && quiz.moduleId)
+    : [];
   const modules: Module[] = Array.isArray(course.modules)
-    ? course.modules.map((m: any, index: number) => ({
-        id: m.id,
-        title: m.title,
-        description: m.description,
-        order: m.order ?? index,
-        quiz: m.quiz ? mapQuizToFE(m.quiz) : undefined,
-        lessons: Array.isArray(m.lectures)
-          ? m.lectures.map(mapLectureToLesson)
-          : [],
-      }))
+    ? course.modules.map((m: any, index: number) => {
+        const quizzesForModule = moduleQuizzes
+          .filter((quiz) => quiz.moduleId === m.id)
+          .map(mapQuizToFE);
+        const legacyQuizzes = Array.isArray(m.quizzes)
+          ? m.quizzes.map(mapQuizToFE)
+          : m.quiz
+            ? [mapQuizToFE(m.quiz)]
+            : [];
+        const allQuizzes = quizzesForModule.length > 0 ? quizzesForModule : legacyQuizzes;
+
+        return {
+          id: m.id,
+          title: m.title,
+          description: m.description,
+          order: m.order ?? index,
+          quizzes: allQuizzes,
+          quiz: allQuizzes[0],
+          lessons: Array.isArray(m.lectures)
+            ? m.lectures.map(mapLectureToLesson)
+            : [],
+        };
+      })
     : [];
 
   const mappedComments: Comment[] = Array.isArray(comments)
@@ -158,10 +178,13 @@ export function mapQuizToFE(quiz: any): Quiz {
   return {
     id: quiz.id,
     title: quiz.title,
-    questions: quiz.questions.map((q: any) => ({
+    passingScore: quiz.passingScore,
+    timeLimit: quiz.timeLimit,
+    shuffleQuestions: quiz.shuffleQuestions,
+    questions: (quiz.questions ?? []).map((q: any) => ({
       id: q.id,
       question: q.text,
-      type: q.type || 'multiple_choice',
+      type: q.type === 'written' ? 'written' : 'multiple_choice',
       options: q.options || [],
       correctAnswer: q.type === 'written' ? (q.correctText || "") : (q.correctIdx || 0),
       explanation: q.explanation,
