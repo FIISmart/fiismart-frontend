@@ -1,0 +1,251 @@
+/* Landing-feature scoped styles. Imported once from LandingPage. */
+
+/* Anchor cascade-layer order in case this file is parsed before src/index.css. */
+@layer theme, base, components, utilities;
+
+/*
+ * .fii-container — page-width wrapper.
+ * Unlayered on purpose: in Tailwind v4 the preflight `* { padding: 0; margin: 0 }`
+ * lives in @layer base and, on some Chromium/Safari versions, wins the cascade
+ * against `padding-inline`/`margin-inline` rules in @layer utilities (the
+ * physical↔logical alias resolution is browser-dependent under cascade layers).
+ * Unlayered author rules trump every layered rule per the cascade-layers spec,
+ * so this rule survives the preflight regardless of the alias quirk.
+ *
+ * Visually equivalent to the original `.section-container`:
+ *   max-w-7xl mx-auto px-4 sm:px-6 lg:px-8
+ */
+.fii-container {
+  width: 100%;
+  max-width: 80rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+@media (min-width: 640px) {
+  .fii-container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+@media (min-width: 1024px) {
+  .fii-container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Component classes ported verbatim from landing-page-front src/index.css.
+ * Names are NOT prefixed with `landing-` so JSX matches the original 1:1.
+ * Only `.card` is prefixed (`.landing-card`) because it collides with shadcn.
+ * ------------------------------------------------------------------------- */
+@layer components {
+  .btn-primary {
+    background-color: var(--primary);
+    color: #ffffff;
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 1rem;
+    padding: 1rem 2rem;
+    border-radius: var(--radius-md);
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .btn-primary:hover {
+    opacity: 0.9;
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  .btn-secondary {
+    background-color: transparent;
+    border: 1px solid var(--border);
+    color: var(--foreground);
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 1rem;
+    padding: 1rem 2rem;
+    border-radius: var(--radius-md);
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .btn-secondary:hover {
+    background-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  }
+
+  .badge {
+    background-color: color-mix(in srgb, var(--accent) 40%, transparent);
+    color: var(--foreground);
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .badge-purple {
+    background-color: color-mix(in srgb, var(--secondary) 30%, transparent);
+    color: var(--foreground);
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  /* Renamed from `.card` to avoid collision with shadcn `<Card>`. */
+  .landing-card {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-card);
+    transition: all 0.3s ease;
+  }
+  .landing-card:hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  .section-padding {
+    padding-top: 5rem;
+    padding-bottom: 5rem;
+  }
+  @media (min-width: 1024px) {
+    .section-padding {
+      padding-top: 8rem;
+      padding-bottom: 8rem;
+    }
+  }
+
+  .input-field {
+    background-color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0.75rem 1rem;
+    color: var(--foreground);
+    font-family: var(--font-body);
+    transition: border-color 0.15s ease;
+    width: 100%;
+  }
+  .input-field:focus {
+    outline: none;
+    border-color: var(--primary);
+  }
+
+  .blob {
+    border-radius: 50%;
+    filter: blur(48px);
+    position: absolute;
+    pointer-events: none;
+  }
+
+  .navbar-blur {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
+
+/* Heading / body font-family helpers — original used Tailwind fontFamily.heading
+ * and fontFamily.body which v4 doesn't auto-generate from --font-heading/body. */
+@layer utilities {
+  .font-heading {
+    font-family: 'Poppins', 'Poppins Fallback', sans-serif;
+  }
+  .font-body {
+    font-family: 'Inter', 'Inter Fallback', sans-serif;
+  }
+}
+
+/* Star rating helper from original. */
+.star-filled {
+  color: #f59e0b;
+}
+
+/* ---------------------------------------------------------------------------
+ * Keyframes & animation utilities — names match the original (no prefix).
+ * ------------------------------------------------------------------------- */
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes countUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-count {
+  animation: countUp 0.6s ease-out forwards;
+}
+
+.animate-countUp {
+  animation: countUp 0.6s ease-out forwards;
+}
+
+.animate-slideIn {
+  animation: slideIn 0.5s ease-out forwards;
+}
+
+/* Staggered animation delays from original index.css. */
+.stagger-1 { animation-delay: 0.1s; opacity: 0; }
+.stagger-2 { animation-delay: 0.2s; opacity: 0; }
+.stagger-3 { animation-delay: 0.3s; opacity: 0; }
+.stagger-4 { animation-delay: 0.4s; opacity: 0; }
+.stagger-5 { animation-delay: 0.5s; opacity: 0; }
+.stagger-6 { animation-delay: 0.6s; opacity: 0; }
+.stagger-7 { animation-delay: 0.7s; opacity: 0; }
+.stagger-8 { animation-delay: 0.8s; opacity: 0; }

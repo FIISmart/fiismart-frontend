@@ -1,0 +1,190 @@
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import type {
+  AuthState,
+  AuthUser,
+  LoginPayload,
+  RegisterResponse,
+  SignupPayload,
+} from "../types";
+import { UserRole } from "../types";
+import {
+  getCurrentUser,
+  login as loginRequest,
+  logout as logoutRequest,
+  signup as signupRequest,
+  verifyEmail as verifyEmailRequest,
+  resendVerification as resendVerificationRequest,
+  forgotPassword as forgotPasswordRequest,
+  resetPassword as resetPasswordRequest,
+  setToken,
+  setRefreshToken,
+} from "../services/auth.service";
+import { exchangeCode } from "../services/cognito.service";
+import { apiFetch } from "@/lib/api";
+
+const MOCK_USER_KEY = "fiismart_mock_user";
+
+interface AuthContextValue extends AuthState {
+  login: (payload: LoginPayload) => Promise<AuthUser>;
+  /** Înregistrare — returnează mesaj, fără auto-login (trebuie verificat email-ul). */
+  signup: (payload: SignupPayload) => Promise<RegisterResponse>;
+  verifyEmail: (email: string, code: string) => Promise<{ message: string }>;
+  resendVerification: (email: string) => Promise<{ message: string }>;
+  forgotPassword: (email: string) => Promise<{ message: string }>;
+  resetPassword: (email: string, code: string, newPassword: string) => Promise<{ message: string }>;
+  logout: () => Promise<void>;
+  /** Completează fluxul Cognito PKCE: schimbă codul, stochează JWT, hidratează user-ul. */
+  loginWithCognito: (code: string, state: string) => Promise<AuthUser>;
+  /** Dev-only: setează un utilizator mock fără backend. */
+  loginAsMock: (role: UserRole) => AuthUser;
+}
+
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    const mockJson =
+      typeof window !== "undefined" ? window.localStorage.getItem(MOCK_USER_KEY) : null;
+    if (mockJson) {
+      try {
+        setUser(JSON.parse(mockJson) as AuthUser);
+        setIsLoading(false);
+        return;
+      } catch {
+        window.localStorage.removeItem(MOCK_USER_KEY);
+      }
+    }
+    (async () => {
+      const me = await getCurrentUser();
+      if (!cancelled) {
+        setUser(me);
+        setIsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const login = useCallback(async (payload: LoginPayload): Promise<AuthUser> => {
+    const res = await loginRequest(payload);
+    setUser(res.user);
+    return res.user;
+  }, []);
+
+  const signup = useCallback(async (payload: SignupPayload): Promise<RegisterResponse> => {
+    return signupRequest(payload);
+    // Nu setăm user — utilizatorul trebuie să verifice email-ul înainte de login.
+  }, []);
+
+  const verifyEmail = useCallback(
+    async (email: string, code: string) => verifyEmailRequest(email, code),
+    []
+  );
+
+  const resendVerification = useCallback(
+    async (email: string) => resendVerificationRequest(email),
+    []
+  );
+
+  const forgotPassword = useCallback(
+    async (email: string) => forgotPasswordRequest(email),
+    []
+  );
+
+  const resetPassword = useCallback(
+    async (email: string, code: string, newPassword: string) =>
+      resetPasswordRequest(email, code, newPassword),
+    []
+  );
+
+  const logout = useCallback(async (): Promise<void> => {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(MOCK_USER_KEY);
+    }
+    await logoutRequest();
+    setUser(null);
+  }, []);
+
+  const loginWithCognito = useCallback(
+    async (code: string, state: string): Promise<AuthUser> => {
+      const tokens = await exchangeCode(code, state);
+      setToken(tokens.accessToken, "cognito");
+      if (tokens.refreshToken) setRefreshToken(tokens.refreshToken);
+
+      const me = await apiFetch<AuthUser>("/auth/me", {
+        headers: { Authorization: `Bearer ${tokens.accessToken}` },
+      });
+      setUser(me);
+      return me;
+    },
+    []
+  );
+
+  const loginAsMock = useCallback((role: UserRole): AuthUser => {
+    const mockUser: AuthUser =
+      role === UserRole.PROFESSOR
+        ? {
+            id: "dev-professor-aaaaaaaaaaaaaaaaaaaaaa",
+            email: "professor@dev.local",
+            firstName: "Dev",
+            lastName: "Professor",
+            displayName: "Dev Professor",
+            role: UserRole.PROFESSOR,
+            emailVerified: true,
+          }
+        : {
+            id: "dev-student-bbbbbbbbbbbbbbbbbbbbbbb",
+            email: "student@dev.local",
+            firstName: "Dev",
+            lastName: "Student",
+            displayName: "Dev Student",
+            role: UserRole.STUDENT,
+            emailVerified: true,
+          };
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(MOCK_USER_KEY, JSON.stringify(mockUser));
+    }
+    setUser(mockUser);
+    return mockUser;
+  }, []);
+
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      isAuthenticated: user !== null,
+      isLoading,
+      login,
+      signup,
+      verifyEmail,
+      resendVerification,
+      forgotPassword,
+      resetPassword,
+      logout,
+      loginWithCognito,
+      loginAsMock,
+    }),
+    [user, isLoading, login, signup, verifyEmail, resendVerification,
+     forgotPassword, resetPassword, logout, loginWithCognito, loginAsMock]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth(): AuthContextValue {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used inside <AuthProvider>");
+  return ctx;
+}
