@@ -12,7 +12,6 @@ import StudentDashboardPage from "@/features/dashboard-student/pages/StudentDash
 import LessonVideoPage from "@/features/lesson-video/pages/LessonVideoPage";
 import QuizPlayerPage from "@/features/quiz/pages/QuizPlayerPage";
 import CourseBuilderPage from "@/features/course-builder/pages/CourseBuilderPage";
-import MyQuizzesPage from "@/features/course-builder/pages/MyQuizzesPage";
 import CoursesListPage from "@/features/courses/pages/CoursesListPage";
 import { DevNav } from "@/components/DevNav";
 
@@ -42,7 +41,6 @@ export default function App() {
       <Route element={<ProtectedRoute allowedRoles={[UserRole.PROFESSOR]} />}>
         <Route path="/professor/dashboard" element={<ProfessorDashboardPage />} />
         <Route path="/professor/courses" element={<CoursesListPage />} />
-        <Route path="/professor/quizzes" element={<MyQuizzesPage />} />
         <Route path="/professor/courses/:courseId" element={<CourseBuilderPage />} />
       </Route>
 

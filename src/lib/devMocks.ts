@@ -76,7 +76,6 @@ interface MockLectureComment {
 export interface MockCourseDB {
   schemaVersion: number;
   courses: CourseAPI[];
-  courseQuizzes: Record<string, QuizAPI>;
   /** Teacher-side comments, keyed by courseId. */
   comments: Record<string, CommentAPI[]>;
   /** studentId → enrolled courseIds. */
@@ -371,26 +370,6 @@ function makeSeedDB(): MockCourseDB {
   return {
     schemaVersion: SCHEMA_VERSION,
     courses: [courseA, courseB],
-    courseQuizzes: {
-      [courseAId]: {
-        id: uuid(),
-        courseId: courseAId,
-        title: "TypeScript final quiz",
-        passingScore: 70,
-        timeLimit: 30,
-        shuffleQuestions: false,
-        questions: [
-          {
-            id: uuid(),
-            text: "What does TypeScript add to JavaScript?",
-            type: "multiple_choice",
-            options: ["Static typing", "A database", "A browser", "A package manager"],
-            correctIdx: 0,
-            explanation: "TypeScript adds static type checking on top of JavaScript.",
-          },
-        ],
-      },
-    },
     comments: {
       [courseAId]: [],
       [courseBId]: [],
@@ -418,7 +397,6 @@ function loadDB(): MockCourseDB {
       persistDB(seeded);
       return seeded;
     }
-    parsed.courseQuizzes = parsed.courseQuizzes ?? {};
     return parsed;
   } catch {
     const seeded = makeSeedDB();
@@ -725,69 +703,6 @@ const routes: Route[] = [
     pattern: /^\/courses\/([^/]+)\/comments$/,
     handle: (m) => db.comments[m[1]] ?? [],
   },
-  // GET /courses/:id/quiz
-  {
-    method: "GET",
-    pattern: /^\/courses\/([^/]+)\/quiz$/,
-    handle: (m) => db.courseQuizzes[m[1]],
-  },
-  // POST /courses/:id/quiz
-  {
-    method: "POST",
-    pattern: /^\/courses\/([^/]+)\/quiz$/,
-    handle: (m, _p, init) => {
-      const course = findCourse(m[1]);
-      if (!course) return undefined;
-      const body = parseBody<QuizPayload>(init);
-      if (!body) return undefined;
-      const quiz: QuizAPI = {
-        id: uuid(),
-        courseId: course.id,
-        title: body.title,
-        passingScore: body.passingScore ?? 70,
-        timeLimit: body.timeLimit ?? 30,
-        shuffleQuestions: body.shuffleQuestions ?? false,
-        questions: [],
-      };
-      db.courseQuizzes[course.id] = quiz;
-      course.updatedAt = nowIso();
-      commit();
-      return quiz;
-    },
-  },
-  // DELETE /courses/:id/quiz
-  {
-    method: "DELETE",
-    pattern: /^\/courses\/([^/]+)\/quiz$/,
-    handle: (m) => {
-      delete db.courseQuizzes[m[1]];
-      commit();
-      return undefined;
-    },
-  },
-  // POST /courses/:id/quiz/questions
-  {
-    method: "POST",
-    pattern: /^\/courses\/([^/]+)\/quiz\/questions$/,
-    handle: (m, _p, init) => {
-      const quiz = db.courseQuizzes[m[1]];
-      if (!quiz) return undefined;
-      const body = parseBody<QuizPayload["questions"][number]>(init);
-      if (!body) return undefined;
-      const question = {
-        id: uuid(),
-        text: body.text,
-        type: body.type === "written" ? "written" as const : "multiple_choice" as const,
-        options: body.options ?? [],
-        correctIdx: body.correctIdx ?? 0,
-        correctText: body.correctText,
-        explanation: body.explanation ?? null,
-      };
-      quiz.questions.push(question);
-      commit();
-      return question;
-    },
-  },
   // GET /courses/:id/builder/modules
   {
     method: "GET",
@@ -796,23 +711,6 @@ const routes: Route[] = [
       const course = findCourse(m[1]);
       if (!course) return undefined;
       return course.modules ?? [];
-    },
-  },
-  // GET /courses/:id/builder/quizzes
-  {
-    method: "GET",
-    pattern: /^\/courses\/([^/]+)\/builder\/quizzes$/,
-    handle: (m) => {
-      const course = findCourse(m[1]);
-      if (!course) return undefined;
-      return (course.modules ?? [])
-        .filter((mod) => mod.quiz)
-        .map((mod) => ({
-          ...mod.quiz,
-          moduleId: mod.id,
-          lectureId: null,
-          quizScope: "module",
-        }));
     },
   },
   // POST /courses/:id/builder/modules
@@ -960,7 +858,6 @@ const routes: Route[] = [
         id: mod.quiz?.id ?? uuid(),
         courseId: course.id,
         moduleId: mod.id,
-        quizScope: "module",
         title: body.title,
         passingScore: body.passingScore ?? 70,
         timeLimit: body.timeLimit ?? 0,

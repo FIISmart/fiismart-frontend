@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Collapsible,
   CollapsibleContent,
@@ -16,209 +18,99 @@ import {
 import {
   ChevronDown,
   ChevronRight,
-  CircleHelp,
   GripVertical,
   MoreHorizontal,
-  Pencil,
   Plus,
   Trash2,
+  Pencil,
+  HelpCircle,
+  Video,
+  FileText,
+  Code,
+  BookOpen,
 } from "lucide-react";
-import type { Lesson, Module, Quiz } from "@/lib/course-types";
-import { LessonEditor, LessonItem } from "./lesson-editor";
+import type { Module, Lesson, Quiz } from "@/lib/course-types";
+import { LessonItem, LessonEditor } from "./lesson-editor";
 import { QuizEditor } from "./quiz-editor";
 import * as api from "@/lib/api";
-import { deleteModuleQuiz, upsertModuleQuiz } from "@/features/course-builder/services/my-quizzes.service";
 import { toast } from "sonner";
 
 interface ModuleCardProps {
-  courseId: string;
+  courseId: string; // Needed for API calls
   module: Module;
   moduleIndex: number;
   onUpdate: (module: Module) => void;
   onDelete: () => void;
 }
 
-type ModuleContentItem =
-  | { type: "lesson"; id: string; order: number; lesson: Lesson }
-  | { type: "quiz"; id: string; order: number; quiz: Quiz };
-
-const getModuleQuizzes = (module: Module) => module.quizzes ?? (module.quiz ? [module.quiz] : []);
-
-function getModuleContentItems(module: Module): ModuleContentItem[] {
-  const lessons = module.lessons.map((lesson, index) => ({
-    type: "lesson" as const,
-    id: lesson.id,
-    order: lesson.order ?? index,
-    lesson,
-  }));
-  const quizzes = getModuleQuizzes(module).map((quiz, index) => ({
-    type: "quiz" as const,
-    id: quiz.id,
-    order: quiz.order ?? lessons.length + index,
-    quiz,
-  }));
-
-  return [...lessons, ...quizzes].sort((a, b) => a.order - b.order);
-}
-
-function reorderItems(items: ModuleContentItem[], draggedId: string, targetId: string) {
-  const from = items.findIndex((item) => item.id === draggedId);
-  const to = items.findIndex((item) => item.id === targetId);
-  if (from < 0 || to < 0 || from === to) return items;
-
-  const next = [...items];
-  const [dragged] = next.splice(from, 1);
-  next.splice(to, 0, dragged);
-  return next.map((item, index) => ({ ...item, order: index }));
-}
-
-function QuizItem({
-  quiz,
-  onEdit,
-  onDelete,
-}: {
-  quiz: Quiz;
-  onEdit: (quiz: Quiz) => void;
-  onDelete: (id: string) => void;
-}) {
-  return (
-    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl border border-border group hover:border-primary/30 transition-colors">
-      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary">
-        <CircleHelp className="h-4 w-4" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-sm truncate">{quiz.title}</p>
-        <p className="text-xs text-muted-foreground">
-          Quiz {quiz.questions.length > 0 && `• ${quiz.questions.length} întrebări`}
-        </p>
-      </div>
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          onClick={() => onEdit(quiz)}
-        >
-          <Pencil className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-destructive"
-          onClick={() => onDelete(quiz.id)}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-export function ModuleCard({
-  courseId,
-  module,
-  moduleIndex,
-  onUpdate,
-  onDelete,
-}: ModuleCardProps) {
+export function ModuleCard({ courseId, module, moduleIndex, onUpdate, onDelete }: ModuleCardProps) {
   const [isExpanded, setIsExpanded] = useState(module.isExpanded ?? true);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(module.title);
   const [editDescription, setEditDescription] = useState(module.description || "");
+  
   const [lessonEditorOpen, setLessonEditorOpen] = useState(false);
   const [editingLesson, setEditingLesson] = useState<Lesson | undefined>();
   const [quizEditorOpen, setQuizEditorOpen] = useState(false);
-  const [editingQuiz, setEditingQuiz] = useState<Quiz | undefined>();
-  const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
 
-  const moduleQuizzes = getModuleQuizzes(module);
-  const moduleItems = getModuleContentItems(module);
-
-  const applyOrder = (items: ModuleContentItem[]) => {
-    onUpdate({
-      ...module,
-      lessons: module.lessons.map((lesson) => ({
-        ...lesson,
-        order: items.find((item) => item.type === "lesson" && item.id === lesson.id)?.order ?? lesson.order,
-      })),
-      quizzes: moduleQuizzes.map((quiz) => ({
-        ...quiz,
-        order: items.find((item) => item.type === "quiz" && item.id === quiz.id)?.order ?? quiz.order,
-      })),
-    });
-  };
-
-  const reindexModule = (nextModule: Module): Module => {
-    const items = getModuleContentItems(nextModule).map((item, index) => ({ ...item, order: index }));
-    const quizzes = getModuleQuizzes(nextModule).map((quiz) => ({
-      ...quiz,
-      order: items.find((item) => item.type === "quiz" && item.id === quiz.id)?.order ?? quiz.order,
-    }));
-
-    return {
-      ...nextModule,
-      lessons: nextModule.lessons.map((lesson) => ({
-        ...lesson,
-        order: items.find((item) => item.type === "lesson" && item.id === lesson.id)?.order ?? lesson.order,
-      })),
-      quizzes,
-      quiz: quizzes[0],
-    };
-  };
+  // ── Module Actions ────────────────────────────────────
 
   const handleSaveTitle = async () => {
-    if (!editTitle.trim()) {
-      toast.error("Titlul modulului nu poate fi gol");
-      return;
-    }
+  if (!editTitle.trim()) {
+    toast.error("Titlul modulului nu poate fi gol");
+    return;
+  }
 
-    try {
-      const updatedModuleData = await api.updateModule(courseId, module.id, {
-        title: editTitle.trim(),
-        description: editDescription.trim(),
-      });
+  try {
+    // Now 'description' is a known property in the API call
+    const updatedModuleData = await api.updateModule(courseId, module.id, { 
+      title: editTitle.trim(),
+      description: editDescription.trim() 
+    });
 
-      onUpdate({
-        ...module,
-        title: updatedModuleData.title,
-        description: updatedModuleData.description,
-      });
+    onUpdate({ 
+      ...module, 
+      title: updatedModuleData.title, 
+      description: updatedModuleData.description 
+    });
 
-      setIsEditing(false);
-      toast.success("Modul actualizat");
-    } catch {
-      toast.error("Eroare la salvarea modulului");
-    }
-  };
+    setIsEditing(false);
+    toast.success("Modul actualizat");
+  } catch (err) {
+    toast.error("Eroare la salvarea modulului");
+  }
+};
+
+  // ── Lesson Actions (Backend Integrated) ───────────────
 
   const handleSaveLesson = async (lesson: Lesson) => {
     try {
       if (editingLesson) {
-        await api.updateLectureInModule(courseId, module.id, lesson.id, {
+        // PUT /api/courses/{courseId}/builder/modules/{moduleId}/lectures/{lectureId}
+        const updated = await api.updateLectureInModule(courseId, module.id, lesson.id, {
           title: lesson.title,
           videoUrl: lesson.content,
           durationSecs: (lesson.duration || 0) * 60,
         });
-
-        const newLessons = module.lessons.map((l) => (l.id === lesson.id ? { ...lesson, order: l.order } : l));
+        
+        const newLessons = module.lessons.map((l) => (l.id === lesson.id ? lesson : l));
         onUpdate({ ...module, lessons: newLessons });
-        toast.success("Lectie actualizata");
+        toast.success("Lecție actualizată");
       } else {
+        // POST /api/courses/{courseId}/builder/modules/{moduleId}/lectures
         const created = await api.addLectureToModule(courseId, module.id, {
           title: lesson.title,
           videoUrl: lesson.content,
-          order: moduleItems.length,
+          order: module.lessons.length,
           durationSecs: (lesson.duration || 0) * 60,
         });
 
-        onUpdate({
-          ...module,
-          lessons: [...module.lessons, { ...lesson, id: created.id, order: moduleItems.length }],
-        });
-        toast.success("Lectie adaugata");
+        // Use the ID generated by the DB
+        onUpdate({ ...module, lessons: [...module.lessons, { ...lesson, id: created.id }] });
+        toast.success("Lecție adăugată");
       }
-    } catch {
-      toast.error("Eroare la salvarea lectiei");
+    } catch (err) {
+      toast.error("Eroare la salvarea lecției");
     }
     setLessonEditorOpen(false);
     setEditingLesson(undefined);
@@ -227,59 +119,64 @@ export function ModuleCard({
   const handleDeleteLesson = async (lessonId: string) => {
     try {
       await api.deleteLectureFromModule(courseId, module.id, lessonId);
-      onUpdate(reindexModule({ ...module, lessons: module.lessons.filter((l) => l.id !== lessonId) }));
-      toast.success("Lectie stearsa");
-    } catch {
-      toast.error("Eroare la stergerea lectiei");
+      const newLessons = module.lessons.filter((l) => l.id !== lessonId);
+      onUpdate({ ...module, lessons: newLessons });
+      toast.success("Lecție ștearsă");
+    } catch (err) {
+      toast.error("Eroare la ștergerea lecției");
     }
   };
 
-  const openQuizEditor = (quiz?: Quiz) => {
-    setEditingQuiz(quiz ?? {
-      id: "",
-      title: "Quiz Modul",
-      order: moduleItems.length,
-      passingScore: 70,
-      timeLimit: 30,
-      shuffleQuestions: false,
-      questions: [],
-    });
-    setQuizEditorOpen(true);
+  // ── Quiz Actions ──────────────────────────────────────
+  const handleRemoveQuiz = async () => {
+    try {
+      await api.deleteModuleQuiz(courseId, module.id);
+      onUpdate({ ...module, quiz: undefined });
+      setQuizEditorOpen(false);
+      toast.success("Quiz șters cu succes");
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Eroare la ștergerea quiz-ului");
+    }
   };
 
-  const handleSaveModuleQuiz = async (quiz: Quiz) => {
+  const handleSaveQuiz = async (quiz: Quiz) => {
     try {
-      const saved = await upsertModuleQuiz(courseId, module.id, {
-        ...quiz,
-        order: editingQuiz?.order ?? moduleItems.length,
+      const saved = await api.createOrUpdateModuleQuiz(courseId, module.id, {
+        title: quiz.title,
+        passingScore: quiz.passingScore,
+        timeLimit: quiz.timeLimit,
+        shuffleQuestions: quiz.shuffleQuestions,
+        questions: quiz.questions.map((q) => ({
+          text: q.question,
+          type: q.type,
+          options: q.options || [],
+          correctIdx: typeof q.correctAnswer === "number" ? q.correctAnswer : undefined,
+          correctText: typeof q.correctAnswer === "string" ? q.correctAnswer : undefined,
+          explanation: q.explanation,
+        })),
       });
-      const nextQuiz = { ...saved, order: editingQuiz?.order ?? moduleItems.length };
-      onUpdate(reindexModule({ ...module, quizzes: [nextQuiz], quiz: nextQuiz }));
+      // Use server-assigned ids so subsequent edits hit the right documents.
+      onUpdate({
+        ...module,
+        quiz: {
+          ...quiz,
+          id: saved.id,
+          questions: quiz.questions.map((q, i) => ({
+            ...q,
+            id: saved.questions?.[i]?.id || q.id,
+          })),
+        },
+      });
       setQuizEditorOpen(false);
-      setEditingQuiz(undefined);
-      toast.success("Quiz salvat.");
+      toast.success("Quiz salvat");
     } catch (err) {
+      console.error(err);
       toast.error(err instanceof Error ? err.message : "Eroare la salvarea quiz-ului");
     }
   };
 
-  const handleRemoveModuleQuiz = async (_quizId?: string) => {
-    try {
-      await deleteModuleQuiz(courseId, module.id);
-      onUpdate(reindexModule({ ...module, quizzes: [], quiz: undefined }));
-      setQuizEditorOpen(false);
-      setEditingQuiz(undefined);
-      toast.success("Quiz eliminat din modul.");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Eroare la stergerea quiz-ului");
-    }
-  };
-
-  const handleDropOnItem = (targetId: string) => {
-    if (!draggedItemId) return;
-    applyOrder(reorderItems(moduleItems, draggedItemId, targetId));
-    setDraggedItemId(null);
-  };
+  const totalDuration = module.lessons.reduce((acc, lesson) => acc + (lesson.duration || 0), 0);
 
   return (
     <>
@@ -289,7 +186,7 @@ export function ModuleCard({
             <button className="mt-1 cursor-grab text-muted-foreground hover:text-foreground hidden sm:block">
               <GripVertical className="h-5 w-5" />
             </button>
-
+            
             <Collapsible open={isExpanded} onOpenChange={setIsExpanded} className="flex-1">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
@@ -302,8 +199,8 @@ export function ModuleCard({
                         autoFocus
                       />
                       <div className="flex gap-2">
-                        <Button size="sm" onClick={handleSaveTitle}>Salveaza</Button>
-                        <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)}>Anuleaza</Button>
+                        <Button size="sm" onClick={handleSaveTitle}>Salvează</Button>
+                        <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)}>Anulează</Button>
                       </div>
                     </div>
                   ) : (
@@ -327,10 +224,10 @@ export function ModuleCard({
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => setIsEditing(true)}><Pencil className="mr-2 h-4 w-4" /> Redenumire</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setLessonEditorOpen(true)}><Plus className="mr-2 h-4 w-4" /> Adauga Lectie</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openQuizEditor(moduleQuizzes[0])}><CircleHelp className="mr-2 h-4 w-4" /> {moduleQuizzes.length > 0 ? "Editeaza Quiz" : "Adauga Quiz"}</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setLessonEditorOpen(true)}><Plus className="mr-2 h-4 w-4" /> Adaugă Lecție</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setQuizEditorOpen(true)}><HelpCircle className="mr-2 h-4 w-4" /> Quiz</DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={onDelete} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Sterge</DropdownMenuItem>
+                        <DropdownMenuItem onClick={onDelete} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Șterge</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -339,54 +236,28 @@ export function ModuleCard({
 
               <CollapsibleContent className="mt-4">
                 <div className="space-y-2 ml-7">
-                  {moduleItems.map((item) => (
-                    <div
-                      key={`${item.type}-${item.id}`}
-                      draggable
-                      onDragStart={() => setDraggedItemId(item.id)}
-                      onDragEnd={() => setDraggedItemId(null)}
-                      onDragOver={(event) => event.preventDefault()}
-                      onDrop={() => handleDropOnItem(item.id)}
-                      className="flex items-center gap-2"
-                    >
-                      <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-muted-foreground" />
-                      <div className={`min-w-0 flex-1 ${draggedItemId === item.id ? "opacity-50" : ""}`}>
-                        {item.type === "lesson" ? (
-                          <LessonItem
-                            lesson={item.lesson}
-                            onEdit={(l) => { setEditingLesson(l); setLessonEditorOpen(true); }}
-                            onDelete={handleDeleteLesson}
-                          />
-                        ) : (
-                          <QuizItem
-                            quiz={item.quiz}
-                            onEdit={openQuizEditor}
-                            onDelete={handleRemoveModuleQuiz}
-                          />
-                        )}
-                      </div>
-                    </div>
+                  {module.lessons.map((lesson) => (
+                    <LessonItem
+                      key={lesson.id}
+                      lesson={lesson}
+                      onEdit={(l) => { setEditingLesson(l); setLessonEditorOpen(true); }}
+                      onDelete={handleDeleteLesson}
+                    />
                   ))}
+                  
+                  {module.quiz && (
+                    <div className="p-3 bg-primary/10 rounded-xl border border-primary/20 flex items-center justify-between">
+                       <div className="flex items-center gap-3">
+                         <HelpCircle className="h-4 w-4 text-primary" />
+                         <span className="text-sm font-medium">{module.quiz.title}</span>
+                       </div>
+                       <Button variant="ghost" size="sm" onClick={() => setQuizEditorOpen(true)}><Pencil className="h-4 w-4" /></Button>
+                    </div>
+                  )}
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full border-dashed border border-border"
-                      onClick={() => setLessonEditorOpen(true)}
-                    >
-                      <Plus className="h-4 w-4 mr-2" /> Lectie Noua
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full border-dashed border border-border"
-                      onClick={() => openQuizEditor(moduleQuizzes[0])}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      {moduleQuizzes.length > 0 ? "Editeaza Quiz" : "Quiz Nou"}
-                    </Button>
-                  </div>
+                  <Button variant="ghost" size="sm" className="w-full mt-2 border-dashed border border-border" onClick={() => setLessonEditorOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" /> Lecție Nouă
+                  </Button>
                 </div>
               </CollapsibleContent>
             </Collapsible>
@@ -400,11 +271,12 @@ export function ModuleCard({
         onCancel={() => { setLessonEditorOpen(false); setEditingLesson(undefined); }}
         isOpen={lessonEditorOpen}
       />
+
       <QuizEditor
-        quiz={editingQuiz}
-        onSave={handleSaveModuleQuiz}
-        onCancel={() => { setQuizEditorOpen(false); setEditingQuiz(undefined); }}
-        onRemove={moduleQuizzes.length > 0 ? () => handleRemoveModuleQuiz() : undefined}
+        quiz={module.quiz}
+        onSave={handleSaveQuiz}
+        onCancel={() => setQuizEditorOpen(false)}
+        onRemove={() => handleRemoveQuiz()} // Wrap it in an arrow function here
         isOpen={quizEditorOpen}
       />
     </>
