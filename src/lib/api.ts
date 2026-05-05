@@ -257,7 +257,10 @@ export function getComments(courseId: string) {
   return request<CommentAPI[]>(`/courses/${courseId}/comments`);
 }
 
-export function updateCourse(courseId: string, data: any) {
+export function updateCourse(
+  courseId: string,
+  data: Partial<Pick<CourseAPI, "title" | "description" | "tags" | "thumbnailUrl" | "status">>
+) {
   return request<CourseAPI>(`/courses/${courseId}`, {
     method: "PUT",
     body: JSON.stringify(data),
