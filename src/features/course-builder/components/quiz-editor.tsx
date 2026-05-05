@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,16 +24,18 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Plus, Trash2, HelpCircle, CheckCircle2, Type, List } from "lucide-react";
+import { Plus, Trash2, HelpCircle } from "lucide-react";
 import type { Quiz, QuizQuestion } from "@/lib/course-types";
 import { generateId } from "@/lib/course-types";
+import { toast } from "sonner";
 
 interface QuizEditorProps {
   quiz?: Quiz;
-  onSave: (quiz: Quiz) => void;
+  onSave: (quiz: Quiz) => void | Promise<void>;
   onCancel: () => void;
   onRemove?: () => void;
   isOpen: boolean;
+  supportsWritten?: boolean;
 }
 
 const emptyQuestion = (): QuizQuestion => ({
@@ -45,29 +47,73 @@ const emptyQuestion = (): QuizQuestion => ({
   explanation: "",
 });
 
-export function QuizEditor({ quiz, onSave, onCancel, onRemove, isOpen }: QuizEditorProps) {
+export function QuizEditor({
+  quiz,
+  onSave,
+  onCancel,
+  onRemove,
+  isOpen,
+  supportsWritten = false,
+}: QuizEditorProps) {
   const [title, setTitle] = useState(quiz?.title || "Quiz Modul");
   const [questions, setQuestions] = useState<QuizQuestion[]>(
     quiz?.questions || [emptyQuestion()]
   );
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
+  useEffect(() => {
+    if (!isOpen) return;
+    setTitle(quiz?.title || "Quiz Modul");
+    setQuestions(quiz?.questions?.length ? quiz.questions : [emptyQuestion()]);
+  }, [isOpen, quiz]);
+
+  const handleSave = async () => {
+    if (!title.trim()) {
+      toast.error("Titlul quiz-ului nu poate fi gol.");
+      return;
+    }
+
+    let validationMessageShown = false;
     const validQuestions = questions.filter((q) => {
-      if (!q.question.trim()) return false;
+      if (!q.question.trim()) {
+        if (!validationMessageShown) {
+          toast.error("Adauga textul intrebarii.");
+          validationMessageShown = true;
+        }
+        return false;
+      }
       if (q.type === "multiple_choice") {
-        return (q.options ?? []).filter((o) => o.trim()).length >= 2
+        const filledOptions = (q.options ?? []).filter((o) => o.trim());
+        if (filledOptions.length < 2 && !validationMessageShown) {
+          toast.error("Adauga cel putin doua optiuni pentru intrebarea grila.");
+          validationMessageShown = true;
+        }
+        return filledOptions.length >= 2;
       }
       // For written, ensure there is a non-empty string answer
-      return typeof q.correctAnswer === "string" && q.correctAnswer.trim() !== "";
+      const hasAnswer = typeof q.correctAnswer === "string" && q.correctAnswer.trim() !== "";
+      if (!hasAnswer && !validationMessageShown) {
+        toast.error("Adauga raspunsul corect pentru intrebarea scrisa.");
+        validationMessageShown = true;
+      }
+      return hasAnswer;
     });
     
     if (validQuestions.length === 0) return;
 
-    onSave({
-      id: quiz?.id || generateId(),
-      title,
-      questions: validQuestions,
-    });
+    setIsSaving(true);
+    try {
+      await onSave({
+        id: quiz?.id || generateId(),
+        title: title.trim(),
+        passingScore: quiz?.passingScore,
+        timeLimit: quiz?.timeLimit,
+        shuffleQuestions: quiz?.shuffleQuestions,
+        questions: validQuestions,
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const addQuestion = () => setQuestions([...questions, emptyQuestion()]);
@@ -157,7 +203,9 @@ export function QuizEditor({ quiz, onSave, onCancel, onRemove, isOpen }: QuizEdi
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="multiple_choice">Alegere Multiplă</SelectItem>
-                            <SelectItem value="written">Răspuns Scris</SelectItem>
+                            {supportsWritten && (
+                              <SelectItem value="written">Răspuns Scris</SelectItem>
+                            )}
                           </SelectContent>
                         </Select>
                       </div>
@@ -212,7 +260,9 @@ export function QuizEditor({ quiz, onSave, onCancel, onRemove, isOpen }: QuizEdi
             </Button>
           )}
           <Button variant="outline" onClick={onCancel}>Anulează</Button>
-          <Button onClick={handleSave} disabled={!isValid}>Salvează</Button>
+          <Button onClick={handleSave} disabled={!isValid || isSaving}>
+            {isSaving ? "Se salveaza..." : "Salvează"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

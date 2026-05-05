@@ -93,8 +93,10 @@ export interface ModuleResponse {
   title: string;
   description: string;
   order: number;
+  quizId?: string | null;
   lectures: LectureAPI[];
   quiz?: QuizAPI | null;
+  quizzes?: ModuleQuizAPI[];
 }
 
 export interface CourseAPI {
@@ -123,6 +125,8 @@ export interface QuizAPI {
   id: string;
   courseId: string;
   moduleId?: string | null;
+  lectureId?: string | null;
+  quizScope?: string;
   title: string;
   passingScore: number;
   timeLimit: number;
@@ -137,6 +141,30 @@ export interface QuizQuestionAPI {
   options: string[];
   correctIdx?: number;     // Used for grila
   correctText?: string;    // Used for written responses
+  explanation: string | null;
+}
+
+export interface ModuleQuizAPI {
+  id: string;
+  courseId: string;
+  moduleId?: string | null;
+  lectureId?: string | null;
+  quizScope: "lecture" | "module" | "course_final" | string;
+  title: string;
+  passingScore: number;
+  timeLimit: number;
+  shuffleQuestions: boolean;
+  questions: ModuleQuizQuestionAPI[];
+}
+
+export interface ModuleQuizQuestionAPI {
+  id: string;
+  text: string;
+  imageUrl?: string | null;
+  type: string;
+  points: number;
+  options: string[];
+  correctIdx: number;
   explanation: string | null;
 }
 
@@ -277,6 +305,24 @@ export interface QuizPayload {
   questions: QuizQuestionPayload[];
 }
 
+export interface ModuleQuizQuestionPayload {
+  text: string;
+  imageUrl?: string;
+  type?: string;
+  points?: number;
+  options: string[];
+  correctIdx: number;
+  explanation?: string;
+}
+
+export interface ModuleQuizPayload {
+  title: string;
+  passingScore?: number;
+  timeLimit?: number;
+  shuffleQuestions?: boolean;
+  questions: ModuleQuizQuestionPayload[];
+}
+
 // Legacy course-wide quiz (kept for backwards compat, not used by the builder UI).
 export function getQuiz(courseId: string) {
   return request<QuizAPI>(`/courses/${courseId}/quiz`);
@@ -293,16 +339,26 @@ export function createOrUpdateQuiz(courseId: string, data: QuizPayload) {
 
 // ── Module-scoped quiz (used by the course builder) ─────
 
+export function getCourseBuilderQuizzes(courseId: string) {
+  return request<ModuleQuizAPI[]>(`/courses/${courseId}/builder/quizzes`);
+}
+
 export function getModuleQuiz(courseId: string, moduleId: string) {
-  return request<QuizAPI>(`/courses/${courseId}/builder/modules/${moduleId}/quiz`);
+  return request<ModuleQuizAPI>(`/courses/${courseId}/builder/modules/${moduleId}/quiz`);
 }
 
 export function createOrUpdateModuleQuiz(
   courseId: string,
   moduleId: string,
-  data: QuizPayload
+  data: ModuleQuizPayload
 ) {
-  return request<QuizAPI>(`/courses/${courseId}/builder/modules/${moduleId}/quiz`, {
+  return request<ModuleQuizAPI>(`/courses/${courseId}/builder/modules/${moduleId}/quiz`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+export function addQuizQuestion(courseId: string, data: QuizQuestionPayload) {
+  return request<QuizQuestionAPI>(`/courses/${courseId}/quiz/questions`, {
     method: "POST",
     body: JSON.stringify(data),
   });

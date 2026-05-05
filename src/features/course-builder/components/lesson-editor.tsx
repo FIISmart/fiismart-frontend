@@ -1,15 +1,9 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +11,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Video, FileText, Code, Clock, GripVertical, Trash2, Pencil, Upload, Loader2 } from "lucide-react";
+import { Video, FileText, Code, Clock, Trash2, Pencil, Upload, Loader2 } from "lucide-react";
 import type { Lesson, LessonType } from "@/lib/course-types";
 import { generateId } from "@/lib/course-types";
 import * as api from "@/lib/api"; // Added for upload helper
@@ -49,6 +43,14 @@ export function LessonEditor({ lesson, onSave, onCancel, isOpen }: LessonEditorP
   const [duration, setDuration] = useState(lesson?.duration?.toString() || "");
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setTitle(lesson?.title || "");
+    setType(lesson?.type || "video");
+    setContent(lesson?.content || "");
+    setDuration(lesson?.duration?.toString() || "");
+  }, [lesson, isOpen]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -212,7 +214,15 @@ export function LessonEditor({ lesson, onSave, onCancel, isOpen }: LessonEditorP
 }
 
 // ... LessonItem remains the same
-export function LessonItem({ lesson, onEdit, onDelete }: { lesson: Lesson, onEdit: (l: Lesson) => void, onDelete: (id: string) => void }) {
+export function LessonItem({
+  lesson,
+  onEdit,
+  onDelete,
+}: {
+  lesson: Lesson;
+  onEdit: (l: Lesson) => void;
+  onDelete: (id: string) => void;
+}) {
   return (
     <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl border border-border group hover:border-primary/30 transition-colors">
       <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent/40 text-foreground">
