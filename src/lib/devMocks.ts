@@ -41,6 +41,17 @@ import type {
 import type { Quiz, QuizQuestion } from "@/features/quiz/types";
 import { MOCK_QUESTIONS } from "@/features/quiz/services/quiz.service";
 
+// Mock-only: reintroduces the inline quiz the public ModuleResponse no longer carries.
+type MockModuleResponse = Omit<ModuleResponse, "quizId"> & {
+  quizId?: string | null;
+  quiz?: QuizAPI | null;
+};
+
+// Mock-only: parallel CourseAPI whose modules carry the inline mock quiz.
+type MockCourseAPI = Omit<CourseAPI, "modules"> & {
+  modules?: MockModuleResponse[];
+};
+
 // ── Storage / DB ────────────────────────────────────────
 
 const STORAGE_KEY = "fiismart_dev_mock_db";
@@ -75,7 +86,7 @@ interface MockLectureComment {
 
 export interface MockCourseDB {
   schemaVersion: number;
-  courses: CourseAPI[];
+  courses: MockCourseAPI[];
   courseQuizzes: Record<string, QuizAPI>;
   /** Teacher-side comments, keyed by courseId. */
   comments: Record<string, CommentAPI[]>;
@@ -126,7 +137,7 @@ function makeSeedDB(): MockCourseDB {
   const lectureB1bId = uuid();
   const lectureB2aId = uuid();
 
-  const moduleA1: ModuleResponse = {
+  const moduleA1: MockModuleResponse = {
     id: uuid(),
     title: "Getting Started with TypeScript",
     description: "Setup, tooling, and the type system fundamentals.",
@@ -151,7 +162,7 @@ function makeSeedDB(): MockCourseDB {
     quiz: null,
   };
 
-  const moduleA2: ModuleResponse = {
+  const moduleA2: MockModuleResponse = {
     id: uuid(),
     title: "Generics & Conditional Types",
     description: "Reusable, type-safe abstractions.",
@@ -170,7 +181,7 @@ function makeSeedDB(): MockCourseDB {
 
   // Quiz attached to the third module of course A.
   const moduleA3QuizId = uuid();
-  const moduleA3: ModuleResponse = {
+  const moduleA3: MockModuleResponse = {
     id: uuid(),
     title: "Practical Patterns",
     description: "Patterns you will use every day.",
@@ -206,7 +217,7 @@ function makeSeedDB(): MockCourseDB {
   };
   if (moduleA3.quiz) moduleA3.quiz.moduleId = moduleA3.id;
 
-  const courseA: CourseAPI = {
+  const courseA: MockCourseAPI = {
     id: courseAId,
     title: "TypeScript Mastery",
     description: "From zero to production-grade TypeScript.",
@@ -219,7 +230,7 @@ function makeSeedDB(): MockCourseDB {
     modules: [moduleA1, moduleA2, moduleA3],
   };
 
-  const moduleB1: ModuleResponse = {
+  const moduleB1: MockModuleResponse = {
     id: uuid(),
     title: "React Fundamentals",
     description: "Components, props, and state.",
@@ -243,7 +254,7 @@ function makeSeedDB(): MockCourseDB {
     quiz: null,
   };
 
-  const moduleB2: ModuleResponse = {
+  const moduleB2: MockModuleResponse = {
     id: uuid(),
     title: "State Management",
     description: "Local, lifted, and global state.",
@@ -260,7 +271,7 @@ function makeSeedDB(): MockCourseDB {
     quiz: null,
   };
 
-  const courseB: CourseAPI = {
+  const courseB: MockCourseAPI = {
     id: courseBId,
     title: "Building Modern React Apps",
     description: "A draft course on React + Vite + TypeScript.",
@@ -450,18 +461,18 @@ export function resetDevMockDB(): void {
 
 // ── Helpers ─────────────────────────────────────────────
 
-function findCourse(id: string): CourseAPI | undefined {
+function findCourse(id: string): MockCourseAPI | undefined {
   return db.courses.find((c) => c.id === id);
 }
 
-function findModule(course: CourseAPI, moduleId: string): ModuleResponse | undefined {
+function findModule(course: MockCourseAPI, moduleId: string): MockModuleResponse | undefined {
   return (course.modules ?? []).find((m) => m.id === moduleId);
 }
 
 function findLecture(
-  course: CourseAPI,
+  course: MockCourseAPI,
   lectureId: string,
-): { module: ModuleResponse; lecture: LectureAPI } | undefined {
+): { module: MockModuleResponse; lecture: LectureAPI } | undefined {
   for (const mod of course.modules ?? []) {
     const lecture = mod.lectures.find((l) => l.id === lectureId);
     if (lecture) return { module: mod, lecture };
@@ -824,7 +835,7 @@ const routes: Route[] = [
       if (!course) return undefined;
       const body = parseBody<{ title?: string; description?: string }>(init) ?? {};
       course.modules = course.modules ?? [];
-      const created: ModuleResponse = {
+      const created: MockModuleResponse = {
         id: uuid(),
         title: body.title ?? "Untitled module",
         description: body.description ?? "",
