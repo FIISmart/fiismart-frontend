@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import {
@@ -48,8 +48,9 @@ export default function MyQuizzesPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [deletingQuiz, setDeletingQuiz] = useState<MyQuiz | null>(null);
   const [isLoading, setIsLoading] = useState(Boolean(teacherId));
+  const cancelledRef = useRef(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!teacherId) return;
     setIsLoading(true);
     try {
@@ -57,43 +58,26 @@ export default function MyQuizzesPage() {
         api.getCoursesByTeacher(teacherId),
         getTeacherCourseQuizzes(teacherId),
       ]);
+      if (cancelledRef.current) return;
       setCourses(courseItems);
       setQuizzes(quizItems);
       setSelectedCourseId((current) => current ?? courseItems[0]?.id ?? null);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Eroare la incarcarea quiz-urilor");
+      if (!cancelledRef.current) {
+        toast.error(err instanceof Error ? err.message : "Eroare la incarcarea quiz-urilor");
+      }
     } finally {
-      setIsLoading(false);
+      if (!cancelledRef.current) setIsLoading(false);
     }
-  };
+  }, [teacherId]);
 
   useEffect(() => {
-    let cancelled = false;
-    async function run() {
-      if (!teacherId) return;
-      setIsLoading(true);
-      try {
-        const [courseItems, quizItems] = await Promise.all([
-          api.getCoursesByTeacher(teacherId),
-          getTeacherCourseQuizzes(teacherId),
-        ]);
-        if (cancelled) return;
-        setCourses(courseItems);
-        setQuizzes(quizItems);
-        setSelectedCourseId((current) => current ?? courseItems[0]?.id ?? null);
-      } catch (err) {
-        if (!cancelled) {
-          toast.error(err instanceof Error ? err.message : "Eroare la incarcarea quiz-urilor");
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    }
-    run();
+    cancelledRef.current = false;
+    load();
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
     };
-  }, [teacherId]);
+  }, [load]);
 
   const openCreate = () => {
     const courseId = selectedCourseId ?? courses[0]?.id;
