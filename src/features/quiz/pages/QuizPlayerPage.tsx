@@ -113,6 +113,7 @@ export default function QuizPlayerPage() {
         <QuizQuestionPage
           question={question}
           onNext={handleNext}
+          onPrev={handlePrev}
           index={currentIndex}
           total={total}
         />

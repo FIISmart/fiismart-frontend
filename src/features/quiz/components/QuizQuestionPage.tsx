@@ -4,6 +4,7 @@ import type { QuizQuestion } from "../types";
 interface Props {
   question: QuizQuestion;
   onNext: (isCorrect: boolean) => void;
+  onPrev: () => void;
   index: number;
   total: number;
 }
@@ -13,11 +14,13 @@ const OPTION_LABELS = ["A", "B", "C", "D", "E", "F"];
 export default function QuizQuestionPage({
   question,
   onNext,
+  onPrev,
   index,
   total,
 }: Props) {
-  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
-  const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
+    const navigate = useNavigate();
+    const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+    const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
 
   // Reset on new question
   useEffect(() => {
@@ -40,7 +43,10 @@ export default function QuizQuestionPage({
       <div className="w-full">
         {/* Top status bar */}
         <div className="flex justify-between items-center text-[#6A7282] text-sm font-medium mb-4 px-2">
-          <button className="flex items-center gap-1 hover:text-[#9B8EC7] transition-colors">
+          <button
+          onClick={() => navigate("/student/dashboard")}
+          className="flex items-center gap-1 hover:text-[#9B8EC7] transition-colors"
+          >
             <span>&lt;</span> Exit
           </button>
           <span className="text-gray-800 font-bold">
@@ -174,6 +180,7 @@ export default function QuizQuestionPage({
           {/* Footer buttons */}
           <div className="flex justify-between items-center">
             <button
+              onClick={onPrev}
               className="px-6 py-3 border-2 border-[#E5E7EB] text-[#A0AABF] font-semibold rounded-[16px] hover:bg-gray-50 transition-colors flex items-center gap-2"
               disabled={isSubmitted || index === 0}
             >
