@@ -12,6 +12,11 @@ export type MyQuiz = Quiz & {
 };
 
 export function quizToModuleQuizPayload(quiz: Quiz): api.ModuleQuizPayload {
+  const writtenQuestion = quiz.questions.find((q) => q.type === "written");
+  if (writtenQuestion) {
+    throw new Error("Quiz-urile de modul/lecție/curs final acceptă doar întrebări grilă (multiple choice).");
+  }
+
   return {
     title: quiz.title,
     passingScore: quiz.passingScore ?? 70,
