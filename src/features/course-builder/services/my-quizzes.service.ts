@@ -156,3 +156,55 @@ export async function upsertModuleQuiz(
 export async function deleteModuleQuiz(courseId: string, moduleId: string): Promise<void> {
   await api.deleteModuleQuiz(courseId, moduleId);
 }
+
+export async function upsertLectureQuiz(
+  courseId: string,
+  moduleId: string,
+  lectureId: string,
+  quiz: Quiz,
+): Promise<MyQuiz> {
+  const saved = await api.createOrUpdateLectureQuiz(
+    courseId,
+    moduleId,
+    lectureId,
+    quizToModuleQuizPayload(quiz),
+  );
+
+  return {
+    ...mapQuizToFE(saved),
+    courseId: saved.courseId,
+    moduleId: saved.moduleId,
+    lectureId: saved.lectureId,
+    quizScope: saved.quizScope,
+  };
+}
+
+export async function deleteLectureQuiz(
+  courseId: string,
+  moduleId: string,
+  lectureId: string,
+): Promise<void> {
+  await api.deleteLectureQuiz(courseId, moduleId, lectureId);
+}
+
+export async function upsertCourseFinalQuiz(
+  courseId: string,
+  quiz: Quiz,
+): Promise<MyQuiz> {
+  const saved = await api.createOrUpdateCourseFinalQuiz(
+    courseId,
+    quizToModuleQuizPayload(quiz),
+  );
+
+  return {
+    ...mapQuizToFE(saved),
+    courseId: saved.courseId,
+    moduleId: saved.moduleId,
+    lectureId: saved.lectureId,
+    quizScope: saved.quizScope,
+  };
+}
+
+export async function deleteCourseFinalQuiz(courseId: string): Promise<void> {
+  await api.deleteCourseFinalQuiz(courseId);
+}
