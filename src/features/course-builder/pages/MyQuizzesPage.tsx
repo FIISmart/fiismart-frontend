@@ -26,12 +26,14 @@ import { useAuth } from "@/features/auth/context/AuthContext";
 import * as api from "@/lib/api";
 import type { Quiz } from "@/lib/course-types";
 import {
+  deleteCourseFinalQuiz,
+  deleteLectureQuiz,
   deleteModuleQuiz,
-  deleteCourseQuiz,
   getTeacherCourseQuizzes,
   type MyQuiz,
+  upsertCourseFinalQuiz,
+  upsertLectureQuiz,
   upsertModuleQuiz,
-  upsertCourseQuiz,
 } from "@/features/course-builder/services/my-quizzes.service";
 
 export default function MyQuizzesPage() {
@@ -44,7 +46,8 @@ export default function MyQuizzesPage() {
   const [activeQuizId, setActiveQuizId] = useState<string | null>(null);
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
   const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
-  const [activeQuizScope, setActiveQuizScope] = useState<string>("course");
+  const [activeLectureId, setActiveLectureId] = useState<string | null>(null);
+  const [activeQuizScope, setActiveQuizScope] = useState<string>("course_final");
   const [editorOpen, setEditorOpen] = useState(false);
   const [deletingQuiz, setDeletingQuiz] = useState<MyQuiz | null>(null);
   const [isLoading, setIsLoading] = useState(Boolean(teacherId));
@@ -87,7 +90,8 @@ export default function MyQuizzesPage() {
     }
     setActiveCourseId(courseId);
     setActiveModuleId(null);
-    setActiveQuizScope("course");
+    setActiveLectureId(null);
+    setActiveQuizScope("course_final");
     setActiveQuizId(null);
     setActiveQuiz({
       id: "",
@@ -103,6 +107,7 @@ export default function MyQuizzesPage() {
   const openEdit = (quiz: MyQuiz) => {
     setActiveCourseId(quiz.courseId);
     setActiveModuleId(quiz.moduleId ?? null);
+    setActiveLectureId(quiz.lectureId ?? null);
     setActiveQuizScope(quiz.quizScope);
     setActiveQuizId(quiz.id);
     setActiveQuiz(quiz);
@@ -115,7 +120,8 @@ export default function MyQuizzesPage() {
     setActiveQuizId(null);
     setActiveCourseId(null);
     setActiveModuleId(null);
-    setActiveQuizScope("course");
+    setActiveLectureId(null);
+    setActiveQuizScope("course_final");
   };
 
   const handleSaveQuiz = async (quiz: Quiz) => {
@@ -125,10 +131,16 @@ export default function MyQuizzesPage() {
     }
 
     try {
-      const saved =
-        activeQuizScope === "module" && activeModuleId
-          ? await upsertModuleQuiz(activeCourseId, activeModuleId, quiz)
-          : await upsertCourseQuiz(activeCourseId, quiz);
+      let saved: MyQuiz;
+      if (activeQuizScope === "module" && activeModuleId) {
+        saved = await upsertModuleQuiz(activeCourseId, activeModuleId, quiz);
+      } else if (activeQuizScope === "lecture" && activeModuleId && activeLectureId) {
+        saved = await upsertLectureQuiz(activeCourseId, activeModuleId, activeLectureId, quiz);
+      } else if (activeQuizScope === "course_final") {
+        saved = await upsertCourseFinalQuiz(activeCourseId, quiz);
+      } else {
+        throw new Error("Context invalid pentru salvarea quiz-ului.");
+      }
       const courseTitle = courses.find((course) => course.id === activeCourseId)?.title;
       const original = quizzes.find((item) => item.id === activeQuizId);
       const savedWithCourse = {
