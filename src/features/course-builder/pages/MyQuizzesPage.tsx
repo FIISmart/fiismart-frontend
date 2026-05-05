@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import {
@@ -26,12 +26,14 @@ import { useAuth } from "@/features/auth/context/AuthContext";
 import * as api from "@/lib/api";
 import type { Quiz } from "@/lib/course-types";
 import {
+  deleteCourseFinalQuiz,
+  deleteLectureQuiz,
   deleteModuleQuiz,
-  deleteCourseQuiz,
   getTeacherCourseQuizzes,
   type MyQuiz,
+  upsertCourseFinalQuiz,
+  upsertLectureQuiz,
   upsertModuleQuiz,
-  upsertCourseQuiz,
 } from "@/features/course-builder/services/my-quizzes.service";
 
 export default function MyQuizzesPage() {
@@ -44,12 +46,14 @@ export default function MyQuizzesPage() {
   const [activeQuizId, setActiveQuizId] = useState<string | null>(null);
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
   const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
-  const [activeQuizScope, setActiveQuizScope] = useState<string>("course");
+  const [activeLectureId, setActiveLectureId] = useState<string | null>(null);
+  const [activeQuizScope, setActiveQuizScope] = useState<string>("course_final");
   const [editorOpen, setEditorOpen] = useState(false);
   const [deletingQuiz, setDeletingQuiz] = useState<MyQuiz | null>(null);
   const [isLoading, setIsLoading] = useState(Boolean(teacherId));
+  const cancelledRef = useRef(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!teacherId) return;
     setIsLoading(true);
     try {
@@ -57,43 +61,26 @@ export default function MyQuizzesPage() {
         api.getCoursesByTeacher(teacherId),
         getTeacherCourseQuizzes(teacherId),
       ]);
+      if (cancelledRef.current) return;
       setCourses(courseItems);
       setQuizzes(quizItems);
       setSelectedCourseId((current) => current ?? courseItems[0]?.id ?? null);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Eroare la incarcarea quiz-urilor");
+      if (!cancelledRef.current) {
+        toast.error(err instanceof Error ? err.message : "Eroare la incarcarea quiz-urilor");
+      }
     } finally {
-      setIsLoading(false);
+      if (!cancelledRef.current) setIsLoading(false);
     }
-  };
+  }, [teacherId]);
 
   useEffect(() => {
-    let cancelled = false;
-    async function run() {
-      if (!teacherId) return;
-      setIsLoading(true);
-      try {
-        const [courseItems, quizItems] = await Promise.all([
-          api.getCoursesByTeacher(teacherId),
-          getTeacherCourseQuizzes(teacherId),
-        ]);
-        if (cancelled) return;
-        setCourses(courseItems);
-        setQuizzes(quizItems);
-        setSelectedCourseId((current) => current ?? courseItems[0]?.id ?? null);
-      } catch (err) {
-        if (!cancelled) {
-          toast.error(err instanceof Error ? err.message : "Eroare la incarcarea quiz-urilor");
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    }
-    run();
+    cancelledRef.current = false;
+    load();
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
     };
-  }, [teacherId]);
+  }, [load]);
 
   const openCreate = () => {
     const courseId = selectedCourseId ?? courses[0]?.id;
@@ -103,7 +90,8 @@ export default function MyQuizzesPage() {
     }
     setActiveCourseId(courseId);
     setActiveModuleId(null);
-    setActiveQuizScope("course");
+    setActiveLectureId(null);
+    setActiveQuizScope("course_final");
     setActiveQuizId(null);
     setActiveQuiz({
       id: "",
@@ -119,6 +107,7 @@ export default function MyQuizzesPage() {
   const openEdit = (quiz: MyQuiz) => {
     setActiveCourseId(quiz.courseId);
     setActiveModuleId(quiz.moduleId ?? null);
+    setActiveLectureId(quiz.lectureId ?? null);
     setActiveQuizScope(quiz.quizScope);
     setActiveQuizId(quiz.id);
     setActiveQuiz(quiz);
@@ -131,7 +120,8 @@ export default function MyQuizzesPage() {
     setActiveQuizId(null);
     setActiveCourseId(null);
     setActiveModuleId(null);
-    setActiveQuizScope("course");
+    setActiveLectureId(null);
+    setActiveQuizScope("course_final");
   };
 
   const handleSaveQuiz = async (quiz: Quiz) => {
@@ -141,10 +131,16 @@ export default function MyQuizzesPage() {
     }
 
     try {
-      const saved =
-        activeQuizScope === "module" && activeModuleId
-          ? await upsertModuleQuiz(activeCourseId, activeModuleId, quiz)
-          : await upsertCourseQuiz(activeCourseId, quiz);
+      let saved: MyQuiz;
+      if (activeQuizScope === "module" && activeModuleId) {
+        saved = await upsertModuleQuiz(activeCourseId, activeModuleId, quiz);
+      } else if (activeQuizScope === "lecture" && activeModuleId && activeLectureId) {
+        saved = await upsertLectureQuiz(activeCourseId, activeModuleId, activeLectureId, quiz);
+      } else if (activeQuizScope === "course_final") {
+        saved = await upsertCourseFinalQuiz(activeCourseId, quiz);
+      } else {
+        throw new Error("Context invalid pentru salvarea quiz-ului.");
+      }
       const courseTitle = courses.find((course) => course.id === activeCourseId)?.title;
       const original = quizzes.find((item) => item.id === activeQuizId);
       const savedWithCourse = {
@@ -166,14 +162,30 @@ export default function MyQuizzesPage() {
 
   const confirmDelete = async () => {
     if (!deletingQuiz) return;
-    if (deletingQuiz.quizScope === "module" && deletingQuiz.moduleId) {
-      await deleteModuleQuiz(deletingQuiz.courseId, deletingQuiz.moduleId);
-    } else {
-      await deleteCourseQuiz(deletingQuiz.courseId);
+    try {
+      if (deletingQuiz.quizScope === "module" && deletingQuiz.moduleId) {
+        await deleteModuleQuiz(deletingQuiz.courseId, deletingQuiz.moduleId);
+      } else if (
+        deletingQuiz.quizScope === "lecture" &&
+        deletingQuiz.moduleId &&
+        deletingQuiz.lectureId
+      ) {
+        await deleteLectureQuiz(
+          deletingQuiz.courseId,
+          deletingQuiz.moduleId,
+          deletingQuiz.lectureId,
+        );
+      } else if (deletingQuiz.quizScope === "course_final") {
+        await deleteCourseFinalQuiz(deletingQuiz.courseId);
+      } else {
+        throw new Error("Context invalid pentru stergerea quiz-ului.");
+      }
+      setDeletingQuiz(null);
+      toast.success("Quiz sters.");
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Eroare la stergerea quiz-ului");
     }
-    setDeletingQuiz(null);
-    toast.success("Quiz sters.");
-    await load();
   };
 
   return (

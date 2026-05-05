@@ -62,7 +62,7 @@ export function CourseHeader({
     0
   );
   const totalQuizzes = course.modules.reduce(
-    (acc, m) => acc + (m.quizzes?.length ?? (m.quiz ? 1 : 0)),
+    (acc, m) => acc + (m.quiz ? 1 : 0),
     0
   );
 

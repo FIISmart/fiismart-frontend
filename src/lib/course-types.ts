@@ -34,12 +34,9 @@ export interface Module {
   title: string;
   description?: string;
   lessons: Lesson[];
-  // New frontend model: a module can have multiple quizzes.
-  quizzes?: Quiz[];
-  // Backward compatibility with current backend payload.
   quiz?: Quiz;
   order: number;
-  isExpanded?: boolean; 
+  isExpanded?: boolean;
 }
 
 export interface Comment {
@@ -100,26 +97,16 @@ export function mapCourseToFE(course: any, quizzes?: any[] | null, comments?: an
     : [];
   const modules: Module[] = Array.isArray(course.modules)
     ? course.modules.map((m: any, index: number) => {
-        const quizzesForModule = moduleQuizzes
-          .filter((quiz) => quiz.moduleId === m.id)
-          .map(mapQuizToFE);
-        const legacyQuizzes = Array.isArray(m.quizzes)
-          ? m.quizzes.map(mapQuizToFE)
-          : m.quiz
-            ? [mapQuizToFE(m.quiz)]
-            : [];
-        const allQuizzes = quizzesForModule.length > 0 ? quizzesForModule : legacyQuizzes;
+        const matchingQuiz = moduleQuizzes.find((quiz) => quiz.moduleId === m.id);
+        const quiz: Quiz | undefined = matchingQuiz ? mapQuizToFE(matchingQuiz) : undefined;
 
         return {
           id: m.id,
           title: m.title,
           description: m.description,
           order: m.order ?? index,
-          quizzes: allQuizzes,
-          quiz: allQuizzes[0],
-          lessons: Array.isArray(m.lectures)
-            ? m.lectures.map(mapLectureToLesson)
-            : [],
+          quiz,
+          lessons: Array.isArray(m.lectures) ? m.lectures.map(mapLectureToLesson) : [],
         };
       })
     : [];
@@ -186,7 +173,7 @@ export function mapQuizToFE(quiz: any): Quiz {
       question: q.text,
       type: q.type === 'written' ? 'written' : 'multiple_choice',
       options: q.options || [],
-      correctAnswer: q.type === 'written' ? (q.correctText || "") : (q.correctIdx || 0),
+      correctAnswer: q.type === 'written' ? (q.correctText ?? "") : (q.correctIdx ?? 0),
       explanation: q.explanation,
     })),
   };

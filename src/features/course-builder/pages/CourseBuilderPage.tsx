@@ -227,7 +227,6 @@ export default function CourseBuilderPage() {
         description: newModuleApi.description,
         order: course.modules.length,
         lessons: [],
-        quizzes: [],
         quiz: undefined,
       };
       setCourse(prev => prev ? { ...prev, modules: [...prev.modules, newModule] } : prev);

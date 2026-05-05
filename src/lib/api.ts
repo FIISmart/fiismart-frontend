@@ -95,8 +95,6 @@ export interface ModuleResponse {
   order: number;
   quizId?: string | null;
   lectures: LectureAPI[];
-  quiz?: QuizAPI | null;
-  quizzes?: ModuleQuizAPI[];
 }
 
 export interface CourseAPI {
@@ -259,7 +257,10 @@ export function getComments(courseId: string) {
   return request<CommentAPI[]>(`/courses/${courseId}/comments`);
 }
 
-export function updateCourse(courseId: string, data: any) {
+export function updateCourse(
+  courseId: string,
+  data: Partial<Pick<CourseAPI, "title" | "description" | "tags" | "thumbnailUrl" | "status">>
+) {
   return request<CourseAPI>(`/courses/${courseId}`, {
     method: "PUT",
     body: JSON.stringify(data),
@@ -366,6 +367,49 @@ export function addQuizQuestion(courseId: string, data: QuizQuestionPayload) {
 
 export function deleteModuleQuiz(courseId: string, moduleId: string) {
   return request<void>(`/courses/${courseId}/builder/modules/${moduleId}/quiz`, {
+    method: "DELETE",
+  });
+}
+
+// ── Lecture-scoped quiz (used by the course builder) ────
+
+export function getLectureQuiz(courseId: string, moduleId: string, lectureId: string) {
+  return request<ModuleQuizAPI>(`/courses/${courseId}/builder/modules/${moduleId}/lectures/${lectureId}/quiz`);
+}
+
+export function createOrUpdateLectureQuiz(
+  courseId: string,
+  moduleId: string,
+  lectureId: string,
+  data: ModuleQuizPayload
+) {
+  return request<ModuleQuizAPI>(`/courses/${courseId}/builder/modules/${moduleId}/lectures/${lectureId}/quiz`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteLectureQuiz(courseId: string, moduleId: string, lectureId: string) {
+  return request<void>(`/courses/${courseId}/builder/modules/${moduleId}/lectures/${lectureId}/quiz`, {
+    method: "DELETE",
+  });
+}
+
+// ── Course-final-scoped quiz (used by the course builder) ─
+
+export function getCourseFinalQuiz(courseId: string) {
+  return request<ModuleQuizAPI>(`/courses/${courseId}/builder/final-quiz`);
+}
+
+export function createOrUpdateCourseFinalQuiz(courseId: string, data: ModuleQuizPayload) {
+  return request<ModuleQuizAPI>(`/courses/${courseId}/builder/final-quiz`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteCourseFinalQuiz(courseId: string) {
+  return request<void>(`/courses/${courseId}/builder/final-quiz`, {
     method: "DELETE",
   });
 }
