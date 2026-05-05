@@ -370,6 +370,49 @@ export function deleteModuleQuiz(courseId: string, moduleId: string) {
   });
 }
 
+// ── Lecture-scoped quiz (used by the course builder) ────
+
+export function getLectureQuiz(courseId: string, moduleId: string, lectureId: string) {
+  return request<ModuleQuizAPI>(`/courses/${courseId}/builder/modules/${moduleId}/lectures/${lectureId}/quiz`);
+}
+
+export function createOrUpdateLectureQuiz(
+  courseId: string,
+  moduleId: string,
+  lectureId: string,
+  data: ModuleQuizPayload
+) {
+  return request<ModuleQuizAPI>(`/courses/${courseId}/builder/modules/${moduleId}/lectures/${lectureId}/quiz`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteLectureQuiz(courseId: string, moduleId: string, lectureId: string) {
+  return request<void>(`/courses/${courseId}/builder/modules/${moduleId}/lectures/${lectureId}/quiz`, {
+    method: "DELETE",
+  });
+}
+
+// ── Course-final-scoped quiz (used by the course builder) ─
+
+export function getCourseFinalQuiz(courseId: string) {
+  return request<ModuleQuizAPI>(`/courses/${courseId}/builder/final-quiz`);
+}
+
+export function createOrUpdateCourseFinalQuiz(courseId: string, data: ModuleQuizPayload) {
+  return request<ModuleQuizAPI>(`/courses/${courseId}/builder/final-quiz`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteCourseFinalQuiz(courseId: string) {
+  return request<void>(`/courses/${courseId}/builder/final-quiz`, {
+    method: "DELETE",
+  });
+}
+
 // ── File Upload Helpers ─────────────────────────────────
 
 export interface UploadResponse {
