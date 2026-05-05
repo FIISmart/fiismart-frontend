@@ -150,11 +150,13 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
   }
 }
 
-export async function refresh(): Promise<AuthResponse | null> {
+export async function refresh(email: string): Promise<AuthResponse | null> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken || !email) return null;
   try {
     const res = await apiFetch<AuthResponse>("/auth/refresh", {
       method: "POST",
-      headers: authHeaders(),
+      body: JSON.stringify({ email, refreshToken }),
     });
     if (res?.accessToken) setToken(res.accessToken, "cognito");
     if (res?.refreshToken) setRefreshToken(res.refreshToken);

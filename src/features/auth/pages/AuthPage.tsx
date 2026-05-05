@@ -4,9 +4,10 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Eye, EyeOff, GraduationCap, Loader2, Mail } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, GraduationCap, Loader2, Mail } from "lucide-react";
 import { isCognitoConfigured } from "@/lib/cognito-config";
 import { buildLoginUrl } from "../services/cognito.service";
+import { ApiError } from "@/lib/api";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -45,6 +46,37 @@ import {
 type LocationState = { from?: { pathname?: string } } | null;
 type AuthView = "tabs" | "verify-email" | "forgot-password" | "reset-password";
 
+const AUTH_ERROR_MAP: Record<string, string> = {
+  // Email duplicat
+  "An account with this email already exists": "Există deja un cont cu acest email.",
+  // Login greșit
+  "Invalid email or password": "Email sau parolă incorectă.",
+  // Email neverificat
+  "Please verify your email before signing in.": "Verifică-ți email-ul înainte de a te autentifica.",
+  // Coduri verificare
+  "Invalid or expired verification code": "Codul de verificare este invalid sau expirat.",
+  "Verification code has expired": "Codul de verificare a expirat. Solicită unul nou.",
+  // Rate limiting
+  "Too many attempts, please try again later": "Prea multe încercări. Încearcă din nou mai târziu.",
+  "Attempt limit exceeded, please try after some time": "Limită de încercări depășită. Încearcă mai târziu.",
+  // Parolă
+  "Password does not meet requirements": "Parola nu respectă cerințele de securitate.",
+  "Password reset successfully. You can now sign in.": "Parola a fost resetată. Te poți autentifica.",
+  // Utilizator
+  "User not found": "Contul nu a fost găsit.",
+  "User profile not found for this account": "Profilul contului nu a fost găsit. Contactează suportul.",
+  // Token / sesiune
+  "Authentication required": "Autentificare necesară.",
+  "Missing or malformed Authorization header": "Lipsește token-ul de autentificare.",
+  // Generic
+  "An unexpected error occurred": "A apărut o eroare neașteptată. Încearcă din nou.",
+};
+
+function translateAuthError(raw: string): string {
+  if (!raw) return "";
+  return AUTH_ERROR_MAP[raw] ?? raw;
+}
+
 function dashboardFor(role: UserRole): string {
   return role === UserRole.PROFESSOR ? "/professor/dashboard" : "/student/dashboard";
 }
@@ -54,9 +86,9 @@ export default function AuthPage() {
   const location = useLocation();
   const { login, signup, verifyEmail, resendVerification, forgotPassword, resetPassword } = useAuth();
 
-  const [tab, setTab]           = useState<"login" | "signup">("login");
-  const [view, setView]         = useState<AuthView>("tabs");
-  const [pendingEmail, setPendingEmail] = useState("");
+  const [tab, setTab]             = useState<"login" | "signup">("login");
+  const [view, setView]           = useState<AuthView>("tabs");
+  const [pendingEmail, setPendingEmail]     = useState("");
   const [pendingPassword, setPendingPassword] = useState("");
 
   const goAfterAuth = (user: AuthUser) => {
@@ -84,6 +116,13 @@ export default function AuthPage() {
       setTab("login");
       setView("tabs");
     }
+  };
+
+  const handleUnconfirmedEmail = (email: string) => {
+    setPendingEmail(email);
+    setPendingPassword("");
+    toast.info("Contul tău nu este confirmat. Introdu codul primit pe email.");
+    setView("verify-email");
   };
 
   const handleForgotPassword = () => setView("forgot-password");
@@ -163,6 +202,7 @@ export default function AuthPage() {
                       onSuccess={goAfterAuth}
                       onSwitchToSignup={() => setTab("signup")}
                       onForgotPassword={handleForgotPassword}
+                      onUnconfirmedEmail={handleUnconfirmedEmail}
                       submit={login}
                     />
                   </TabsContent>
@@ -225,24 +265,32 @@ interface LoginFormProps {
   onSuccess: (user: AuthUser) => void;
   onSwitchToSignup: () => void;
   onForgotPassword: () => void;
+  onUnconfirmedEmail: (email: string) => void;
   submit: (payload: LoginValues) => Promise<AuthUser>;
 }
 
-function LoginForm({ onSuccess, onSwitchToSignup, onForgotPassword, submit }: LoginFormProps) {
+function LoginForm({ onSuccess, onSwitchToSignup, onForgotPassword, onUnconfirmedEmail, submit }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
   });
 
   const onSubmit = handleSubmit(async (values) => {
+    setFormError(null);
     try {
       const user = await submit(values);
       toast.success(`Bine ai revenit, ${user.firstName || user.email}!`);
       onSuccess(user);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Autentificare eșuată. Verifică datele.";
-      toast.error(message);
+      if (err instanceof ApiError && err.code === "USER_NOT_CONFIRMED") {
+        onUnconfirmedEmail(values.email);
+        return;
+      }
+      const raw = err instanceof Error ? err.message : "";
+      const message = translateAuthError(raw) || "Autentificare eșuată. Verifică datele.";
+      setFormError(message);
     }
   });
 
@@ -267,6 +315,12 @@ function LoginForm({ onSuccess, onSwitchToSignup, onForgotPassword, submit }: Lo
           onToggleShow={() => setShowPassword((v) => !v)} {...register("password")} />
         {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
       </div>
+      {formError && (
+        <div className="flex items-start gap-2 rounded-md bg-destructive/10 border border-destructive/30 p-3">
+          <AlertCircle className="size-4 text-destructive mt-0.5 shrink-0" />
+          <p className="text-sm text-destructive">{formError}</p>
+        </div>
+      )}
       <Button type="submit" className="w-full" disabled={isSubmitting}>
         {isSubmitting ? <><Loader2 className="size-4 animate-spin" />Se autentifică…</> : "Login"}
       </Button>
@@ -290,6 +344,7 @@ interface SignupFormProps {
 
 function SignupForm({ onSuccess, onSwitchToLogin, submit }: SignupFormProps) {
   const [showPassword, setShowPassword] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } =
     useForm<SignupValues>({
       resolver: zodResolver(signupSchema),
@@ -299,13 +354,15 @@ function SignupForm({ onSuccess, onSwitchToLogin, submit }: SignupFormProps) {
   const role = watch("role");
 
   const onSubmit = handleSubmit(async (values) => {
+    setFormError(null);
     try {
       await submit(values);
       toast.success("Cont creat! Verifică email-ul pentru codul de confirmare.");
       onSuccess(values.email, values.password);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Înregistrare eșuată. Încearcă din nou.";
-      toast.error(message);
+      const raw = err instanceof Error ? err.message : "";
+      const message = translateAuthError(raw) || "Înregistrare eșuată. Încearcă din nou.";
+      setFormError(message);
     }
   });
 
@@ -352,6 +409,12 @@ function SignupForm({ onSuccess, onSwitchToLogin, submit }: SignupFormProps) {
         </Select>
         {errors.role && <p className="text-xs text-destructive">{errors.role.message}</p>}
       </div>
+      {formError && (
+        <div className="flex items-start gap-2 rounded-md bg-destructive/10 border border-destructive/30 p-3">
+          <AlertCircle className="size-4 text-destructive mt-0.5 shrink-0" />
+          <p className="text-sm text-destructive">{formError}</p>
+        </div>
+      )}
       <Button type="submit" className="w-full" disabled={isSubmitting}>
         {isSubmitting ? <><Loader2 className="size-4 animate-spin" />Se creează contul…</> : "Creează cont"}
       </Button>
@@ -375,28 +438,34 @@ interface VerifyEmailFormProps {
 }
 
 function VerifyEmailForm({ email, onSuccess, onResend, submitVerify }: VerifyEmailFormProps) {
-  const { register, handleSubmit, formState: { errors, isSubmitting } } =
+  const [formError, setFormError] = useState<string | null>(null);
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } =
     useForm<VerifyEmailValues>({
       resolver: zodResolver(verifyEmailSchema),
       defaultValues: { code: "" },
     });
 
   const onSubmit = handleSubmit(async ({ code }) => {
+    setFormError(null);
     try {
       await submitVerify(email, code);
       await onSuccess();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Cod invalid sau expirat.";
-      toast.error(message);
+      const raw = err instanceof Error ? err.message : "";
+      const message = translateAuthError(raw) || "Cod invalid sau expirat.";
+      setFormError(message);
+      reset({ code: "" });
     }
   });
 
   const handleResend = async () => {
+    setFormError(null);
     try {
       await onResend(email);
       toast.success("Cod retrimis! Verifică email-ul.");
-    } catch {
-      toast.error("Nu s-a putut retrimite codul. Încearcă din nou.");
+    } catch (err) {
+      const raw = err instanceof Error ? err.message : "";
+      setFormError(translateAuthError(raw) || "Nu s-a putut retrimite codul. Încearcă din nou.");
     }
   };
 
@@ -418,9 +487,15 @@ function VerifyEmailForm({ email, onSuccess, onResend, submitVerify }: VerifyEma
           <div className="space-y-2">
             <Label htmlFor="verify-code">Cod de verificare</Label>
             <Input id="verify-code" placeholder="123456" maxLength={6}
-              aria-invalid={!!errors.code} {...register("code")} />
+              aria-invalid={!!errors.code || !!formError} {...register("code")} />
             {errors.code && <p className="text-xs text-destructive">{errors.code.message}</p>}
           </div>
+          {formError && (
+            <div className="flex items-start gap-2 rounded-md bg-destructive/10 border border-destructive/30 p-3">
+              <AlertCircle className="size-4 text-destructive mt-0.5 shrink-0" />
+              <p className="text-sm text-destructive">{formError}</p>
+            </div>
+          )}
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? <><Loader2 className="size-4 animate-spin" />Se verifică…</> : "Confirmă email"}
           </Button>
@@ -445,20 +520,23 @@ interface ForgotPasswordFormProps {
 }
 
 function ForgotPasswordForm({ onCodeSent, onBack, submit }: ForgotPasswordFormProps) {
-  const { register, handleSubmit, getValues, formState: { errors, isSubmitting } } =
+  const [formError, setFormError] = useState<string | null>(null);
+  const { register, handleSubmit, formState: { errors, isSubmitting } } =
     useForm<ForgotPasswordValues>({
       resolver: zodResolver(forgotPasswordSchema),
       defaultValues: { email: "" },
     });
 
   const onSubmit = handleSubmit(async ({ email }) => {
+    setFormError(null);
     try {
       await submit(email);
       toast.success("Cod trimis! Verifică email-ul.");
       onCodeSent(email);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "A apărut o eroare. Încearcă din nou.";
-      toast.error(message);
+      const raw = err instanceof Error ? err.message : "";
+      const message = translateAuthError(raw) || "A apărut o eroare. Încearcă din nou.";
+      setFormError(message);
     }
   });
 
@@ -476,6 +554,12 @@ function ForgotPasswordForm({ onCodeSent, onBack, submit }: ForgotPasswordFormPr
               aria-invalid={!!errors.email} {...register("email")} />
             {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
           </div>
+          {formError && (
+            <div className="flex items-start gap-2 rounded-md bg-destructive/10 border border-destructive/30 p-3">
+              <AlertCircle className="size-4 text-destructive mt-0.5 shrink-0" />
+              <p className="text-sm text-destructive">{formError}</p>
+            </div>
+          )}
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? <><Loader2 className="size-4 animate-spin" />Se trimite…</> : "Trimite cod"}
           </Button>
@@ -501,19 +585,23 @@ interface ResetPasswordFormProps {
 
 function ResetPasswordForm({ email, onSuccess, onBack, submit }: ResetPasswordFormProps) {
   const [showPassword, setShowPassword] = useState(false);
-  const { register, handleSubmit, formState: { errors, isSubmitting } } =
+  const [formError, setFormError] = useState<string | null>(null);
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } =
     useForm<ResetPasswordValues>({
       resolver: zodResolver(resetPasswordSchema),
       defaultValues: { code: "", newPassword: "" },
     });
 
   const onSubmit = handleSubmit(async ({ code, newPassword }) => {
+    setFormError(null);
     try {
       await submit(email, code, newPassword);
       onSuccess();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Resetare eșuată. Verifică codul și încearcă din nou.";
-      toast.error(message);
+      const raw = err instanceof Error ? err.message : "";
+      const message = translateAuthError(raw) || "Resetare eșuată. Verifică codul și încearcă din nou.";
+      setFormError(message);
+      reset({ code: "", newPassword: "" });
     }
   });
 
@@ -528,7 +616,7 @@ function ResetPasswordForm({ email, onSuccess, onBack, submit }: ResetPasswordFo
           <div className="space-y-2">
             <Label htmlFor="reset-code">Cod de verificare</Label>
             <Input id="reset-code" placeholder="123456" maxLength={6}
-              aria-invalid={!!errors.code} {...register("code")} />
+              aria-invalid={!!errors.code || !!formError} {...register("code")} />
             {errors.code && <p className="text-xs text-destructive">{errors.code.message}</p>}
           </div>
           <div className="space-y-2">
@@ -539,6 +627,12 @@ function ResetPasswordForm({ email, onSuccess, onBack, submit }: ResetPasswordFo
               onToggleShow={() => setShowPassword((v) => !v)} {...register("newPassword")} />
             {errors.newPassword && <p className="text-xs text-destructive">{errors.newPassword.message}</p>}
           </div>
+          {formError && (
+            <div className="flex items-start gap-2 rounded-md bg-destructive/10 border border-destructive/30 p-3">
+              <AlertCircle className="size-4 text-destructive mt-0.5 shrink-0" />
+              <p className="text-sm text-destructive">{formError}</p>
+            </div>
+          )}
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? <><Loader2 className="size-4 animate-spin" />Se resetează…</> : "Resetează parola"}
           </Button>

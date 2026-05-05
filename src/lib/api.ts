@@ -1,5 +1,17 @@
 export const API_BASE = import.meta.env.VITE_API_URL || "/api";
 
+/** Eroare aruncată de apiFetch pentru răspunsuri non-2xx. Poartă și codul din JSON. */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly code?: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 /** localStorage key for the bearer token. Mirrored from features/auth/services/auth.service.ts. */
 const TOKEN_KEY = "fiismart_token";
 
@@ -44,7 +56,12 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
       if (mocked !== undefined) return mocked as T;
     }
     const err = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error(err.message || `Request failed: ${res.status}`);
+    let errMessage: string = err.message || `Request failed: ${res.status}`;
+    if (errMessage === "Validation failed" && err.errors) {
+      const firstMessages = Object.values(err.errors as Record<string, string[]>).flat();
+      if (firstMessages.length > 0) errMessage = firstMessages[0];
+    }
+    throw new ApiError(errMessage, res.status, err.code);
   }
   if (res.status === 204) return undefined as T;
   return res.json();
@@ -332,7 +349,12 @@ async function postMultipart(path: string, file: File): Promise<UploadResponse> 
       if (mocked !== undefined) return mocked as UploadResponse;
     }
     const err = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error(err.message || `Upload failed: ${res.status}`);
+    let errMessage: string = err.message || `Upload failed: ${res.status}`;
+    if (errMessage === "Validation failed" && err.errors) {
+      const firstMessages = Object.values(err.errors as Record<string, string[]>).flat();
+      if (firstMessages.length > 0) errMessage = firstMessages[0];
+    }
+    throw new ApiError(errMessage, res.status, err.code);
   }
   return res.json();
 }
