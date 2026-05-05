@@ -42,8 +42,6 @@ type ModuleContentItem =
   | { type: "lesson"; id: string; order: number; lesson: Lesson }
   | { type: "quiz"; id: string; order: number; quiz: Quiz };
 
-const getModuleQuizzes = (module: Module) => module.quizzes ?? (module.quiz ? [module.quiz] : []);
-
 function getModuleContentItems(module: Module): ModuleContentItem[] {
   const lessons = module.lessons.map((lesson, index) => ({
     type: "lesson" as const,
@@ -51,14 +49,11 @@ function getModuleContentItems(module: Module): ModuleContentItem[] {
     order: lesson.order ?? index,
     lesson,
   }));
-  const quizzes = getModuleQuizzes(module).map((quiz, index) => ({
-    type: "quiz" as const,
-    id: quiz.id,
-    order: quiz.order ?? lessons.length + index,
-    quiz,
-  }));
+  const quizItems = module.quiz
+    ? [{ type: "quiz" as const, id: module.quiz.id, order: module.quiz.order ?? lessons.length, quiz: module.quiz }]
+    : [];
 
-  return [...lessons, ...quizzes].sort((a, b) => a.order - b.order);
+  return [...lessons, ...quizItems].sort((a, b) => a.order - b.order);
 }
 
 function reorderItems(items: ModuleContentItem[], draggedId: string, targetId: string) {
@@ -131,29 +126,25 @@ export function ModuleCard({
   const [editingQuiz, setEditingQuiz] = useState<Quiz | undefined>();
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
 
-  const moduleQuizzes = getModuleQuizzes(module);
   const moduleItems = getModuleContentItems(module);
 
   const applyOrder = (items: ModuleContentItem[]) => {
+    const quizItem = items.find((item) => item.type === "quiz");
     onUpdate({
       ...module,
       lessons: module.lessons.map((lesson) => ({
         ...lesson,
         order: items.find((item) => item.type === "lesson" && item.id === lesson.id)?.order ?? lesson.order,
       })),
-      quizzes: moduleQuizzes.map((quiz) => ({
-        ...quiz,
-        order: items.find((item) => item.type === "quiz" && item.id === quiz.id)?.order ?? quiz.order,
-      })),
+      quiz: module.quiz && quizItem
+        ? { ...module.quiz, order: quizItem.order }
+        : module.quiz,
     });
   };
 
   const reindexModule = (nextModule: Module): Module => {
     const items = getModuleContentItems(nextModule).map((item, index) => ({ ...item, order: index }));
-    const quizzes = getModuleQuizzes(nextModule).map((quiz) => ({
-      ...quiz,
-      order: items.find((item) => item.type === "quiz" && item.id === quiz.id)?.order ?? quiz.order,
-    }));
+    const quizItem = items.find((item) => item.type === "quiz");
 
     return {
       ...nextModule,
@@ -161,8 +152,9 @@ export function ModuleCard({
         ...lesson,
         order: items.find((item) => item.type === "lesson" && item.id === lesson.id)?.order ?? lesson.order,
       })),
-      quizzes,
-      quiz: quizzes[0],
+      quiz: nextModule.quiz && quizItem
+        ? { ...nextModule.quiz, order: quizItem.order }
+        : nextModule.quiz,
     };
   };
 
@@ -257,7 +249,7 @@ export function ModuleCard({
         order: editingQuiz?.order ?? moduleItems.length,
       });
       const nextQuiz = { ...saved, order: editingQuiz?.order ?? moduleItems.length };
-      onUpdate(reindexModule({ ...module, quizzes: [nextQuiz], quiz: nextQuiz }));
+      onUpdate(reindexModule({ ...module, quiz: nextQuiz }));
       setQuizEditorOpen(false);
       setEditingQuiz(undefined);
       toast.success("Quiz salvat.");
@@ -267,10 +259,10 @@ export function ModuleCard({
     }
   };
 
-  const handleRemoveModuleQuiz = async (_quizId?: string) => {
+  const handleRemoveModuleQuiz = async () => {
     try {
       await deleteModuleQuiz(courseId, module.id);
-      onUpdate(reindexModule({ ...module, quizzes: [], quiz: undefined }));
+      onUpdate(reindexModule({ ...module, quiz: undefined }));
       setQuizEditorOpen(false);
       setEditingQuiz(undefined);
       toast.success("Quiz eliminat din modul.");
@@ -333,7 +325,7 @@ export function ModuleCard({
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => setIsEditing(true)}><Pencil className="mr-2 h-4 w-4" /> Redenumire</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setLessonEditorOpen(true)}><Plus className="mr-2 h-4 w-4" /> Adauga Lectie</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openQuizEditor(moduleQuizzes[0])}><CircleHelp className="mr-2 h-4 w-4" /> {moduleQuizzes.length > 0 ? "Editeaza Quiz" : "Adauga Quiz"}</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openQuizEditor(module.quiz)}><CircleHelp className="mr-2 h-4 w-4" /> {module.quiz ? "Editeaza Quiz" : "Adauga Quiz"}</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={onDelete} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Sterge</DropdownMenuItem>
                       </DropdownMenuContent>
@@ -366,7 +358,7 @@ export function ModuleCard({
                           <QuizItem
                             quiz={item.quiz}
                             onEdit={openQuizEditor}
-                            onDelete={handleRemoveModuleQuiz}
+                            onDelete={() => handleRemoveModuleQuiz()}
                           />
                         )}
                       </div>
@@ -386,10 +378,10 @@ export function ModuleCard({
                       variant="ghost"
                       size="sm"
                       className="w-full border-dashed border border-border"
-                      onClick={() => openQuizEditor(moduleQuizzes[0])}
+                      onClick={() => openQuizEditor(module.quiz)}
                     >
                       <Plus className="h-4 w-4 mr-2" />
-                      {moduleQuizzes.length > 0 ? "Editeaza Quiz" : "Quiz Nou"}
+                      {module.quiz ? "Editeaza Quiz" : "Quiz Nou"}
                     </Button>
                   </div>
                 </div>
@@ -409,7 +401,7 @@ export function ModuleCard({
         quiz={editingQuiz}
         onSave={handleSaveModuleQuiz}
         onCancel={() => { setQuizEditorOpen(false); setEditingQuiz(undefined); }}
-        onRemove={moduleQuizzes.length > 0 ? () => handleRemoveModuleQuiz() : undefined}
+        onRemove={module.quiz ? () => handleRemoveModuleQuiz() : undefined}
         isOpen={quizEditorOpen}
       />
     </>
