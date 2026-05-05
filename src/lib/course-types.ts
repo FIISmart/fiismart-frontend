@@ -186,7 +186,7 @@ export function mapQuizToFE(quiz: any): Quiz {
       question: q.text,
       type: q.type === 'written' ? 'written' : 'multiple_choice',
       options: q.options || [],
-      correctAnswer: q.type === 'written' ? (q.correctText || "") : (q.correctIdx || 0),
+      correctAnswer: q.type === 'written' ? (q.correctText ?? "") : (q.correctIdx ?? 0),
       explanation: q.explanation,
     })),
   };
