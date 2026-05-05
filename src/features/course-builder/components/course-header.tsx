@@ -61,10 +61,7 @@ export function CourseHeader({
     (acc, m) => acc + m.lessons.reduce((lAcc, l) => lAcc + (l.duration || 0), 0),
     0
   );
-  const totalQuizzes = course.modules.reduce(
-    (acc, m) => acc + (m.quizzes?.length ?? (m.quiz ? 1 : 0)),
-    0
-  );
+  const hasQuiz = course.modules.some((m) => !!m.quiz);
 
   const handleSaveDetails = () => {
     onUpdate({
@@ -187,10 +184,10 @@ export function CourseHeader({
                 </strong>
               </div>
             )}
-            {totalQuizzes > 0 && (
+            {hasQuiz && (
               <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
                 <strong className="text-foreground">
-                  {totalQuizzes}
+                  {course.modules.filter((m) => !!m.quiz).length}
                 </strong>{" "}
                 quiz
               </div>

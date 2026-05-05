@@ -10,7 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, GraduationCap, Sparkles, LayoutPanelLeft, AlertTriangle, ArrowLeft, HelpCircle } from "lucide-react";
+import { Plus, GraduationCap, Sparkles, LayoutPanelLeft, AlertTriangle, ArrowLeft } from "lucide-react";
 import { CourseHeader } from "@/features/course-builder/components/course-header";
 import { ModuleCard } from "@/features/course-builder/components/module-card";
 import { CommentModeration } from "@/features/course-builder/components/comment-moderation";
@@ -20,7 +20,7 @@ import { mapCourseToFE } from "@/lib/course-types";
 import * as api from "@/lib/api";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { Toaster, toast } from "sonner";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 const pendingNewCourseCreations = new Map<string, Promise<api.CourseAPI>>();
 
@@ -43,7 +43,6 @@ function isNotFoundError(err: unknown): boolean {
 export default function CourseBuilderPage() {
   const { user } = useAuth();
   const teacherId = user?.id;
-  const { courseId: routeCourseId } = useParams<{ courseId: string }>();
   const [searchParams] = useSearchParams();
   const [course, setCourse] = useState<Course | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -63,7 +62,7 @@ export default function CourseBuilderPage() {
       try {
         const shouldCreateNew = searchParams.get("new") === "1";
         const newToken = searchParams.get("newToken") || "legacy-new-token";
-        const selectedCourseId = routeCourseId ?? searchParams.get("courseId");
+        const selectedCourseId = searchParams.get("courseId");
         let currentCourseApi: api.CourseAPI;
 
         if (shouldCreateNew) {
@@ -132,13 +131,14 @@ export default function CourseBuilderPage() {
           }
         }
 
-        const [commentsData, quizzesData] = await Promise.all([
-          api.getComments(currentCourseApi.id).catch(() => [] as api.CommentAPI[]),
-          api.getCourseBuilderQuizzes(currentCourseApi.id).catch(() => [] as api.ModuleQuizAPI[]),
-        ]);
+        let commentsData: api.CommentAPI[] = [];
+        try {
+          commentsData = await api.getComments(currentCourseApi.id);
+        } catch { /* No comments */ }
 
         if (cancelled) return;
-        setCourse(mapCourseToFE(currentCourseApi, quizzesData, commentsData));
+        // CourseResponse already includes modules -> mapCourseToFE maps them inline
+        setCourse(mapCourseToFE(currentCourseApi, null, commentsData));
       } catch (err) {
         if (cancelled) return;
         console.error("Failed to load course:", err);
@@ -164,7 +164,7 @@ export default function CourseBuilderPage() {
     return () => {
       cancelled = true;
     };
-  }, [routeCourseId, searchParams, teacherId]);
+  }, [searchParams, teacherId]);
 
   if (isLoading) {
     return (
@@ -227,7 +227,6 @@ export default function CourseBuilderPage() {
         description: newModuleApi.description,
         order: course.modules.length,
         lessons: [],
-        quizzes: [],
         quiz: undefined,
       };
       setCourse(prev => prev ? { ...prev, modules: [...prev.modules, newModule] } : prev);
@@ -327,13 +326,7 @@ export default function CourseBuilderPage() {
             <LayoutPanelLeft className="h-6 w-6 text-primary" />
             <h2 className="font-serif font-bold text-xl">Module Curs</h2>
           </div>
-          <div className="flex w-full sm:w-auto items-center justify-end gap-2">
-            <Button asChild variant="outline" className="gap-2">
-              <Link to={`/professor/quizzes?courseId=${course.id}`}>
-                <HelpCircle className="h-4 w-4" />
-                My Quizzes
-              </Link>
-            </Button>
+          <div className="flex items-center gap-2">
             <CommentModeration
               comments={course.comments}
               onUpdateComment={async (id, status) => {
