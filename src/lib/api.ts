@@ -95,8 +95,6 @@ export interface ModuleResponse {
   order: number;
   quizId?: string | null;
   lectures: LectureAPI[];
-  quiz?: QuizAPI | null;
-  quizzes?: ModuleQuizAPI[];
 }
 
 export interface CourseAPI {
