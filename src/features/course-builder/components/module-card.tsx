@@ -252,6 +252,11 @@ export function ModuleCard({
     }
   };
 
+  const openInPlaceQuizEditor = () => {
+    setPickerOpen(false);
+    openQuizEditor(undefined);
+  };
+
   const handleAttachExistingQuiz = async (source: MyQuiz) => {
     try {
       const saved = await upsertModuleQuiz(courseId, module.id, source);
@@ -431,6 +436,7 @@ export function ModuleCard({
         isOpen={pickerOpen}
         onCancel={() => setPickerOpen(false)}
         onSelect={handleAttachExistingQuiz}
+        onCreateNew={openInPlaceQuizEditor}
       />
     </>
   );
