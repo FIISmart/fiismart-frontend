@@ -55,9 +55,9 @@ export default function CourseBuilderPage() {
 
   // ── Load Course & Modules on Mount ────────────────────
 
-  const reloadCourse = useCallback(async () => {
+  const reloadCourse = useCallback(async (opts?: { silent?: boolean }) => {
     if (!teacherId) return;
-    setIsLoading(true);
+    if (!opts?.silent) setIsLoading(true);
     setLoadError(null);
     try {
       const shouldCreateNew = searchParams.get("new") === "1";
@@ -156,7 +156,7 @@ export default function CourseBuilderPage() {
           : "Eroare la încărcarea cursului"
       );
     } finally {
-      if (!cancelledRef.current) setIsLoading(false);
+      if (!cancelledRef.current && !opts?.silent) setIsLoading(false);
     }
   }, [routeCourseId, searchParams, teacherId]);
 
@@ -378,7 +378,7 @@ export default function CourseBuilderPage() {
                 moduleIndex={index}
                 onUpdate={handleUpdateModuleInState}
                 onDelete={() => setDeleteModuleId(module.id)}
-                onCourseRefresh={reloadCourse}
+                onCourseRefresh={() => reloadCourse({ silent: true })}
               />
             ))
           )}

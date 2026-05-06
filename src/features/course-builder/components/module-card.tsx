@@ -264,7 +264,7 @@ export function ModuleCard({
       const saved = await upsertModuleQuiz(courseId, module.id, source);
       const nextQuiz = { ...saved, order: moduleItems.length };
       onUpdate(reindexModule({ ...module, quiz: nextQuiz }));
-      await onCourseRefresh?.();
+      onCourseRefresh?.().catch((err) => console.error("Course refetch failed:", err));
       setPickerOpen(false);
       toast.success("Quiz adăugat din bibliotecă.");
     } catch (err) {
@@ -281,7 +281,7 @@ export function ModuleCard({
       });
       const nextQuiz = { ...saved, order: editingQuiz?.order ?? moduleItems.length };
       onUpdate(reindexModule({ ...module, quiz: nextQuiz }));
-      await onCourseRefresh?.();
+      onCourseRefresh?.().catch((err) => console.error("Course refetch failed:", err));
       setQuizEditorOpen(false);
       setEditingQuiz(undefined);
       toast.success("Quiz salvat.");
@@ -295,7 +295,7 @@ export function ModuleCard({
     try {
       await deleteModuleQuiz(courseId, module.id);
       onUpdate(reindexModule({ ...module, quiz: undefined }));
-      await onCourseRefresh?.();
+      onCourseRefresh?.().catch((err) => console.error("Course refetch failed:", err));
       setQuizEditorOpen(false);
       setEditingQuiz(undefined);
       toast.success("Quiz eliminat din modul.");
