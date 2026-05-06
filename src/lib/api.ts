@@ -240,6 +240,10 @@ export function getCoursesByTeacher(teacherId: string) {
   return request<CourseAPI[]>(`/courses?teacherId=${teacherId}`);
 }
 
+export function getPublishedCourses() {
+  return request<CourseAPI[]>(`/courses?published=true`);
+}
+
 export function createCourse(data: { title: string; description: string; teacherId: string; tags?: string[] }) {
   return request<CourseAPI>("/courses", {
     method: "POST",

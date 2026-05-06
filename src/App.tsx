@@ -15,6 +15,8 @@ import QuizPlayerPage from "@/features/quiz/pages/QuizPlayerPage";
 import CourseBuilderPage from "@/features/course-builder/pages/CourseBuilderPage";
 import MyQuizzesPage from "@/features/course-builder/pages/MyQuizzesPage";
 import CoursesListPage from "@/features/courses/pages/CoursesListPage";
+import StudentCoursesPage from "@/features/dashboard-student/pages/StudentCoursesPage";
+import StudentCourseDetailPage from "@/features/dashboard-student/pages/StudentCourseDetailPage";
 import { DevNav } from "@/components/DevNav";
 import { Toaster } from "sonner";
 
@@ -34,15 +36,9 @@ export default function App() {
       {/* Student-only */}
       <Route element={<ProtectedRoute allowedRoles={[UserRole.STUDENT]} />}>
         <Route path="/student/dashboard" element={<StudentDashboardPage />} />
-
-        {/* ← adaugă astea */}
-        <Route path="/student/courses" element={<CoursesListPage />} />
-        <Route path="/student/courses/:courseId" element={<CourseBuilderPage />} />
-
-        <Route
-          path="/student/courses/:courseId/lectures/:lectureId"
-          element={<LessonVideoPage />}
-        />
+        <Route path="/student/courses" element={<StudentCoursesPage />} />
+        <Route path="/student/courses/:courseId" element={<StudentCourseDetailPage />} />
+        <Route path="/student/courses/:courseId/lectures/:lectureId" element={<LessonVideoPage />} />
         <Route path="/student/quizzes/:quizId" element={<QuizPlayerPage />} />
       </Route>
 
