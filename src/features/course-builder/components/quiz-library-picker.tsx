@@ -108,11 +108,11 @@ export function QuizLibraryPicker({
             </div>
           ) : quizzes.length === 0 ? (
             <div className="border border-dashed border-border rounded-xl p-8 text-center bg-muted/20">
-              <p className="text-sm text-muted-foreground mb-4">
+              <p className="text-sm text-muted-foreground mb-3">
                 Nu ai niciun quiz în biblioteca ta.
               </p>
-              <Button asChild>
-                <Link to="/professor/quizzes">Mergi la Quiz Builder</Link>
+              <Button asChild variant="link" className="text-muted-foreground">
+                <Link to="/professor/quizzes">Vezi pagina Quiz Builder →</Link>
               </Button>
             </div>
           ) : (
