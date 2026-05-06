@@ -26,8 +26,9 @@ import {
 import type { Lesson, Module, Quiz } from "@/lib/course-types";
 import { LessonEditor, LessonItem } from "./lesson-editor";
 import { QuizEditor } from "./quiz-editor";
+import { QuizLibraryPicker } from "./quiz-library-picker";
 import * as api from "@/lib/api";
-import { deleteModuleQuiz, upsertModuleQuiz } from "@/features/course-builder/services/my-quizzes.service";
+import { deleteModuleQuiz, upsertModuleQuiz, type MyQuiz } from "@/features/course-builder/services/my-quizzes.service";
 import { toast } from "sonner";
 
 interface ModuleCardProps {
@@ -124,6 +125,7 @@ export function ModuleCard({
   const [editingLesson, setEditingLesson] = useState<Lesson | undefined>();
   const [quizEditorOpen, setQuizEditorOpen] = useState(false);
   const [editingQuiz, setEditingQuiz] = useState<Quiz | undefined>();
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
 
   const moduleItems = getModuleContentItems(module);
@@ -242,6 +244,27 @@ export function ModuleCard({
     setQuizEditorOpen(true);
   };
 
+  const openQuizFlow = () => {
+    if (module.quiz) {
+      openQuizEditor(module.quiz);
+    } else {
+      setPickerOpen(true);
+    }
+  };
+
+  const handleAttachExistingQuiz = async (source: MyQuiz) => {
+    try {
+      const saved = await upsertModuleQuiz(courseId, module.id, source);
+      const nextQuiz = { ...saved, order: moduleItems.length };
+      onUpdate(reindexModule({ ...module, quiz: nextQuiz }));
+      setPickerOpen(false);
+      toast.success("Quiz adăugat din bibliotecă.");
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Eroare la atașarea quiz-ului");
+    }
+  };
+
   const handleSaveModuleQuiz = async (quiz: Quiz) => {
     try {
       const saved = await upsertModuleQuiz(courseId, module.id, {
@@ -325,7 +348,7 @@ export function ModuleCard({
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => setIsEditing(true)}><Pencil className="mr-2 h-4 w-4" /> Redenumire</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setLessonEditorOpen(true)}><Plus className="mr-2 h-4 w-4" /> Adauga Lectie</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openQuizEditor(module.quiz)}><CircleHelp className="mr-2 h-4 w-4" /> {module.quiz ? "Editeaza Quiz" : "Adauga Quiz"}</DropdownMenuItem>
+                        <DropdownMenuItem onClick={openQuizFlow}><CircleHelp className="mr-2 h-4 w-4" /> {module.quiz ? "Editeaza Quiz" : "Adauga Quiz"}</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={onDelete} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Sterge</DropdownMenuItem>
                       </DropdownMenuContent>
@@ -378,7 +401,7 @@ export function ModuleCard({
                       variant="ghost"
                       size="sm"
                       className="w-full border-dashed border border-border"
-                      onClick={() => openQuizEditor(module.quiz)}
+                      onClick={openQuizFlow}
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       {module.quiz ? "Editeaza Quiz" : "Quiz Nou"}
@@ -403,6 +426,11 @@ export function ModuleCard({
         onCancel={() => { setQuizEditorOpen(false); setEditingQuiz(undefined); }}
         onRemove={module.quiz ? () => handleRemoveModuleQuiz() : undefined}
         isOpen={quizEditorOpen}
+      />
+      <QuizLibraryPicker
+        isOpen={pickerOpen}
+        onCancel={() => setPickerOpen(false)}
+        onSelect={handleAttachExistingQuiz}
       />
     </>
   );
