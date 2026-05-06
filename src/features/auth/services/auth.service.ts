@@ -150,6 +150,16 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
   }
 }
 
+/**
+ * Utilizatorii federați (Google) fără rol selectat apelează acest endpoint după ce aleg rolul.
+ */
+export async function assignRole(role: string, firstName?: string, lastName?: string): Promise<import("../types").AuthUser> {
+  return apiFetch<import("../types").AuthUser>("/auth/assign-role", {
+    method: "POST",
+    body: JSON.stringify({ role, firstName, lastName }),
+  });
+}
+
 export async function refresh(email: string): Promise<AuthResponse | null> {
   const refreshToken = getRefreshToken();
   if (!refreshToken || !email) return null;

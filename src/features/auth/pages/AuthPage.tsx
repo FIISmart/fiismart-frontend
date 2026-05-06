@@ -675,7 +675,8 @@ function GoogleLoginButton() {
   const handleClick = async () => {
     setLoading(true);
     try {
-      const url = await buildLoginUrl();
+      // identity_provider="Google" ocolește ecranul Hosted UI și redirecționează direct la Google.
+      const url = await buildLoginUrl("Google");
       window.location.href = url;
     } catch {
       toast.error("Nu s-a putut iniția login-ul cu Google. Încearcă din nou.");

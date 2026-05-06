@@ -14,6 +14,8 @@ export interface AuthUser {
   displayName?: string;
   role: UserRole;
   emailVerified?: boolean;
+  /** True pentru utilizatorii Google nou-creați care nu și-au selectat rolul încă. */
+  needsRoleSelection?: boolean;
 }
 
 export interface AuthState {

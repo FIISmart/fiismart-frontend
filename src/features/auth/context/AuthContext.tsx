@@ -24,6 +24,7 @@ import {
   resendVerification as resendVerificationRequest,
   forgotPassword as forgotPasswordRequest,
   resetPassword as resetPasswordRequest,
+  assignRole as assignRoleRequest,
   setToken,
   setRefreshToken,
 } from "../services/auth.service";
@@ -43,6 +44,8 @@ interface AuthContextValue extends AuthState {
   logout: () => Promise<void>;
   /** Completează fluxul Cognito PKCE: schimbă codul, stochează JWT, hidratează user-ul. */
   loginWithCognito: (code: string, state: string) => Promise<AuthUser>;
+  /** Utilizatorii Google fără rol selectat apelează aceasta după ce aleg rolul. */
+  assignRole: (role: UserRole, firstName?: string, lastName?: string) => Promise<AuthUser>;
   /** Dev-only: setează un utilizator mock fără backend. */
   loginAsMock: (role: UserRole) => AuthUser;
 }
@@ -127,11 +130,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const me = await apiFetch<AuthUser>("/auth/me", {
         headers: { Authorization: `Bearer ${tokens.accessToken}` },
       });
-      setUser(me);
+      // Nu setăm user în context dacă necesită selecția rolului —
+      // pagina CompleteProfilePage va chema assignRole și va face setUser după.
+      if (!me.needsRoleSelection) {
+        setUser(me);
+      }
       return me;
     },
     []
   );
+
+  const assignRole = useCallback(async (role: UserRole, firstName?: string, lastName?: string): Promise<AuthUser> => {
+    const updated = await assignRoleRequest(role, firstName, lastName);
+    setUser(updated);
+    return updated;
+  }, []);
 
   const loginAsMock = useCallback((role: UserRole): AuthUser => {
     const mockUser: AuthUser =
@@ -174,10 +187,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resetPassword,
       logout,
       loginWithCognito,
+      assignRole,
       loginAsMock,
     }),
     [user, isLoading, login, signup, verifyEmail, resendVerification,
-     forgotPassword, resetPassword, logout, loginWithCognito, loginAsMock]
+     forgotPassword, resetPassword, logout, loginWithCognito, assignRole, loginAsMock]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

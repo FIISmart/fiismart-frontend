@@ -39,6 +39,13 @@ export default function AuthCallbackPage() {
 
     loginWithCognito(code, state)
       .then((user) => {
+        if (user.needsRoleSelection) {
+          navigate("/auth/complete-profile", {
+            replace: true,
+            state: { firstName: user.firstName ?? "", lastName: user.lastName ?? "" },
+          });
+          return;
+        }
         toast.success(`Bine ai revenit, ${user.firstName || user.email}!`);
         const dest = user.role === "PROFESSOR" ? "/professor/dashboard" : "/student/dashboard";
         navigate(dest, { replace: true });
