@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -51,120 +51,122 @@ export default function CourseBuilderPage() {
   const [loadError, setLoadError] = useState<LoadError | null>(null);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [deleteModuleId, setDeleteModuleId] = useState<string | null>(null);
+  const cancelledRef = useRef(false);
 
   // ── Load Course & Modules on Mount ────────────────────
 
-  useEffect(() => {
+  const reloadCourse = useCallback(async () => {
     if (!teacherId) return;
-    let cancelled = false;
     setIsLoading(true);
     setLoadError(null);
-    async function loadCourse() {
-      try {
-        const shouldCreateNew = searchParams.get("new") === "1";
-        const newToken = searchParams.get("newToken") || "legacy-new-token";
-        const selectedCourseId = routeCourseId ?? searchParams.get("courseId");
-        let currentCourseApi: api.CourseAPI;
+    try {
+      const shouldCreateNew = searchParams.get("new") === "1";
+      const newToken = searchParams.get("newToken") || "legacy-new-token";
+      const selectedCourseId = routeCourseId ?? searchParams.get("courseId");
+      let currentCourseApi: api.CourseAPI;
 
-        if (shouldCreateNew) {
-          const consumedTokensKey = "fiismart-consumed-new-course-tokens";
-          const tokenToCourseKey = "fiismart-new-course-token-map";
-          const consumedTokens = JSON.parse(
-            sessionStorage.getItem(consumedTokensKey) || "[]"
-          ) as string[];
-          const tokenMap = JSON.parse(
-            sessionStorage.getItem(tokenToCourseKey) || "{}"
-          ) as Record<string, string>;
-          const alreadyConsumed = consumedTokens.includes(newToken);
+      if (shouldCreateNew) {
+        const consumedTokensKey = "fiismart-consumed-new-course-tokens";
+        const tokenToCourseKey = "fiismart-new-course-token-map";
+        const consumedTokens = JSON.parse(
+          sessionStorage.getItem(consumedTokensKey) || "[]"
+        ) as string[];
+        const tokenMap = JSON.parse(
+          sessionStorage.getItem(tokenToCourseKey) || "{}"
+        ) as Record<string, string>;
+        const alreadyConsumed = consumedTokens.includes(newToken);
 
-          if (alreadyConsumed && tokenMap[newToken]) {
-            currentCourseApi = await api.getCourse(tokenMap[newToken]);
-          } else {
-            sessionStorage.setItem(
-              consumedTokensKey,
-              JSON.stringify([...consumedTokens, newToken].slice(-50))
-            );
-            let creationPromise = pendingNewCourseCreations.get(newToken);
-            if (!creationPromise) {
-              creationPromise = api.createCourse({
-                title: "Curs Nou",
-                description: "Adaugă o descriere...",
-                teacherId: teacherId!,
-                tags: [],
-              });
-              pendingNewCourseCreations.set(newToken, creationPromise);
-            }
-            currentCourseApi = await creationPromise;
-            pendingNewCourseCreations.delete(newToken);
-            sessionStorage.setItem(
-              tokenToCourseKey,
-              JSON.stringify({
-                ...tokenMap,
-                [newToken]: currentCourseApi.id,
-              })
-            );
-          }
-
-          // Pin URL to the created course id so subsequent state/effect updates
-          // stay on the same course instead of falling back to another one.
-          if (typeof window !== "undefined") {
-            const params = new URLSearchParams(window.location.search);
-            params.delete("new");
-            params.delete("newToken");
-            params.set("courseId", currentCourseApi.id);
-            const nextQuery = params.toString();
-            const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`;
-            window.history.replaceState(null, "", nextUrl);
-          }
-        } else if (selectedCourseId) {
-          currentCourseApi = await api.getCourse(selectedCourseId);
+        if (alreadyConsumed && tokenMap[newToken]) {
+          currentCourseApi = await api.getCourse(tokenMap[newToken]);
         } else {
-          const courses = await api.getCoursesByTeacher(teacherId!);
-          if (courses.length > 0) {
-            currentCourseApi = courses[0];
-          } else {
-            currentCourseApi = await api.createCourse({
+          sessionStorage.setItem(
+            consumedTokensKey,
+            JSON.stringify([...consumedTokens, newToken].slice(-50))
+          );
+          let creationPromise = pendingNewCourseCreations.get(newToken);
+          if (!creationPromise) {
+            creationPromise = api.createCourse({
               title: "Curs Nou",
               description: "Adaugă o descriere...",
               teacherId: teacherId!,
               tags: [],
             });
+            pendingNewCourseCreations.set(newToken, creationPromise);
           }
+          currentCourseApi = await creationPromise;
+          pendingNewCourseCreations.delete(newToken);
+          sessionStorage.setItem(
+            tokenToCourseKey,
+            JSON.stringify({
+              ...tokenMap,
+              [newToken]: currentCourseApi.id,
+            })
+          );
         }
 
-        const [commentsData, quizzesData] = await Promise.all([
-          api.getComments(currentCourseApi.id).catch(() => [] as api.CommentAPI[]),
-          api.getCourseBuilderQuizzes(currentCourseApi.id).catch(() => [] as api.ModuleQuizAPI[]),
-        ]);
-
-        if (cancelled) return;
-        setCourse(mapCourseToFE(currentCourseApi, quizzesData, commentsData));
-      } catch (err) {
-        if (cancelled) return;
-        console.error("Failed to load course:", err);
-        const notFound = isNotFoundError(err);
-        setCourse(null);
-        setLoadError({
-          kind: notFound ? "not-found" : "generic",
-          message:
-            err instanceof Error
-              ? err.message
-              : "A apărut o eroare la încărcarea cursului",
-        });
-        toast.error(
-          notFound
-            ? "Cursul nu a fost găsit"
-            : "Eroare la încărcarea cursului"
-        );
-      } finally {
-        if (!cancelled) setIsLoading(false);
+        // Pin URL to the created course id so subsequent state/effect updates
+        // stay on the same course instead of falling back to another one.
+        if (typeof window !== "undefined") {
+          const params = new URLSearchParams(window.location.search);
+          params.delete("new");
+          params.delete("newToken");
+          params.set("courseId", currentCourseApi.id);
+          const nextQuery = params.toString();
+          const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`;
+          window.history.replaceState(null, "", nextUrl);
+        }
+      } else if (selectedCourseId) {
+        currentCourseApi = await api.getCourse(selectedCourseId);
+      } else {
+        const courses = await api.getCoursesByTeacher(teacherId!);
+        if (courses.length > 0) {
+          currentCourseApi = courses[0];
+        } else {
+          currentCourseApi = await api.createCourse({
+            title: "Curs Nou",
+            description: "Adaugă o descriere...",
+            teacherId: teacherId!,
+            tags: [],
+          });
+        }
       }
+
+      const [commentsData, quizzesData] = await Promise.all([
+        api.getComments(currentCourseApi.id).catch(() => [] as api.CommentAPI[]),
+        api.getCourseBuilderQuizzes(currentCourseApi.id).catch(() => [] as api.ModuleQuizAPI[]),
+      ]);
+
+      if (cancelledRef.current) return;
+      setCourse(mapCourseToFE(currentCourseApi, quizzesData, commentsData));
+    } catch (err) {
+      if (cancelledRef.current) return;
+      console.error("Failed to load course:", err);
+      const notFound = isNotFoundError(err);
+      setCourse(null);
+      setLoadError({
+        kind: notFound ? "not-found" : "generic",
+        message:
+          err instanceof Error
+            ? err.message
+            : "A apărut o eroare la încărcarea cursului",
+      });
+      toast.error(
+        notFound
+          ? "Cursul nu a fost găsit"
+          : "Eroare la încărcarea cursului"
+      );
+    } finally {
+      if (!cancelledRef.current) setIsLoading(false);
     }
-    loadCourse();
-    return () => {
-      cancelled = true;
-    };
   }, [routeCourseId, searchParams, teacherId]);
+
+  useEffect(() => {
+    cancelledRef.current = false;
+    reloadCourse();
+    return () => {
+      cancelledRef.current = true;
+    };
+  }, [reloadCourse]);
 
   if (isLoading) {
     return (
@@ -376,6 +378,7 @@ export default function CourseBuilderPage() {
                 moduleIndex={index}
                 onUpdate={handleUpdateModuleInState}
                 onDelete={() => setDeleteModuleId(module.id)}
+                onCourseRefresh={reloadCourse}
               />
             ))
           )}
