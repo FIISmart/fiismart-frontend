@@ -163,6 +163,7 @@ export interface ModuleQuizQuestionAPI {
   points: number;
   options: string[];
   correctIdx: number;
+  correctText?: string | null;
   explanation: string | null;
 }
 
@@ -313,6 +314,7 @@ export interface ModuleQuizQuestionPayload {
   points?: number;
   options: string[];
   correctIdx: number;
+  correctText?: string | null;
   explanation?: string;
 }
 
