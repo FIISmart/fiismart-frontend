@@ -19,7 +19,7 @@ import type { Course, Module } from "@/lib/course-types";
 import { mapCourseToFE } from "@/lib/course-types";
 import * as api from "@/lib/api";
 import { useAuth } from "@/features/auth/context/AuthContext";
-import { Toaster, toast } from "sonner";
+import { toast } from "sonner";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
 const pendingNewCourseCreations = new Map<string, Promise<api.CourseAPI>>();
@@ -169,7 +169,6 @@ export default function CourseBuilderPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Toaster richColors position="top-right" />
         <div className="text-center">
           <GraduationCap className="h-12 w-12 text-primary animate-pulse mx-auto mb-4" />
           <div className="flex items-center justify-center gap-2 text-muted-foreground">
@@ -194,7 +193,6 @@ export default function CourseBuilderPage() {
         aria-live="assertive"
         className="min-h-screen bg-background flex items-center justify-center px-4"
       >
-        <Toaster richColors position="top-right" />
         <div className="max-w-md w-full text-center bg-card border border-border rounded-2xl p-8">
           <AlertTriangle className="h-12 w-12 text-destructive/80 mx-auto mb-4" />
           <h1 className="font-serif font-bold text-2xl mb-2">
@@ -309,8 +307,6 @@ export default function CourseBuilderPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Toaster richColors position="top-right" />
-
       <CourseHeader
         course={course}
         onUpdate={handleUpdateCourse}

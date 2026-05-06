@@ -16,6 +16,7 @@ import CourseBuilderPage from "@/features/course-builder/pages/CourseBuilderPage
 import MyQuizzesPage from "@/features/course-builder/pages/MyQuizzesPage";
 import CoursesListPage from "@/features/courses/pages/CoursesListPage";
 import { DevNav } from "@/components/DevNav";
+import { Toaster } from "sonner";
 
 export default function App() {
   return (
@@ -61,6 +62,7 @@ export default function App() {
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
     <DevNav />
+    <Toaster richColors position="top-right" />
     </>
   );
 }
