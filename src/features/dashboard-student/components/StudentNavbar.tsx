@@ -35,7 +35,7 @@ export function StudentNavbar({ studentName, initials }: StudentNavbarProps) {
           <Link to="/student/dashboard" className="hover:text-[#9b8ec7] transition-colors">
             Dashboard
           </Link>
-          <Link to="/student/dashboard" className="hover:text-[#9b8ec7] transition-colors">
+          <Link to="/student/courses" className="hover:text-[#9b8ec7] transition-colors">
             Cursuri
           </Link>
         </div>

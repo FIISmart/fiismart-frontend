@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { Recommendation, StudentCourse } from "../types";
 import { CourseCard } from "./CourseCard";
 
@@ -7,12 +8,9 @@ interface MyCoursesProps {
   recommendation: Recommendation | null;
 }
 
-/**
- * Lists the student's enrolled courses with a "see all"/"collapse" toggle
- * and an optional recommendation tile in the trailing slot.
- */
 export function MyCourses({ courses, recommendation }: MyCoursesProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const navigate = useNavigate();
   const visibleCourses = isExpanded ? courses : courses.slice(0, 2);
 
   return (
@@ -43,6 +41,11 @@ export function MyCourses({ courses, recommendation }: MyCoursesProps) {
             </p>
             <button
               type="button"
+              onClick={() =>
+                recommendation.courseId
+                  ? navigate(`/student/courses/${recommendation.courseId}`)
+                  : navigate("/student/courses")
+              }
               className="px-7 py-2.5 border border-[#9b8ec7] rounded-lg text-[12.5px] font-bold text-[#9b8ec7] hover:bg-[#9b8ec7]/5 focus:outline-none"
             >
               Descoperă cursuri

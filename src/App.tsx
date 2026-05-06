@@ -31,6 +31,11 @@ export default function App() {
       {/* Student-only */}
       <Route element={<ProtectedRoute allowedRoles={[UserRole.STUDENT]} />}>
         <Route path="/student/dashboard" element={<StudentDashboardPage />} />
+
+        {/* ← adaugă astea */}
+        <Route path="/student/courses" element={<CoursesListPage />} />
+        <Route path="/student/courses/:courseId" element={<CourseBuilderPage />} />
+
         <Route
           path="/student/courses/:courseId/lectures/:lectureId"
           element={<LessonVideoPage />}

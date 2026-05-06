@@ -1,9 +1,18 @@
 interface Props {
   onStart: () => void;
   quizTitle: string;
+   questionCount?: number;    // ← adaugă
+    durationMinutes?: number;  // ← adaugă
+    passScore?: number;        // ← adaugă
 }
 
-export default function QuizStartPage({ onStart, quizTitle }: Props) {
+export default function QuizStartPage({
+    onStart,
+    quizTitle,
+    questionCount = 10,        // ← default 10 dacă nu vine din backend
+      durationMinutes = 10,      // ← default 10 min
+      passScore = 60,
+    }: Props) {
   return (
     <div className="flex-grow flex flex-col items-center justify-center p-4">
       <div className="bg-[#9B8EC7] text-white text-sm font-medium px-6 h-[32px] flex items-center justify-center rounded-full mb-6 shadow-sm">
@@ -39,17 +48,17 @@ export default function QuizStartPage({ onStart, quizTitle }: Props) {
 
           <div className="flex w-full gap-4 mb-8">
             <div className="flex-1 h-[78px] bg-[#B4D3D9]/20 rounded-[16px] flex flex-col items-center justify-center">
-              <span className="text-[18px] font-bold text-gray-900">10</span>
+              <span className="text-[18px] font-bold text-gray-900">{questionCount}</span>
               <span className="text-[12px] text-[#6A7282]">Questions</span>
             </div>
 
             <div className="flex-1 h-[78px] bg-[#B4D3D9]/20 rounded-[16px] flex flex-col items-center justify-center">
-              <span className="text-[18px] font-bold text-gray-900">10 min</span>
+              <span className="text-[18px] font-bold text-gray-900">{durationMinutes} min</span>
               <span className="text-[12px] text-[#6A7282]">Duration</span>
             </div>
 
             <div className="flex-1 h-[78px] bg-[#B4D3D9]/20 rounded-[16px] flex flex-col items-center justify-center">
-              <span className="text-[18px] font-bold text-gray-900">60%</span>
+              <span className="text-[18px] font-bold text-gray-900">{passScore}%</span>
               <span className="text-[12px] text-[#6A7282]">Pass Score</span>
             </div>
           </div>

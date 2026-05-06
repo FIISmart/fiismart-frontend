@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { MoreVertical } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import type { StudentQuiz } from "../types";
 
 interface QuizzesTableProps {
@@ -8,12 +9,9 @@ interface QuizzesTableProps {
 
 const PASSED_STATUSES = new Set(["Promovat", "ACTIV"]);
 
-/**
- * Wide table of quiz attempts with horizontal scroll on mobile and a
- * "see all"/"collapse" toggle.
- */
 export function QuizzesTable({ quizzes }: QuizzesTableProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const navigate = useNavigate();
   const visibleQuizzes = isExpanded ? quizzes : quizzes.slice(0, 3);
 
   return (
@@ -61,16 +59,15 @@ export function QuizzesTable({ quizzes }: QuizzesTableProps) {
                       {quiz.scor}%
                     </td>
                     <td className="px-8 py-5 text-center">
-                      <span
-                        className={`px-3.5 py-1.5 rounded-full text-[10px] font-black tracking-widest ${statusClass}`}
-                      >
+                      <span className={`px-3.5 py-1.5 rounded-full text-[10px] font-black tracking-widest ${statusClass}`}>
                         {quiz.status.toUpperCase()}
                       </span>
                     </td>
                     <td className="px-8 py-5 text-right">
                       <MoreVertical
                         size={16}
-                        className="text-gray-300 ml-auto cursor-pointer"
+                        className="text-gray-300 ml-auto cursor-pointer hover:text-gray-500"
+                        onClick={() => navigate(`/student/quizzes/${quiz.quizId}`)}
                       />
                     </td>
                   </tr>

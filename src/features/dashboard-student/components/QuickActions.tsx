@@ -1,19 +1,21 @@
 import { BookOpen, Play } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import type { ContinueStudy } from "../types";
 
 interface QuickActionsProps {
   continueStudy: ContinueStudy | null;
 }
 
-/**
- * Two side-by-side CTAs: continue last viewed course (when available)
- * and a permanent "Find a Tutor" prompt.
- */
 export function QuickActions({ continueStudy }: QuickActionsProps) {
+  const navigate = useNavigate();
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
       {continueStudy && (
-        <div className="p-6 md:p-8 rounded-[20px] bg-gradient-to-r from-[#9b8ec7] to-[#bda6ce] flex items-center gap-6 border border-white/20 shadow-sm cursor-pointer hover:opacity-95 transition-all">
+        <div
+          onClick={() => navigate(`/student/courses/${continueStudy.cursId}`)}
+          className="p-6 md:p-8 rounded-[20px] bg-gradient-to-r from-[#9b8ec7] to-[#bda6ce] flex items-center gap-6 border border-white/20 shadow-sm cursor-pointer hover:opacity-95 transition-all"
+        >
           <div className="w-12 h-12 bg-white/30 backdrop-blur-md rounded-xl flex items-center justify-center text-white shrink-0">
             <Play fill="white" size={18} className="ml-1" />
           </div>
@@ -28,7 +30,10 @@ export function QuickActions({ continueStudy }: QuickActionsProps) {
         </div>
       )}
 
-      <div className="p-6 md:p-8 rounded-[20px] bg-gradient-to-r from-[#b4d3d9] to-[#2dd4bf] flex items-center gap-6 border border-white/20 shadow-sm cursor-pointer hover:opacity-95 transition-all">
+      <div
+        onClick={() => navigate("/student/tutors")}
+        className="p-6 md:p-8 rounded-[20px] bg-gradient-to-r from-[#b4d3d9] to-[#2dd4bf] flex items-center gap-6 border border-white/20 shadow-sm cursor-pointer hover:opacity-95 transition-all"
+      >
         <div className="w-12 h-12 bg-white/50 backdrop-blur-md rounded-xl flex items-center justify-center text-[#1a1a2e] shrink-0">
           <BookOpen size={20} />
         </div>
