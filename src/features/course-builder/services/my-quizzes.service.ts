@@ -21,7 +21,7 @@ export function quizToModuleQuizPayload(quiz: Quiz): api.ModuleQuizPayload {
       const isWritten = question.type === "written";
       if (isWritten) {
         const correctText =
-          typeof question.correctAnswer === "string" ? question.correctAnswer : "";
+          typeof question.correctAnswer === "string" ? question.correctAnswer.trim() : "";
         return {
           text: question.question,
           type: "written",
