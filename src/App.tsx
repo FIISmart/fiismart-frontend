@@ -3,6 +3,7 @@ import { ProtectedRoute } from "@/features/auth/components/ProtectedRoute";
 import { UserRole } from "@/features/auth/types";
 import AuthPage from "@/features/auth/pages/AuthPage";
 import AuthCallbackPage from "@/features/auth/pages/AuthCallbackPage";
+import CompleteProfilePage from "@/features/auth/pages/CompleteProfilePage";
 import UnauthorizedPage from "@/features/auth/pages/UnauthorizedPage";
 import TermsOfServicePage from "@/features/auth/components/TermsOfServicePage";
 import PrivacyPolicyPage from "@/features/auth/components/PrivacyPolicyPage";
@@ -24,6 +25,7 @@ export default function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
+      <Route path="/auth/complete-profile" element={<CompleteProfilePage />} />
       <Route path="/terms" element={<TermsOfServicePage />} />
       <Route path="/privacy" element={<PrivacyPolicyPage />} />
       <Route path="/unauthorized" element={<UnauthorizedPage />} />

@@ -1,5 +1,7 @@
 import { cognitoConfig } from "@/lib/cognito-config";
 
+const clientSecret = import.meta.env.VITE_COGNITO_CLIENT_SECRET ?? "";
+
 const PKCE_VERIFIER_KEY = "cognito_pkce_verifier";
 const PKCE_STATE_KEY = "cognito_pkce_state";
 
@@ -28,8 +30,11 @@ function randomString(length = 64): string {
 /**
  * Generate PKCE verifier/challenge, store the verifier in sessionStorage, and
  * return the Cognito Hosted UI authorization URL. Redirect the user to it.
+ *
+ * @param identityProvider - dacă e specificat (ex: "Google"), redirectează direct la acel provider,
+ *                           ocolind pagina Hosted UI.
  */
-export async function buildLoginUrl(): Promise<string> {
+export async function buildLoginUrl(identityProvider?: string): Promise<string> {
   const verifier = randomString(64);
   const state = randomString(32);
   const challengeBuffer = await sha256(verifier);
@@ -47,6 +52,10 @@ export async function buildLoginUrl(): Promise<string> {
     code_challenge: challenge,
     state,
   });
+
+  if (identityProvider) {
+    params.set("identity_provider", identityProvider);
+  }
 
   return `https://${cognitoConfig.domain}/oauth2/authorize?${params}`;
 }
@@ -83,6 +92,7 @@ export async function exchangeCode(
     redirect_uri: cognitoConfig.redirectUri,
     code,
     code_verifier: verifier,
+    ...(clientSecret ? { client_secret: clientSecret } : {}),
   });
 
   const res = await fetch(`https://${cognitoConfig.domain}/oauth2/token`, {
