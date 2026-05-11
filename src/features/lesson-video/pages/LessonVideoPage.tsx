@@ -40,6 +40,9 @@ export default function LessonVideoPage() {
   const [lectureComments, setLectureComments] = useState<CourseComment[]>([]);
   const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
 
+  // State to trigger refetches when progress is saved
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
   const studentId = user?.id ?? null;
 
   // Keep activeLectureId in sync with the route param
@@ -47,50 +50,37 @@ export default function LessonVideoPage() {
     if (lectureId) setActiveLectureId(lectureId);
   }, [lectureId]);
 
-  // Load course header info
-  useEffect(() => {
+  // Extracted fetchCourseData into a useCallback so we can trigger it again
+  const fetchCourseData = useCallback(async () => {
     if (!studentId || !courseId) return;
-    let cancelled = false;
+    
+    try {
+      const data = await lessonVideoService.getCourseInfo(studentId, courseId);
+      setCourseData(data);
 
-    const fetchCourseData = async () => {
-      setLoading(true);
-      try {
-        const data = await lessonVideoService.getCourseInfo(
-          studentId,
-          courseId
-        );
-        if (cancelled) return;
-        setCourseData(data);
-
-        // If we don't have a lecture yet, default to the first one in the
-        // course (mirrors the source behaviour for the legacy hard-coded
-        // lecture).
-        if (
-          !activeLectureId &&
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (data as any)?.modules?.[0]?.lectures?.[0]
-        ) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          setActiveLectureId((data as any).modules[0].lectures[0].lectureId);
-        }
-      } catch {
-        if (!cancelled) setError("Eroare la incarcarea cursului.");
-      } finally {
-        if (!cancelled) setLoading(false);
+      // If we don't have a lecture yet, default to the first one in the course
+      if (
+        !activeLectureId &&
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (data as any)?.modules?.[0]?.lectures?.[0]
+      ) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setActiveLectureId((data as any).modules[0].lectures[0].lectureId);
       }
-    };
+    } catch {
+      setError("Eroare la incarcarea cursului.");
+    } finally {
+      setLoading(false);
+    }
+  }, [studentId, courseId, activeLectureId]);
 
+  // Keep refreshTrigger here: We WANT to update Course Data for the Sidebar overall progress
+  useEffect(() => {
     void fetchCourseData();
-    return () => {
-      cancelled = true;
-    };
-    // activeLectureId intentionally omitted: we only want the initial fallback
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [studentId, courseId]);
+  }, [fetchCourseData, refreshTrigger]);
 
   const fetchLectureDetails = useCallback(async () => {
     if (!studentId || !courseId || !activeLectureId) return;
-    setLectureDetails(null);
 
     try {
       const data = await lessonVideoService.getLectureDetails(
@@ -104,23 +94,29 @@ export default function LessonVideoPage() {
     }
   }, [studentId, courseId, activeLectureId]);
 
+  // Runs ONLY when the user actually switches to a different video
   useEffect(() => {
     void fetchLectureDetails();
   }, [fetchLectureDetails]);
 
-  // Extragem markerele corect, indiferent cum vin de la backend
-  const markersList = lectureComments
-    .map((c) => {
-      // @ts-expect-error fallback logic pt backend vechi/nou
-      const timeVal = c.timestampSecs ?? c.videoTimestamp;
-      return { time: timeVal, id: c.commentId };
-    })
-    .filter((m) => typeof m.time === "number");
+  // ✅ THE FIX: flatMap perfectly handles the types and filters out undefined values
+  const markersList = lectureComments.flatMap((c) => {
+    const timeVal = c.timestampSecs ?? c.videoTimestamp;
+    
+    return typeof timeVal === "number" 
+      ? [{ time: timeVal, id: c.commentId }] 
+      : [];
+  });
 
   const handleSeekAndHighlight = (time: number, id: string) => {
     setSeekRequest({ time, id: Date.now() });
     setActiveCommentId(id);
   };
+
+  // Wrapped in useCallback so it doesn't trigger interval resets in VideoPlayer
+  const handleProgressSaved = useCallback(() => {
+    setRefreshTrigger((prev) => prev + 1);
+  }, []);
 
   if (!user) {
     return (
@@ -130,13 +126,14 @@ export default function LessonVideoPage() {
     );
   }
 
-  if (loading) {
+  if (loading && !courseData) {
     return (
       <div className="p-8 text-center text-muted-foreground font-medium">
         Se încarcă...
       </div>
     );
   }
+  
   if (error) {
     return (
       <div className="p-8 text-center text-red-500 font-semibold">{error}</div>
@@ -162,6 +159,7 @@ export default function LessonVideoPage() {
               targetTime={seekRequest}
               onMarkerClick={handleSeekAndHighlight}
               markers={markersList}
+              onProgressSaved={handleProgressSaved} 
             />
 
             <div className="bg-card border border-border rounded-2xl p-8 shadow-sm">
@@ -188,6 +186,8 @@ export default function LessonVideoPage() {
               courseId={courseId ?? ""}
               activeLectureId={activeLectureId}
               onSelectLecture={setActiveLectureId}
+              overallProgress={courseData?.overallProgress ?? 0}
+              refreshTrigger={refreshTrigger} 
             />
           </div>
         </div>

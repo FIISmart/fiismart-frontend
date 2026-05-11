@@ -35,6 +35,7 @@ type Props = {
   onTimeUpdate?: (time: number) => void;
   markers?: VideoMarker[];
   onMarkerClick?: (time: number, id: string) => void;
+  onProgressSaved?: () => void; // Passed from parent to trigger UI refresh
 };
 
 function formatTime(time: number): string {
@@ -57,6 +58,7 @@ export default function VideoPlayer({
   onTimeUpdate,
   markers = [],
   onMarkerClick,
+  onProgressSaved,
 }: Props) {
   const youtubeId = useMemo(() => (src ? getYouTubeId(src) : null), [src]);
   const isYouTube = Boolean(youtubeId);
@@ -72,6 +74,17 @@ export default function VideoPlayer({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
+  // --- TIMER FIX: Refs to keep track of time without triggering re-renders ---
+  const timeRef = useRef(0);
+  const durationRef = useRef(0);
+
+  // Keep refs in sync with the actual state
+  useEffect(() => {
+    timeRef.current = currentTime;
+    durationRef.current = duration;
+  }, [currentTime, duration]);
+  // --------------------------------------------------------------------------
+
   const [showMarkers, setShowMarkers] = useState(true);
 
   const syncWithBackend = useCallback(
@@ -84,21 +97,32 @@ export default function VideoPlayer({
           positionSecs: Math.floor(currTime),
           completed: watchedPercent >= 95,
         });
+        
+        // Tell the parent component to refresh the sidebar
+        if (onProgressSaved) {
+          onProgressSaved();
+        }
       } catch (error) {
         console.error("Eroare la salvare progres:", error);
       }
     },
-    [studentId, courseId, lectureId]
+    [studentId, courseId, lectureId, onProgressSaved]
   );
 
+  // --- TIMER FIX: The updated interval that reads from refs ---
   useEffect(() => {
     const interval = setInterval(() => {
-      if (currentTime > 0 && duration > 0) {
-        void syncWithBackend(currentTime, duration);
+      const curr = timeRef.current;
+      const dur = durationRef.current;
+
+      if (curr > 0 && dur > 0) {
+        void syncWithBackend(curr, dur);
       }
-    }, 10000);
+    }, 10000); // 10 seconds
+
     return () => clearInterval(interval);
-  }, [currentTime, duration, syncWithBackend]);
+  }, [syncWithBackend]); 
+  // ------------------------------------------------------------
 
   useEffect(() => {
     if (isYouTube) return;
@@ -189,8 +213,7 @@ export default function VideoPlayer({
     setIsPlaying(true);
   }, [targetTime, isYouTube]);
 
-  // Imperatively update the progress bar fill width and marker positions, to
-  // avoid using inline `style={{...}}` props.
+  // Imperatively update the progress bar fill width and marker positions
   useEffect(() => {
     const fill = progressFillRef.current;
     if (fill) {
