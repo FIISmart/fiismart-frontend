@@ -1,5 +1,7 @@
 import { Star, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/features/auth/context/AuthContext";
+import { lessonVideoService } from "@/features/lesson-video/services/lesson-video.service";
 import type { StudentCourse } from "../types";
 
 interface CourseCardProps {
@@ -11,7 +13,34 @@ const HEADER_COLORS = ["bg-[#b1a7d1]", "bg-[#8ad6cc]"];
 
 export function CourseCard({ course, idx }: CourseCardProps) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const headerColor = HEADER_COLORS[idx % HEADER_COLORS.length];
+  const handleCourseClick = async () => {
+    if (!course.courseId) {
+      navigate("/student/courses");
+      return;
+    }
+
+    try {
+      const studentId = user?.id;
+      if (!studentId) {
+        navigate(`/student/courses/${course.courseId}`);
+        return;
+      }
+
+      const modules = await lessonVideoService.getModules(studentId, course.courseId);
+      const firstLectureId = modules?.[0]?.lectures?.[0]?.lectureId;
+
+      if (firstLectureId) {
+        navigate(`/student/courses/${course.courseId}/lectures/${firstLectureId}`);
+        return;
+      }
+
+      navigate(`/student/courses/${course.courseId}`);
+    } catch {
+      navigate(`/student/courses/${course.courseId}`);
+    }
+  };
 
   return (
     <div className="bg-white rounded-[22px] overflow-hidden shadow-sm border border-black/5 flex flex-col group h-full">
@@ -40,14 +69,14 @@ export function CourseCard({ course, idx }: CourseCardProps) {
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
-            onClick={() => navigate(`/student/courses/${course.id}/quiz`)}
+            onClick={() => navigate(`/student/courses/${course.courseId}/quiz`)}
             className="bg-[#9b8ec7]/10 text-[#9b8ec7] py-2.5 rounded-xl text-[10.5px] font-black hover:bg-[#9b8ec7]/20 transition-all uppercase tracking-tight focus:outline-none"
           >
             QUIZ
           </button>
           <button
             type="button"
-            onClick={() => navigate(`/student/courses/${course.id}`)}
+            onClick={() => void handleCourseClick()}
             className="bg-gray-100 text-gray-500 py-2.5 rounded-xl text-[10.5px] font-black hover:bg-gray-200 transition-all uppercase tracking-tight focus:outline-none"
           >
             CURS

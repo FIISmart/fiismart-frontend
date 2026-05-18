@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Menu, X, GraduationCap } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
-import { UserRole } from "@/features/auth/types";
 
 const navLinks = [
   { label: "Functionalitati", href: "#Functionalitati" },
@@ -17,8 +16,6 @@ export default function Navbar() {
 
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
-  const dashboardHref =
-    user?.role === UserRole.PROFESSOR ? "/professor/dashboard" : "/student/dashboard";
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -69,7 +66,7 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-3">
             {isAuthenticated ? (
               <>
-                <Link to={dashboardHref} className="btn-secondary py-2 px-5 text-sm">
+                <Link to="/dashboard" className="btn-secondary py-2 px-5 text-sm">
                   Dashboard
                 </Link>
                 <button
@@ -120,7 +117,7 @@ export default function Navbar() {
                 {isAuthenticated ? (
                   <>
                     <Link
-                      to={dashboardHref}
+                      to="/dashboard"
                       className="btn-secondary py-2 px-5 text-sm justify-center"
                       onClick={() => setIsMobileOpen(false)}
                     >

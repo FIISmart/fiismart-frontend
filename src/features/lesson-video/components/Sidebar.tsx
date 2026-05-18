@@ -15,6 +15,8 @@ interface SidebarProps {
   courseId: string;
   activeLectureId: string | null;
   onSelectLecture: (lectureId: string) => void;
+  overallProgress?: number;
+  refreshTrigger?: number; // 👈 NEW PROP
 }
 
 const formatDuration = (seconds: number) => {
@@ -48,25 +50,21 @@ export default function Sidebar({
   courseId,
   activeLectureId,
   onSelectLecture,
+  overallProgress = 0,
+  refreshTrigger = 0, // 👈 DEFAULT TO 0
 }: SidebarProps) {
   const [modules, setModules] = useState<ModuleSummary[]>([]);
   const [expandedModules, setExpandedModules] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const overallProgressRef = useRef<HTMLDivElement | null>(null);
-  // Static "14%" placeholder progress, mirroring source.
-  useEffect(() => {
-    if (overallProgressRef.current) {
-      overallProgressRef.current.style.width = "14%";
-    }
-  }, []);
 
   useEffect(() => {
     const fetchModules = async () => {
       try {
         const data = await lessonVideoService.getModules(studentId, courseId);
         setModules(data);
-        if (data && data.length > 0) {
+        
+        // Only auto-expand the first module if none are currently expanded
+        if (data && data.length > 0 && expandedModules.length === 0) {
           setExpandedModules([data[0].moduleId]);
         }
       } catch (error) {
@@ -77,7 +75,7 @@ export default function Sidebar({
     };
 
     void fetchModules();
-  }, [studentId, courseId]);
+  }, [studentId, courseId, refreshTrigger]); // 👈 ADDED TO DEPENDENCY ARRAY
 
   const toggleModule = (moduleId: string) => {
     setExpandedModules((prev) =>
@@ -87,7 +85,8 @@ export default function Sidebar({
     );
   };
 
-  if (loading) {
+  // 👈 Only show the loading state on the INITIAL load, not during background refreshes
+  if (loading && modules.length === 0) {
     return (
       <div className="bg-card border border-border rounded-2xl p-6 shadow-sm sticky top-24 text-muted-foreground text-center">
         Se încarcă lecțiile...
@@ -102,10 +101,13 @@ export default function Sidebar({
       <div className="mb-6">
         <div className="flex justify-between text-sm font-medium mb-2">
           <span className="text-muted-foreground">Progres</span>
-          <span className="text-primary">14%</span>
+          <span className="text-primary">{overallProgress}%</span>
         </div>
         <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-          <div ref={overallProgressRef} className="h-full w-0 bg-primary rounded-full" />
+          <div
+            className="h-full bg-primary rounded-full transition-all duration-300"
+            style={{ width: `${overallProgress}%` }}
+          />
         </div>
       </div>
 

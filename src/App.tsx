@@ -7,6 +7,7 @@ import CompleteProfilePage from "@/features/auth/pages/CompleteProfilePage";
 import UnauthorizedPage from "@/features/auth/pages/UnauthorizedPage";
 import TermsOfServicePage from "@/features/auth/components/TermsOfServicePage";
 import PrivacyPolicyPage from "@/features/auth/components/PrivacyPolicyPage";
+import RoleDashboardRedirect from "@/features/auth/components/RoleDashboardRedirect";
 import LandingPage from "@/features/landing/pages/LandingPage";
 import ProfessorDashboardPage from "@/features/dashboard-prof/pages/ProfessorDashboardPage";
 import StudentDashboardPage from "@/features/dashboard-student/pages/StudentDashboardPage";
@@ -48,6 +49,11 @@ export default function App() {
         <Route path="/professor/courses" element={<CoursesListPage />} />
         <Route path="/professor/quizzes" element={<MyQuizzesPage />} />
         <Route path="/professor/courses/:courseId" element={<CourseBuilderPage />} />
+      </Route>
+
+      {/* Role-aware dashboard alias */}
+      <Route element={<ProtectedRoute allowedRoles={[UserRole.STUDENT, UserRole.PROFESSOR]} />}>
+        <Route path="/dashboard" element={<RoleDashboardRedirect />} />
       </Route>
 
       {/* Compatibility shims for legacy / external links */}

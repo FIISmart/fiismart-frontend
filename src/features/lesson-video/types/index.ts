@@ -66,11 +66,15 @@ export interface CourseComment {
   authorName: string;
   authorRole?: string;
   body: string;
-  timestampSecs?: number;
   likeCount: number;
   timeAgo: string;
-  likedByMe: boolean;
   isPinned?: boolean;
+  createdAt?: string;
+  timestampSecs?: number;
+  videoTimestamp?: number; 
+  likedByMe?: boolean;
+  isLikedByMe?: boolean;
+  replies?: CourseComment[] | StudentCommentDTO[]; 
 }
 
 export interface LectureDetails {

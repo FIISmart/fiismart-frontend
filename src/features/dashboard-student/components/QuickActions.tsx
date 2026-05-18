@@ -1,4 +1,6 @@
 import { BookOpen, Play } from "lucide-react";
+import { useAuth } from "@/features/auth/context/AuthContext";
+import { lessonVideoService } from "@/features/lesson-video/services/lesson-video.service";
 import { useNavigate } from "react-router-dom";
 import type { ContinueStudy } from "../types";
 
@@ -8,12 +10,39 @@ interface QuickActionsProps {
 
 export function QuickActions({ continueStudy }: QuickActionsProps) {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const handleContinueStudy = async () => {
+    if (!continueStudy?.cursId) return;
+
+    const studentId = user?.id;
+    if (!studentId) {
+      navigate(`/student/courses/${continueStudy.cursId}`);
+      return;
+    }
+
+    try {
+      const modules = await lessonVideoService.getModules(studentId, continueStudy.cursId);
+      const lectures = modules.flatMap((module) => module.lectures ?? []);
+      const nextLecture =
+        lectures.find((lecture) => !lecture.completed) ?? lectures[0];
+
+      if (nextLecture?.lectureId) {
+        navigate(`/student/courses/${continueStudy.cursId}/lectures/${nextLecture.lectureId}`);
+        return;
+      }
+
+      navigate(`/student/courses/${continueStudy.cursId}`);
+    } catch {
+      navigate(`/student/courses/${continueStudy.cursId}`);
+    }
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
       {continueStudy && (
         <div
-          onClick={() => navigate(`/student/courses/${continueStudy.cursId}`)}
+          onClick={() => void handleContinueStudy()}
           className="p-6 md:p-8 rounded-[20px] bg-gradient-to-r from-[#9b8ec7] to-[#bda6ce] flex items-center gap-6 border border-white/20 shadow-sm cursor-pointer hover:opacity-95 transition-all"
         >
           <div className="w-12 h-12 bg-white/30 backdrop-blur-md rounded-xl flex items-center justify-center text-white shrink-0">
