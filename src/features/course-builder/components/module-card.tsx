@@ -37,6 +37,7 @@ interface ModuleCardProps {
   moduleIndex: number;
   onUpdate: (module: Module) => void;
   onDelete: () => void;
+  onCourseRefresh?: () => Promise<void>;
 }
 
 type ModuleContentItem =
@@ -116,6 +117,7 @@ export function ModuleCard({
   moduleIndex,
   onUpdate,
   onDelete,
+  onCourseRefresh,
 }: ModuleCardProps) {
   const [isExpanded, setIsExpanded] = useState(module.isExpanded ?? true);
   const [isEditing, setIsEditing] = useState(false);
@@ -252,11 +254,17 @@ export function ModuleCard({
     }
   };
 
+  const openInPlaceQuizEditor = () => {
+    setPickerOpen(false);
+    openQuizEditor(undefined);
+  };
+
   const handleAttachExistingQuiz = async (source: MyQuiz) => {
     try {
       const saved = await upsertModuleQuiz(courseId, module.id, source);
       const nextQuiz = { ...saved, order: moduleItems.length };
       onUpdate(reindexModule({ ...module, quiz: nextQuiz }));
+      onCourseRefresh?.().catch((err) => console.error("Course refetch failed:", err));
       setPickerOpen(false);
       toast.success("Quiz adăugat din bibliotecă.");
     } catch (err) {
@@ -273,6 +281,7 @@ export function ModuleCard({
       });
       const nextQuiz = { ...saved, order: editingQuiz?.order ?? moduleItems.length };
       onUpdate(reindexModule({ ...module, quiz: nextQuiz }));
+      onCourseRefresh?.().catch((err) => console.error("Course refetch failed:", err));
       setQuizEditorOpen(false);
       setEditingQuiz(undefined);
       toast.success("Quiz salvat.");
@@ -286,6 +295,7 @@ export function ModuleCard({
     try {
       await deleteModuleQuiz(courseId, module.id);
       onUpdate(reindexModule({ ...module, quiz: undefined }));
+      onCourseRefresh?.().catch((err) => console.error("Course refetch failed:", err));
       setQuizEditorOpen(false);
       setEditingQuiz(undefined);
       toast.success("Quiz eliminat din modul.");
@@ -431,6 +441,7 @@ export function ModuleCard({
         isOpen={pickerOpen}
         onCancel={() => setPickerOpen(false)}
         onSelect={handleAttachExistingQuiz}
+        onCreateNew={openInPlaceQuizEditor}
       />
     </>
   );

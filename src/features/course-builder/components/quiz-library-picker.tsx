@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Loader2, Library } from "lucide-react";
+import { Loader2, Library, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +20,7 @@ interface QuizLibraryPickerProps {
   isOpen: boolean;
   onCancel: () => void;
   onSelect: (quiz: MyQuiz) => void;
+  onCreateNew?: () => void;
 }
 
 function buildContextLabel(quiz: MyQuiz): string {
@@ -40,6 +41,7 @@ export function QuizLibraryPicker({
   isOpen,
   onCancel,
   onSelect,
+  onCreateNew,
 }: QuizLibraryPickerProps) {
   const { user } = useAuth();
   const teacherId = user?.id;
@@ -79,10 +81,23 @@ export function QuizLibraryPicker({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
       <DialogContent className="max-w-[640px] max-h-[85vh] overflow-y-auto bg-card">
         <DialogHeader>
-          <DialogTitle className="font-serif text-xl flex items-center gap-2">
-            <Library className="h-5 w-5 text-primary" />
-            Alege quiz din bibliotecă
-          </DialogTitle>
+          <div className="flex items-center justify-between gap-3 pr-6">
+            <DialogTitle className="font-serif text-xl flex items-center gap-2">
+              <Library className="h-5 w-5 text-primary" />
+              Alege quiz din bibliotecă
+            </DialogTitle>
+            {onCreateNew && (
+              <Button
+                size="sm"
+                variant="default"
+                className="gap-2"
+                onClick={onCreateNew}
+              >
+                <Plus className="h-4 w-4" />
+                Creează quiz nou
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
         <div className="py-2">
@@ -93,11 +108,11 @@ export function QuizLibraryPicker({
             </div>
           ) : quizzes.length === 0 ? (
             <div className="border border-dashed border-border rounded-xl p-8 text-center bg-muted/20">
-              <p className="text-sm text-muted-foreground mb-4">
+              <p className="text-sm text-muted-foreground mb-3">
                 Nu ai niciun quiz în biblioteca ta.
               </p>
-              <Button asChild>
-                <Link to="/professor/quizzes">Mergi la Quiz Builder</Link>
+              <Button asChild variant="link" className="text-muted-foreground">
+                <Link to="/professor/quizzes">Vezi pagina Quiz Builder →</Link>
               </Button>
             </div>
           ) : (
