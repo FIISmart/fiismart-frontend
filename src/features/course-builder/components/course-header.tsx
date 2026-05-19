@@ -110,7 +110,7 @@ export function CourseHeader({
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between sm:h-16 py-3 sm:py-0 gap-3 sm:gap-4">
             {/* Top Row on Mobile: Back + Title + Status */}
             <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-              <Link to="/cursuri">
+              <Link to="/professor/courses">
                 <Button variant="ghost" size="icon" className="shrink-0 h-9 w-9 sm:h-10 sm:w-10">
                   <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>

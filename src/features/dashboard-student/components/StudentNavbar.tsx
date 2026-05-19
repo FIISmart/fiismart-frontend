@@ -1,7 +1,8 @@
-import { Bell, GraduationCap, LogOut } from "lucide-react";
+import { GraduationCap, LogOut } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { toast } from "sonner";
+import { NotificationBell } from "@/features/notifications/NotificationBell";
 
 interface StudentNavbarProps {
   studentName: string;
@@ -41,7 +42,7 @@ export function StudentNavbar({ studentName, initials }: StudentNavbarProps) {
         </div>
 
         <div className="flex items-center gap-3 md:gap-6">
-          <Bell size={20} className="text-gray-400 cursor-pointer hidden sm:block" />
+          <NotificationBell className="hidden sm:block" />
           <div className="flex items-center gap-2.5 px-3 md:px-4 py-1.5 bg-white rounded-full border border-black/5 shadow-sm">
             <div className="w-7 h-7 bg-indigo-100 rounded-full flex items-center justify-center text-[10px] font-bold text-[#9b8ec7]">
               {initials}

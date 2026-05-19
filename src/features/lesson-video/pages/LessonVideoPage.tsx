@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { Spinner } from "@/components/ui/spinner";
 import Header from "../components/Header";
@@ -147,6 +148,15 @@ export default function LessonVideoPage() {
       </div>
 
       <main className="max-w-[1200px] mx-auto lg:px-8 lg:py-8">
+        {courseId && (
+          <Link
+            to={`/student/courses/${courseId}`}
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors mb-4 px-4 lg:px-0 pt-4 lg:pt-0"
+          >
+            <ArrowLeft className="size-4" />
+            Înapoi la curs
+          </Link>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-3 lg:gap-8">
           <div className="lg:col-span-2 flex flex-col gap-8">
             <VideoPlayer

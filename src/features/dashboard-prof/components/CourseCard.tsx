@@ -1,6 +1,8 @@
 import { Users, Star } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface CourseCardProps {
+  courseId: string;
   title: string;
   subtitle: string;
   studentsCount: number | string;
@@ -10,6 +12,7 @@ interface CourseCardProps {
 }
 
 export function CourseCard({
+  courseId,
   title,
   subtitle,
   studentsCount,
@@ -17,6 +20,7 @@ export function CourseCard({
   status,
   gradientClass,
 }: CourseCardProps) {
+  const navigate = useNavigate();
   return (
     <div className="bg-edu-card border border-edu-border rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col">
       <div className={`h-32 w-full relative ${gradientClass}`}>
@@ -48,11 +52,15 @@ export function CourseCard({
         </div>
 
         <div className="grid grid-cols-2 gap-3 pt-4 border-t border-edu-border/50">
-          <button className="py-2 px-4 rounded-xl border border-edu-border text-edu-foreground font-medium text-sm hover:bg-edu-bg transition text-center">
+          <button
+            onClick={() => navigate(`/professor/courses/${courseId}`)}
+            className="py-2 px-4 rounded-xl border border-edu-border text-edu-foreground font-medium text-sm hover:bg-edu-bg transition text-center"
+          >
             Editează
           </button>
 
           <button
+            onClick={() => navigate(`/professor/courses/${courseId}`)}
             className={`py-2 px-4 rounded-xl font-medium text-sm transition text-center ${
               status === "Activ"
                 ? "bg-edu-accent/30 text-edu-foreground hover:bg-edu-accent/50"

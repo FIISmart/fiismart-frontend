@@ -2,6 +2,7 @@ import { UserCircle, Menu, LogOut } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { toast } from "sonner";
+import { NotificationBell } from "@/features/notifications/NotificationBell";
 
 export function ProfDashboardNavbar() {
   const { logout, user } = useAuth();
@@ -47,6 +48,7 @@ export function ProfDashboardNavbar() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <NotificationBell />
           <div className="flex items-center gap-3 border border-edu-border p-2 md:px-4 md:py-2 rounded-full cursor-default">
             <UserCircle size={24} className="text-edu-muted-fg" />
             <span className="hidden md:inline text-edu-foreground font-medium">{displayName}</span>
