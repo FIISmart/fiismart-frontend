@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Spinner } from "@/components/ui/spinner";
 import Header from "../components/Header";
@@ -6,6 +6,7 @@ import QuizStartPage from "../components/QuizStartPage";
 import QuizQuestionPage from "../components/QuizQuestionPage";
 import QuizResultPage from "../components/QuizResultPage";
 import { getQuiz, MOCK_QUESTIONS } from "../services/quiz.service";
+import { submitQuizAttempt } from "@/lib/api";
 import type { Quiz } from "../types";
 
 type Phase = "start" | "question" | "result";
@@ -20,6 +21,7 @@ export default function QuizPlayerPage() {
   const [phase, setPhase] = useState<Phase>("start");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [correctAnswers, setCorrectAnswers] = useState(0);
+  const startTimeRef = useRef<number>(0);
 
   useEffect(() => {
     if (!quizId) return;
@@ -55,6 +57,7 @@ export default function QuizPlayerPage() {
   const handleStart = () => {
     setCurrentIndex(0);
     setCorrectAnswers(0);
+    startTimeRef.current = Date.now();
     setPhase("question");
   };
 
@@ -66,8 +69,25 @@ export default function QuizPlayerPage() {
     if (currentIndex + 1 < quiz.questions.length) {
       setCurrentIndex((prev) => prev + 1);
     } else {
+      const totalQ = quiz.questions.length;
+      const scorePercent = Math.round((nextCorrect / totalQ) * 100);
+      const passed = scorePercent >= (quiz.passingScore ?? 60);
+      const timeTakenSecs = Math.round((Date.now() - startTimeRef.current) / 1000);
+      if (quiz.courseId) {
+        void submitQuizAttempt({
+          quizId: quiz.id,
+          courseId: quiz.courseId,
+          score: scorePercent,
+          passed,
+          timeTakenSecs,
+        }).catch(() => {});
+      }
       setPhase("result");
     }
+  };
+
+  const handlePrev = () => {
+    if (currentIndex > 0) setCurrentIndex((prev) => prev - 1);
   };
 
   const handleRetry = () => {
@@ -107,7 +127,13 @@ export default function QuizPlayerPage() {
     <div className="min-h-screen bg-[#F2EAE0] flex flex-col font-sans">
       <Header />
       {phase === "start" && (
-        <QuizStartPage onStart={handleStart} quizTitle={quiz.title} />
+        <QuizStartPage
+          onStart={handleStart}
+          quizTitle={quiz.title}
+          questionCount={quiz.questions.length}
+          durationMinutes={quiz.timeLimit ? Math.ceil(quiz.timeLimit / 60) : undefined}
+          passScore={quiz.passingScore}
+        />
       )}
       {phase === "question" && question && (
         <QuizQuestionPage

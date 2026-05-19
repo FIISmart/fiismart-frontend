@@ -7,6 +7,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { ModuleSummary } from "../types";
 import { lessonVideoService } from "../services/lesson-video.service";
 
@@ -53,6 +54,7 @@ export default function Sidebar({
   overallProgress = 0,
   refreshTrigger = 0, // 👈 DEFAULT TO 0
 }: SidebarProps) {
+  const navigate = useNavigate();
   const [modules, setModules] = useState<ModuleSummary[]>([]);
   const [expandedModules, setExpandedModules] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -209,7 +211,10 @@ export default function Sidebar({
                   })}
 
                   {moduleItem.quiz && (
-                    <div className="flex items-center gap-3 p-3 mt-2 rounded-lg bg-accent/20 border border-accent/40 cursor-pointer hover:bg-accent/30 transition-colors">
+                    <div
+                      onClick={() => navigate(`/student/quizzes/${moduleItem.quiz!.quizId}`)}
+                      className="flex items-center gap-3 p-3 mt-2 rounded-lg bg-accent/20 border border-accent/40 cursor-pointer hover:bg-accent/30 transition-colors"
+                    >
                       <HelpCircle size={18} className="text-foreground" />
                       <div>
                         <h5 className="text-sm font-medium text-foreground">

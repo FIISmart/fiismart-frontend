@@ -1,3 +1,5 @@
+import { useNavigate } from "react-router-dom";
+
 interface Props {
   correct: number;
   total: number;
@@ -60,6 +62,7 @@ function CircularProgress({ score, correct, total }: CircularProps) {
 }
 
 export default function QuizResultPage({ correct, total, onRetry }: Props) {
+  const navigate = useNavigate();
   const incorrect = total - correct;
   const score = total > 0 ? Math.round((correct / total) * 100) : 0;
 
@@ -148,6 +151,13 @@ export default function QuizResultPage({ correct, total, onRetry }: Props) {
               className="w-full h-[44px] rounded-[14px] bg-[#9B8EC7] border-none text-white text-[14px] font-semibold hover:opacity-90 transition-opacity"
             >
               Retry Quiz
+            </button>
+
+            <button
+              onClick={() => navigate("/student/dashboard")}
+              className="w-full h-[44px] rounded-[14px] bg-white border-[1.5px] border-[#9B8EC7] text-[#9B8EC7] text-[14px] font-semibold hover:bg-[#F9F7FA] transition-colors"
+            >
+              Înapoi la Dashboard
             </button>
           </div>
 

@@ -8,6 +8,9 @@ export interface QuizQuestion {
 
 export interface Quiz {
   id: string;
+  courseId?: string;
   title: string;
+  passingScore?: number;
+  timeLimit?: number;
   questions: QuizQuestion[];
 }
