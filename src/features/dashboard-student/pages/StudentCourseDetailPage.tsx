@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { StudentNavbar } from "../components/StudentNavbar";
-import { getCourse, getModules } from "@/lib/api";
+import { getCourse, getModules, checkMyEnrollment, enrollMe } from "@/lib/api";
 import type { CourseAPI, ModuleResponse } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -22,18 +22,35 @@ export default function StudentCourseDetailPage() {
   const [modules, setModules] = useState<ModuleResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [enrolled, setEnrolled] = useState(false);
+  const [enrolling, setEnrolling] = useState(false);
 
   useEffect(() => {
     if (!courseId) return;
-    Promise.all([getCourse(courseId), getModules(courseId)])
-      .then(([c, m]) => {
+    Promise.all([getCourse(courseId), getModules(courseId), checkMyEnrollment(courseId)])
+      .then(([c, m, status]) => {
         setCourse(c);
         setModules(m);
+        setEnrolled(status.enrolled);
         if (m.length > 0) setExpanded(new Set([m[0].id]));
       })
       .catch(() => toast.error("Eroare la încărcarea cursului."))
       .finally(() => setLoading(false));
   }, [courseId]);
+
+  const handleEnroll = async () => {
+    if (!courseId) return;
+    setEnrolling(true);
+    try {
+      await enrollMe(courseId);
+      setEnrolled(true);
+      toast.success("Te-ai înscris cu succes în curs!");
+    } catch {
+      toast.error("Eroare la înrolare. Încearcă din nou.");
+    } finally {
+      setEnrolling(false);
+    }
+  };
 
   const toggle = (id: string) =>
     setExpanded((prev) => {
@@ -165,16 +182,24 @@ export default function StudentCourseDetailPage() {
                   );
                 })}
 
-                {firstLecture && (
+                {!enrolled ? (
+                  <Button
+                    onClick={handleEnroll}
+                    disabled={enrolling}
+                    className="mt-2 bg-[#9b8ec7] hover:bg-[#7b6eb0] text-white rounded-xl h-12 text-base"
+                  >
+                    {enrolling ? "Se procesează..." : "Înscrie-te în curs"}
+                  </Button>
+                ) : firstLecture ? (
                   <Button
                     asChild
                     className="mt-2 bg-[#9b8ec7] hover:bg-[#7b6eb0] text-white rounded-xl h-12 text-base"
                   >
                     <Link to={`/student/courses/${courseId}/lectures/${firstLecture.id}`}>
-                      Începe cursul
+                      Continuă cursul
                     </Link>
                   </Button>
-                )}
+                ) : null}
               </div>
             )}
           </>

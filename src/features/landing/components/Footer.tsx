@@ -1,4 +1,5 @@
 import { Mail, Phone, MapPin, GraduationCap } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export default function Footer() {
   return (
@@ -29,7 +30,6 @@ export default function Footer() {
           {[
             { title: "Navigare", links: ["Cursuri", "Tutori", "Comunitate", "Blog", "Contact"] },
             { title: "Categorii", links: ["Programare", "Design", "Marketing", "Business", "Limbi Straine"] },
-            { title: "Support", links: ["Ajutor", "FAQ", "Contact", "Confidentialitate", "Termeni"] },
           ].map((col) => (
             <div key={col.title}>
               <h4 className="font-heading font-semibold text-white mb-4">{col.title}</h4>
@@ -44,6 +44,22 @@ export default function Footer() {
               </ul>
             </div>
           ))}
+          <div>
+            <h4 className="font-heading font-semibold text-white mb-4">Support</h4>
+            <ul className="flex flex-col gap-2">
+              {["Ajutor", "FAQ", "Contact"].map((link) => (
+                <li key={link}>
+                  <a href="#" className="font-body text-body-sm text-white/60 hover:text-white transition-colors">{link}</a>
+                </li>
+              ))}
+              <li>
+                <Link to="/privacy" className="font-body text-body-sm text-white/60 hover:text-white transition-colors">Confidențialitate</Link>
+              </li>
+              <li>
+                <Link to="/terms" className="font-body text-body-sm text-white/60 hover:text-white transition-colors">Termeni</Link>
+              </li>
+            </ul>
+          </div>
         </div>
         <div className="border-t border-white/10 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="font-body text-caption text-white/40">© 2026 FIISmart. Toate drepturile rezervate.</p>
