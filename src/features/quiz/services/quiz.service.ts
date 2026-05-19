@@ -75,8 +75,12 @@ export function createQuizAttempt(payload: {
   });
 }
 
-export function getLatestQuizAttempt(studentId: string, quizId: string): Promise<QuizAttempt | null> {
-  return apiFetch<QuizAttempt>(`/quiz-attempts/student/${studentId}/quiz/${quizId}/latest`)
+/**
+ * Fetch the calling student's latest attempt on this quiz. The BE derives the
+ * student id from the authenticated principal — no need to pass studentId.
+ */
+export function getLatestQuizAttempt(quizId: string): Promise<QuizAttempt | null> {
+  return apiFetch<QuizAttempt>(`/quiz-attempts/student/me/quiz/${quizId}/latest`)
     .catch(() => null);
 }
 

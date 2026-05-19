@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/features/auth/context/AuthContext";
@@ -10,6 +10,10 @@ import { createQuizAttempt, getLatestQuizAttempt, getQuiz } from "../services/qu
 import type { Quiz, QuizAttempt, QuizAttemptAnswer } from "../types";
 
 type Phase = "start" | "question" | "result";
+
+// Submitted answer in flight, before the BE grades it. `correct` is added
+// server-side, so we omit it on the client.
+type PendingAnswer = Omit<QuizAttemptAnswer, "correct">;
 
 export default function QuizPlayerPage() {
   const { quizId } = useParams<{ quizId: string }>();
@@ -24,11 +28,14 @@ export default function QuizPlayerPage() {
 
   const [phase, setPhase] = useState<Phase>("start");
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState<QuizAttemptAnswer[]>([]);
-  const [correctAnswers, setCorrectAnswers] = useState(0);
+  const [answers, setAnswers] = useState<PendingAnswer[]>([]);
   const startedAtRef = useRef<number>(Date.now());
 
-  const studentId = user?.id ?? "";
+  // studentId is no longer needed on this page — the BE derives it from the
+  // authenticated principal on both /quiz-attempts/student/me/... reads and
+  // POST /quiz-attempts. The `user` is still read by useAuth so the page only
+  // renders when authenticated.
+  void user;
   const courseId = quiz?.courseId ?? searchParams.get("courseId") ?? "";
 
   useEffect(() => {
@@ -59,91 +66,89 @@ export default function QuizPlayerPage() {
   }, [quizId]);
 
   useEffect(() => {
-    if (!studentId || !quizId) return;
+    if (!quizId) return;
     let cancelled = false;
-    getLatestQuizAttempt(studentId, quizId).then((attempt) => {
+    getLatestQuizAttempt(quizId).then((attempt) => {
       if (!cancelled) setLatestAttempt(attempt);
     });
     return () => {
       cancelled = true;
     };
-  }, [quizId, studentId]);
+  }, [quizId]);
 
   const total = quiz?.questions.length ?? 0;
   const passScore = quiz?.passingScore ?? 60;
-  const score = useMemo(
-    () => (total > 0 ? Math.round((correctAnswers / total) * 100) : 0),
-    [correctAnswers, total],
-  );
 
   const handleStart = () => {
     setCurrentIndex(0);
-    setCorrectAnswers(0);
     setAnswers([]);
     startedAtRef.current = Date.now();
     setPhase("question");
   };
 
-  const submitAttempt = async (nextAnswers: QuizAttemptAnswer[], nextCorrect: number) => {
-    if (!quiz || !studentId || !courseId) {
-      setError("Nu pot salva rezultatul: lipseste cursul sau studentul.");
+  const submitAttempt = async (nextAnswers: PendingAnswer[]) => {
+    // Double-submit guard: if a submission is already in flight, ignore further
+    // calls. The last question's Next button is also disabled while submitting,
+    // but a stale call path (or a double-click that races) is caught here too.
+    if (submitting) return;
+    if (!quiz || !courseId) {
+      setError("Nu pot salva rezultatul: lipseste cursul.");
       setPhase("result");
       return;
     }
 
-    const finalScore = total > 0 ? Math.round((nextCorrect / total) * 100) : 0;
     setSubmitting(true);
+    setError(null);
     try {
+      // The BE grades the attempt server-side and returns score / passed.
+      // We deliberately do NOT send score / passed / per-answer correct
+      // flags — they'd be ignored, but stripping them client-side is the
+      // defense-in-depth move.
       const saved = await createQuizAttempt({
         quizId: quiz.id,
         courseId,
-        studentId,
-        score: finalScore,
-        passed: finalScore >= passScore,
         timeTakenSecs: Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000)),
         answers: nextAnswers,
       });
       setLatestAttempt(saved);
+      setPhase("result");
     } catch (err) {
       console.error("Eroare la salvarea attempt-ului:", err);
       setError(err instanceof Error ? err.message : "Rezultatul quiz-ului nu a putut fi salvat.");
+      setPhase("result");
     } finally {
       setSubmitting(false);
-      setPhase("result");
     }
   };
 
-  const handleNext = (answer: { selectedIdx: number; writtenAnswer?: string; isCorrect: boolean }) => {
+  const handleNext = (answer: { selectedIdx: number; writtenAnswer?: string }) => {
     if (!quiz) return;
 
     const question = quiz.questions[currentIndex];
-    const answerRecord: QuizAttemptAnswer = {
+    const answerRecord: PendingAnswer = {
       questionId: question.id,
       selectedIdx: answer.selectedIdx,
       writtenAnswer: answer.writtenAnswer,
-      correct: answer.isCorrect,
     };
     const nextAnswers = [...answers, answerRecord];
-    const nextCorrect = answer.isCorrect ? correctAnswers + 1 : correctAnswers;
-
     setAnswers(nextAnswers);
-    setCorrectAnswers(nextCorrect);
 
     if (currentIndex + 1 < quiz.questions.length) {
       setCurrentIndex((prev) => prev + 1);
     } else {
-      void submitAttempt(nextAnswers, nextCorrect);
+      void submitAttempt(nextAnswers);
     }
   };
 
   const handlePrev = () => {
     setCurrentIndex((prev) => Math.max(prev - 1, 0));
+    setAnswers((prev) => prev.slice(0, -1));
   };
 
   const handleRetry = () => {
     setCurrentIndex(0);
-    setCorrectAnswers(0);
     setAnswers([]);
+    setError(null);
     setPhase("start");
   };
 
@@ -200,6 +205,7 @@ export default function QuizPlayerPage() {
           onPrev={handlePrev}
           index={currentIndex}
           total={total}
+          isSubmitting={submitting}
         />
       )}
       {phase === "result" && (
@@ -214,19 +220,19 @@ export default function QuizPlayerPage() {
               {error}
             </div>
           )}
+          {/* The result page renders BE-computed correct count and score.
+              Falls back to 0 if the attempt didn't persist (error path). */}
           <QuizResultPage
-            correct={correctAnswers}
+            correct={latestAttempt
+              ? latestAttempt.answers.filter((a) => a.correct).length
+              : 0}
             total={total}
             onRetry={handleRetry}
           />
           {latestAttempt && (
             <p className="pb-8 text-center text-sm text-[#6A7282]">
-              Rezultat salvat: {latestAttempt.score}%.
-            </p>
-          )}
-          {!latestAttempt && phase === "result" && !submitting && (
-            <p className="pb-8 text-center text-sm text-[#6A7282]">
-              Scor local: {score}%.
+              Rezultat salvat: {latestAttempt.score}%
+              {latestAttempt.passed ? " (promovat)" : " (nepromovat)"}.
             </p>
           )}
         </div>
