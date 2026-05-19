@@ -100,9 +100,24 @@ export default function VideoPlayer({
     }
   }, [onDurationDetected]);
 
+  // Track the "current" lectureId in a ref so the throttled progress writer
+  // can detect when it's about to write against a stale lecture (e.g. the
+  // user navigated to another lecture between the time interval set up its
+  // closure and the time the next tick fires).
+  const currentLectureIdRef = useRef(lectureId);
+  useEffect(() => {
+    currentLectureIdRef.current = lectureId;
+  }, [lectureId]);
+
   const syncWithBackend = useCallback(
     async (currTime: number, dur: number) => {
       if (currTime <= 0 || dur <= 0) return;
+      // Belt-and-suspenders guard against the lecture-switch race: the
+      // closure captured `lectureId` at the time syncWithBackend was created.
+      // If the user has since navigated to another lecture, the ref is now
+      // pointing at that newer id — skip the write so we don't attribute
+      // the new video's `timeRef.current` to the old lecture.
+      if (currentLectureIdRef.current !== lectureId) return;
       const watchedPercent = Math.floor((currTime / dur) * 100);
       try {
         await lessonVideoService.saveProgress(studentId, courseId, lectureId, {
@@ -111,7 +126,7 @@ export default function VideoPlayer({
           completed: watchedPercent >= 95,
           durationSecs: Math.round(dur),
         });
-        
+
         // Tell the parent component to refresh the sidebar
         if (onProgressSaved) {
           onProgressSaved();
@@ -123,7 +138,10 @@ export default function VideoPlayer({
     [studentId, courseId, lectureId, onProgressSaved]
   );
 
-  // --- TIMER FIX: The updated interval that reads from refs ---
+  // 10-second throttled progress writer. The interval reads `timeRef` /
+  // `durationRef` to avoid stale-closure issues with `currentTime` /
+  // `duration` state. Restarts when `syncWithBackend` identity changes
+  // (i.e. when studentId / courseId / lectureId change).
   useEffect(() => {
     const interval = setInterval(() => {
       const curr = timeRef.current;
@@ -135,8 +153,7 @@ export default function VideoPlayer({
     }, 10000); // 10 seconds
 
     return () => clearInterval(interval);
-  }, [syncWithBackend]); 
-  // ------------------------------------------------------------
+  }, [syncWithBackend]);
 
   useEffect(() => {
     if (isYouTube) return;
