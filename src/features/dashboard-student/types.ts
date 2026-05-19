@@ -24,6 +24,7 @@ export interface StudentCourse {
 }
 
 export interface StudentQuiz {
+  quizId?: string;
   titluQuiz: string;
   numeCurs: string;
   incercari: number;

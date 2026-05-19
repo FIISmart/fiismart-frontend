@@ -1,9 +1,10 @@
 import { useState, useEffect, type ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 import type { QuizQuestion } from "../types";
 
 interface Props {
   question: QuizQuestion;
-  onNext: (isCorrect: boolean) => void;
+  onNext: (answer: { selectedIdx: number; writtenAnswer?: string; isCorrect: boolean }) => void;
   onPrev: () => void;
   index: number;
   total: number;
@@ -20,23 +21,37 @@ export default function QuizQuestionPage({
 }: Props) {
     const navigate = useNavigate();
     const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+    const [writtenAnswer, setWrittenAnswer] = useState("");
     const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
 
   // Reset on new question
   useEffect(() => {
     setSelectedIdx(null);
+    setWrittenAnswer("");
     setIsSubmitted(false);
   }, [question]);
 
   const handleConfirm = () => {
-    if (!isSubmitted && selectedIdx !== null) {
+    const isWritten = question.type === "written";
+    const hasAnswer = isWritten ? writtenAnswer.trim() !== "" : selectedIdx !== null;
+
+    if (!isSubmitted && hasAnswer) {
       setIsSubmitted(true);
     } else if (isSubmitted) {
-      onNext(selectedIdx === question.correctIdx);
+      onNext({
+        selectedIdx: selectedIdx ?? -1,
+        writtenAnswer: isWritten ? writtenAnswer : undefined,
+        isCorrect,
+      });
     }
   };
 
-  const isCorrect = selectedIdx === question.correctIdx;
+  const normalizedWrittenAnswer = writtenAnswer.trim().toLowerCase();
+  const normalizedCorrectText = (question.correctText ?? "").trim().toLowerCase();
+  const isCorrect = question.type === "written"
+    ? Boolean(normalizedCorrectText) && normalizedWrittenAnswer === normalizedCorrectText
+    : selectedIdx === question.correctIdx;
+  const canConfirm = question.type === "written" ? writtenAnswer.trim() !== "" : selectedIdx !== null;
 
   return (
     <div className="flex-grow flex flex-col justify-center items-center w-full max-w-[800px] mx-auto px-4 py-8">
@@ -91,9 +106,28 @@ export default function QuizQuestionPage({
             {question.text}
           </h2>
 
-          {/* Options */}
-          <div className="flex flex-col gap-4 mb-8">
-            {question.options.map((option, optIdx) => {
+          {question.type === "written" ? (
+            <div className="mb-8">
+              <textarea
+                value={writtenAnswer}
+                onChange={(event) => !isSubmitted && setWrittenAnswer(event.target.value)}
+                disabled={isSubmitted}
+                className="w-full min-h-[140px] rounded-[16px] border-2 border-[#E5E7EB] bg-white p-4 text-[16px] text-[#4B5563] outline-none focus:border-[#9B8EC7]"
+                placeholder="Scrie raspunsul aici..."
+              />
+              {isSubmitted && (
+                <div className={`mt-4 rounded-[16px] p-4 text-sm ${
+                  isCorrect ? "bg-[#F2F8F8] text-[#31706E]" : "bg-[#FDF6F6] text-[#C62828]"
+                }`}>
+                  {isCorrect
+                    ? "Raspuns corect."
+                    : `Raspuns asteptat: ${question.correctText || "nu este definit"}`}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4 mb-8">
+            {(question.options ?? []).map((option, optIdx) => {
               const isSelected = selectedIdx === optIdx;
               const isThisCorrect = optIdx === question.correctIdx;
 
@@ -165,7 +199,8 @@ export default function QuizQuestionPage({
                 </button>
               );
             })}
-          </div>
+            </div>
+          )}
 
           {/* Explanation */}
           {isSubmitted && question.explanation && (
@@ -189,10 +224,10 @@ export default function QuizQuestionPage({
 
             <button
               onClick={handleConfirm}
-              disabled={selectedIdx === null}
+              disabled={!canConfirm}
               className={`px-8 py-3 rounded-[16px] font-semibold text-white transition-all flex items-center justify-center
                   ${
-                    selectedIdx !== null
+                    canConfirm
                       ? "bg-[#9B8EC7] hover:opacity-90 shadow-md"
                       : "bg-[#D1D5DB] cursor-not-allowed"
                   }

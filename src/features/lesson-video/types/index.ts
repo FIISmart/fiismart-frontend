@@ -7,6 +7,7 @@ export interface CourseHeader {
     displayName: string;
   };
   overallProgress: number;
+  finalQuiz?: QuizStatus | null;
 }
 
 export interface CourseDetails {
@@ -25,19 +26,30 @@ export interface CourseDetails {
 export interface LectureSummary {
   lectureId: string;
   title: string;
+  type?: "video" | "pdf" | "markdown" | string;
+  content?: string;
+  videoUrl?: string | null;
+  pdfUrl?: string | null;
   order: number;
   durationSecs: number;
   completed: boolean;
   watchedPercent: number;
   lastPositionSecs: number;
+  quiz?: QuizStatus | null;
 }
 
 export interface QuizStatus {
   quizId: string;
-  attemptCount: number;
-  lastScore: number;
-  passed: boolean;
-  statusLabel: string;
+  title?: string;
+  scope?: "lecture" | "module" | "course_final" | string;
+  moduleId?: string | null;
+  lectureId?: string | null;
+  attemptCount?: number;
+  lastScore?: number;
+  latestScore?: number;
+  passed?: boolean;
+  status?: string;
+  statusLabel?: string;
 }
 
 export interface ModuleSummary {
@@ -80,18 +92,23 @@ export interface CourseComment {
 export interface LectureDetails {
   lectureId: string;
   title: string;
+  type?: "video" | "pdf" | "markdown" | string;
+  content?: string;
   videoUrl: string;
+  pdfUrl?: string | null;
   durationSecs: number;
   order: number;
   positionSecs?: number;
   watchedPercent?: number;
   completed?: boolean;
+  quiz?: QuizStatus | null;
 }
 
 export interface LectureProgressPayload {
   watchedPercent: number;
   positionSecs: number;
   completed: boolean;
+  durationSecs?: number;
 }
 
 export interface AddCommentPayload {

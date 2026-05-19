@@ -57,7 +57,7 @@ type MockCourseAPI = Omit<CourseAPI, "modules"> & {
 const STORAGE_KEY = "fiismart_dev_mock_db";
 // Bumped from 1 → 2 to invalidate teacher-only DBs that don't yet have
 // student enrollments / lecture progress / lecture comments.
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 const DEV_PROFESSOR_ID = "dev-professor-aaaaaaaaaaaaaaaaaaaaaa";
 const DEV_STUDENT_ID = "dev-student-bbbbbbbbbbbbbbbbbbbbbbb";
 
@@ -88,6 +88,8 @@ export interface MockCourseDB {
   schemaVersion: number;
   courses: MockCourseAPI[];
   courseQuizzes: Record<string, QuizAPI>;
+  /** `${courseId}:${moduleId}:${lectureId}` -> lecture-scoped builder quiz. */
+  lectureQuizzes: Record<string, QuizAPI>;
   /** Teacher-side comments, keyed by courseId. */
   comments: Record<string, CommentAPI[]>;
   /** studentId → enrolled courseIds. */
@@ -402,6 +404,7 @@ function makeSeedDB(): MockCourseDB {
         ],
       },
     },
+    lectureQuizzes: {},
     comments: {
       [courseAId]: [],
       [courseBId]: [],
@@ -430,6 +433,7 @@ function loadDB(): MockCourseDB {
       return seeded;
     }
     parsed.courseQuizzes = parsed.courseQuizzes ?? {};
+    parsed.lectureQuizzes = parsed.lectureQuizzes ?? {};
     return parsed;
   } catch {
     const seeded = makeSeedDB();
@@ -467,6 +471,10 @@ function findCourse(id: string): MockCourseAPI | undefined {
 
 function findModule(course: MockCourseAPI, moduleId: string): MockModuleResponse | undefined {
   return (course.modules ?? []).find((m) => m.id === moduleId);
+}
+
+function lectureQuizKey(courseId: string, moduleId: string, lectureId: string): string {
+  return `${courseId}:${moduleId}:${lectureId}`;
 }
 
 function findLecture(
@@ -557,6 +565,18 @@ function quizToStatus(quiz: QuizAPI): QuizStatus {
   };
 }
 
+function quizApiToPlayerQuestions(quiz: QuizAPI): QuizQuestion[] {
+  return quiz.questions
+    .filter((q) => typeof q.correctIdx === "number")
+    .map((q) => ({
+      id: q.id,
+      text: q.text,
+      options: q.options,
+      correctIdx: q.correctIdx as number,
+      explanation: q.explanation ?? undefined,
+    }));
+}
+
 /**
  * Build a stable mock {@link Quiz} for the player. Returns the seeded quiz from
  * a course if `quizId` matches one, otherwise falls back to {@link MOCK_QUESTIONS}
@@ -566,15 +586,7 @@ function buildMockQuiz(quizId: string): Quiz {
   for (const course of db.courses) {
     for (const mod of course.modules ?? []) {
       if (mod.quiz?.id === quizId) {
-        const questions: QuizQuestion[] = mod.quiz.questions
-          .filter((q) => typeof q.correctIdx === "number")
-          .map((q) => ({
-            id: q.id,
-            text: q.text,
-            options: q.options,
-            correctIdx: q.correctIdx as number,
-            explanation: q.explanation ?? undefined,
-          }));
+        const questions = quizApiToPlayerQuestions(mod.quiz);
         if (questions.length === 0) {
           return {
             id: mod.quiz.id,
@@ -585,6 +597,15 @@ function buildMockQuiz(quizId: string): Quiz {
         return { id: mod.quiz.id, title: mod.quiz.title, questions };
       }
     }
+  }
+  const lectureQuiz = Object.values(db.lectureQuizzes).find((quiz) => quiz.id === quizId);
+  if (lectureQuiz) {
+    const questions = quizApiToPlayerQuestions(lectureQuiz);
+    return {
+      id: lectureQuiz.id,
+      title: lectureQuiz.title,
+      questions: questions.length > 0 ? questions : MOCK_QUESTIONS.slice(0, 5),
+    };
   }
   return {
     id: quizId,
@@ -816,14 +837,20 @@ const routes: Route[] = [
     handle: (m) => {
       const course = findCourse(m[1]);
       if (!course) return undefined;
-      return (course.modules ?? [])
-        .filter((mod) => mod.quiz)
-        .map((mod) => ({
-          ...mod.quiz,
-          moduleId: mod.id,
-          lectureId: null,
-          quizScope: "module",
-        }));
+      const moduleQuizzes: QuizAPI[] = (course.modules ?? []).flatMap((mod) =>
+        mod.quiz
+          ? [{
+              ...mod.quiz,
+              courseId: course.id,
+              moduleId: mod.id,
+              lectureId: null,
+              quizScope: "module",
+            }]
+          : [],
+      );
+      const lectureQuizzes = Object.values(db.lectureQuizzes)
+        .filter((quiz) => quiz.courseId === course.id);
+      return [...moduleQuizzes, ...lectureQuizzes];
     },
   },
   // POST /courses/:id/builder/modules
@@ -876,6 +903,9 @@ const routes: Route[] = [
       const idx = course.modules.findIndex((mod) => mod.id === m[2]);
       if (idx === -1) return undefined;
       course.modules.splice(idx, 1);
+      for (const key of Object.keys(db.lectureQuizzes)) {
+        if (key.startsWith(`${course.id}:${m[2]}:`)) delete db.lectureQuizzes[key];
+      }
       course.updatedAt = nowIso();
       commit();
       return undefined;
@@ -939,6 +969,73 @@ const routes: Route[] = [
       const idx = mod.lectures.findIndex((l) => l.id === m[3]);
       if (idx === -1) return undefined;
       mod.lectures.splice(idx, 1);
+      delete db.lectureQuizzes[lectureQuizKey(course.id, mod.id, m[3])];
+      course.updatedAt = nowIso();
+      commit();
+      return undefined;
+    },
+  },
+  // GET /courses/:id/builder/modules/:moduleId/lectures/:lectureId/quiz
+  {
+    method: "GET",
+    pattern: /^\/courses\/([^/]+)\/builder\/modules\/([^/]+)\/lectures\/([^/]+)\/quiz$/,
+    handle: (m) => {
+      const course = findCourse(m[1]);
+      if (!course) return undefined;
+      const mod = findModule(course, m[2]);
+      if (!mod || !mod.lectures.some((lecture) => lecture.id === m[3])) return undefined;
+      return db.lectureQuizzes[lectureQuizKey(course.id, mod.id, m[3])] ?? null;
+    },
+  },
+  // POST /courses/:id/builder/modules/:moduleId/lectures/:lectureId/quiz
+  {
+    method: "POST",
+    pattern: /^\/courses\/([^/]+)\/builder\/modules\/([^/]+)\/lectures\/([^/]+)\/quiz$/,
+    handle: (m, _p, init) => {
+      const course = findCourse(m[1]);
+      if (!course) return undefined;
+      const mod = findModule(course, m[2]);
+      if (!mod || !mod.lectures.some((lecture) => lecture.id === m[3])) return undefined;
+      const body = parseBody<QuizPayload>(init);
+      if (!body) return undefined;
+      const key = lectureQuizKey(course.id, mod.id, m[3]);
+      const existing = db.lectureQuizzes[key];
+      const quiz: QuizAPI = {
+        id: existing?.id ?? uuid(),
+        courseId: course.id,
+        moduleId: mod.id,
+        lectureId: m[3],
+        quizScope: "lecture",
+        title: body.title ?? "Quiz Lectie",
+        passingScore: body.passingScore ?? 70,
+        timeLimit: body.timeLimit ?? 30,
+        shuffleQuestions: body.shuffleQuestions ?? false,
+        questions: (body.questions ?? []).map((q) => ({
+          id: uuid(),
+          text: q.text,
+          type: q.type === "written" ? "written" : "multiple_choice",
+          options: q.options ?? [],
+          correctIdx: q.type === "written" ? undefined : q.correctIdx,
+          correctText: q.correctText,
+          explanation: q.explanation ?? null,
+        })),
+      };
+      db.lectureQuizzes[key] = quiz;
+      course.updatedAt = nowIso();
+      commit();
+      return quiz;
+    },
+  },
+  // DELETE /courses/:id/builder/modules/:moduleId/lectures/:lectureId/quiz
+  {
+    method: "DELETE",
+    pattern: /^\/courses\/([^/]+)\/builder\/modules\/([^/]+)\/lectures\/([^/]+)\/quiz$/,
+    handle: (m) => {
+      const course = findCourse(m[1]);
+      if (!course) return undefined;
+      const mod = findModule(course, m[2]);
+      if (!mod) return undefined;
+      delete db.lectureQuizzes[lectureQuizKey(course.id, mod.id, m[3])];
       course.updatedAt = nowIso();
       commit();
       return undefined;

@@ -132,6 +132,7 @@ export async function deleteCourseQuiz(courseId: string): Promise<void> {
 export async function getMyQuizzes(courseId: string): Promise<MyQuiz[]> {
   const quizzes = await api.getCourseBuilderQuizzes(courseId);
   return quizzes
+    .filter((quiz) => quiz && quiz.id)
     .map((quiz) => ({
       ...mapQuizToFE(quiz),
       courseId: quiz.courseId,

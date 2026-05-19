@@ -36,6 +36,7 @@ type Props = {
   markers?: VideoMarker[];
   onMarkerClick?: (time: number, id: string) => void;
   onProgressSaved?: () => void; // Passed from parent to trigger UI refresh
+  onDurationDetected?: (durationSecs: number) => void;
 };
 
 function formatTime(time: number): string {
@@ -59,6 +60,7 @@ export default function VideoPlayer({
   markers = [],
   onMarkerClick,
   onProgressSaved,
+  onDurationDetected,
 }: Props) {
   const youtubeId = useMemo(() => (src ? getYouTubeId(src) : null), [src]);
   const isYouTube = Boolean(youtubeId);
@@ -86,6 +88,17 @@ export default function VideoPlayer({
   // --------------------------------------------------------------------------
 
   const [showMarkers, setShowMarkers] = useState(true);
+  const reportedDurationRef = useRef(0);
+
+  const reportDuration = useCallback((value: number) => {
+    if (!Number.isFinite(value) || value <= 0) return;
+    const rounded = Math.round(value);
+    setDuration(value);
+    if (Math.abs(reportedDurationRef.current - rounded) > 1) {
+      reportedDurationRef.current = rounded;
+      onDurationDetected?.(rounded);
+    }
+  }, [onDurationDetected]);
 
   const syncWithBackend = useCallback(
     async (currTime: number, dur: number) => {
@@ -96,6 +109,7 @@ export default function VideoPlayer({
           watchedPercent,
           positionSecs: Math.floor(currTime),
           completed: watchedPercent >= 95,
+          durationSecs: Math.round(dur),
         });
         
         // Tell the parent component to refresh the sidebar
@@ -130,7 +144,7 @@ export default function VideoPlayer({
     if (!video) return;
 
     const onLoaded = () => {
-      setDuration(video.duration);
+      reportDuration(video.duration);
       if (savedPosition > 0) video.currentTime = savedPosition;
     };
 
@@ -150,7 +164,7 @@ export default function VideoPlayer({
       video.removeEventListener("timeupdate", onTime);
       video.removeEventListener("ended", onEnd);
     };
-  }, [isYouTube, onTimeUpdate, savedPosition]);
+  }, [isYouTube, onTimeUpdate, reportDuration, savedPosition]);
 
   useEffect(() => {
     if (!isYouTube || !youtubeId) return;
@@ -167,7 +181,7 @@ export default function VideoPlayer({
         },
         events: {
           onReady: (e: { target: YouTubePlayerType }) => {
-            setDuration(e.target.getDuration());
+            reportDuration(e.target.getDuration());
           },
         },
       });
@@ -184,7 +198,7 @@ export default function VideoPlayer({
 
         if (duration === 0) {
           const d = player.getDuration();
-          if (d > 0) setDuration(d);
+          if (d > 0) reportDuration(d);
         }
       }, 500);
     });
@@ -194,7 +208,7 @@ export default function VideoPlayer({
       ytPlayerRef.current?.destroy();
       ytPlayerRef.current = null;
     };
-  }, [isYouTube, youtubeId, onTimeUpdate, savedPosition, duration]);
+  }, [isYouTube, youtubeId, onTimeUpdate, savedPosition, duration, reportDuration]);
 
   useEffect(() => {
     if (!targetTime) return;
