@@ -51,6 +51,7 @@ export default function CourseBuilderPage() {
   const [loadError, setLoadError] = useState<LoadError | null>(null);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [deleteModuleId, setDeleteModuleId] = useState<string | null>(null);
+  const [expandedModuleIds, setExpandedModuleIds] = useState<Set<string>>(new Set());
   const cancelledRef = useRef(false);
 
   // ── Load Course & Modules on Mount ────────────────────
@@ -133,7 +134,7 @@ export default function CourseBuilderPage() {
 
       const [commentsData, quizzesData] = await Promise.all([
         api.getComments(currentCourseApi.id).catch(() => [] as api.CommentAPI[]),
-        api.getCourseBuilderQuizzes(currentCourseApi.id).catch(() => [] as api.ModuleQuizAPI[]),
+        api.getCourseBuilderQuizzes(currentCourseApi.id),
       ]);
 
       if (cancelledRef.current) return;
@@ -167,6 +168,18 @@ export default function CourseBuilderPage() {
       cancelledRef.current = true;
     };
   }, [reloadCourse]);
+
+  useEffect(() => {
+    if (!course) return;
+    setExpandedModuleIds((current) => {
+      const knownModuleIds = new Set(course.modules.map((module) => module.id));
+      const next = new Set([...current].filter((id) => knownModuleIds.has(id)));
+      if (next.size === 0 && course.modules[0]) {
+        next.add(course.modules[0].id);
+      }
+      return next;
+    });
+  }, [course?.id, course?.modules.map((module) => module.id).join("|")]);
 
   if (isLoading) {
     return (
@@ -230,6 +243,7 @@ export default function CourseBuilderPage() {
         quiz: undefined,
       };
       setCourse(prev => prev ? { ...prev, modules: [...prev.modules, newModule] } : prev);
+      setExpandedModuleIds((current) => new Set(current).add(newModule.id));
       toast.success("Modul adăugat!");
     } catch (err) {
       console.error(err);
@@ -251,6 +265,11 @@ export default function CourseBuilderPage() {
         ...prev,
         modules: prev.modules.filter(m => m.id !== moduleId)
       } : prev);
+      setExpandedModuleIds((current) => {
+        const next = new Set(current);
+        next.delete(moduleId);
+        return next;
+      });
       toast.success("Modul șters!");
     } catch (err) {
       toast.error("Eroare la ștergerea modulului");
@@ -306,6 +325,15 @@ export default function CourseBuilderPage() {
 
   const totalLessons = course.modules.reduce((acc, m) => acc + m.lessons.length, 0);
   const canPublish = course.title && totalLessons > 0;
+
+  const handleModuleExpandedChange = (moduleId: string, open: boolean) => {
+    setExpandedModuleIds((current) => {
+      const next = new Set(current);
+      if (open) next.add(moduleId);
+      else next.delete(moduleId);
+      return next;
+    });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -376,6 +404,8 @@ export default function CourseBuilderPage() {
                 courseId={course.id}
                 module={module}
                 moduleIndex={index}
+                isExpanded={expandedModuleIds.has(module.id)}
+                onExpandedChange={(open) => handleModuleExpandedChange(module.id, open)}
                 onUpdate={handleUpdateModuleInState}
                 onDelete={() => setDeleteModuleId(module.id)}
                 onCourseRefresh={() => reloadCourse({ silent: true })}

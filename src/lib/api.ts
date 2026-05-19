@@ -73,7 +73,10 @@ export interface CourseAPI {
 export interface LectureAPI {
   id: string;
   title: string;
+  type?: string | null;
+  content?: string | null;
   videoUrl: string | null;
+  pdfUrl?: string | null;
   order: number;
   durationSecs: number;
 }
@@ -157,7 +160,7 @@ export function deleteModule(courseId: string, moduleId: string) {
 export function addLectureToModule(
   courseId: string, 
   moduleId: string, 
-  data: { title: string; videoUrl?: string; order: number; durationSecs: number }
+  data: { title: string; type?: string; content?: string; videoUrl?: string; pdfUrl?: string; order: number; durationSecs: number }
 ) {
   return request<LectureAPI>(`/courses/${courseId}/builder/modules/${moduleId}/lectures`, {
     method: "POST",

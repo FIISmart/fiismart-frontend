@@ -1,9 +1,8 @@
-import { useNavigate } from "react-router-dom";
-
 interface Props {
   correct: number;
   total: number;
   onRetry: () => void;
+  onBack?: () => void;
 }
 
 interface CircularProps {
@@ -61,12 +60,11 @@ function CircularProgress({ score, correct, total }: CircularProps) {
   );
 }
 
-export default function QuizResultPage({ correct, total, onRetry }: Props) {
-  const navigate = useNavigate();
+export default function QuizResultPage({ correct, total, onRetry, onBack }: Props) {
   const incorrect = total - correct;
   const score = total > 0 ? Math.round((correct / total) * 100) : 0;
 
-  const today = new Date().toLocaleDateString("en-US", {
+  const today = new Date().toLocaleDateString("ro-RO", {
     month: "long",
     day: "numeric",
     year: "numeric",
@@ -75,30 +73,26 @@ export default function QuizResultPage({ correct, total, onRetry }: Props) {
   const getHeaderMessage = () => {
     if (score === 100)
       return {
-        title: "Perfect Score!",
-        sub: "Incredible! You got every single question right!",
+        title: "Scor Perfect!",
+        sub: "Incredibil! Ai răspuns corect la toate întrebările!",
       };
     if (score >= 80)
       return {
-        title: "Excellent Work!",
-        sub: "You have a strong grasp of the material. Just a couple more to go for perfection!",
+        title: "Excelent!",
+        sub: "Ai o înțelegere foarte bună a materialului.",
       };
     if (score >= 60)
       return {
-        title: "Good Job!",
-        sub: "You have a solid understanding. Keep practicing to reach the top!",
+        title: "Bravo!",
+        sub: "Ai trecut testul. Continuă să exersezi pentru un scor și mai bun!",
       };
     return {
-      title: "Keep Practicing!",
-      sub: "A bit more practice and you will master this topic!",
+      title: "Mai încearcă!",
+      sub: "Puțină practică în plus și vei stăpâni acest subiect!",
     };
   };
 
   const { title, sub } = getHeaderMessage();
-
-  const handleShowBreakdown = () => {
-    // Feature in development.
-  };
 
   return (
     <div className="flex-grow flex items-center justify-center p-4 py-8">
@@ -124,7 +118,7 @@ export default function QuizResultPage({ correct, total, onRetry }: Props) {
                 {correct}
               </span>
               <span className="text-[11px] font-medium text-[#2E6B62]">
-                Correct
+                Corect
               </span>
             </div>
 
@@ -133,36 +127,31 @@ export default function QuizResultPage({ correct, total, onRetry }: Props) {
                 {incorrect}
               </span>
               <span className="text-[11px] font-medium text-[#6B3E8A]">
-                Incorrect
+                Gresit
               </span>
             </div>
           </div>
 
           <div className="w-full flex flex-col gap-2">
-            <button
-              onClick={handleShowBreakdown}
-              className="w-full h-[44px] rounded-[14px] bg-white border-[1.5px] border-[#1E5F56] text-[#1E5F56] text-[14px] font-semibold hover:bg-[#F2F8F7] transition-colors"
-            >
-              Show Answer Breakdown
-            </button>
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="w-full h-[44px] rounded-[14px] bg-[#84C5C4] border-none text-white text-[14px] font-semibold hover:opacity-90 transition-opacity"
+              >
+                Inapoi la curs
+              </button>
+            )}
 
             <button
               onClick={onRetry}
               className="w-full h-[44px] rounded-[14px] bg-[#9B8EC7] border-none text-white text-[14px] font-semibold hover:opacity-90 transition-opacity"
             >
-              Retry Quiz
-            </button>
-
-            <button
-              onClick={() => navigate("/student/dashboard")}
-              className="w-full h-[44px] rounded-[14px] bg-white border-[1.5px] border-[#9B8EC7] text-[#9B8EC7] text-[14px] font-semibold hover:bg-[#F9F7FA] transition-colors"
-            >
-              Înapoi la Dashboard
+              Reîncepe Quiz
             </button>
           </div>
 
           <p className="mt-[14px] text-[11px] text-[#B0A8C2] text-center">
-            Quiz completed on {today}
+            Finalizat la data de {today}
           </p>
         </div>
       </div>

@@ -1,14 +1,17 @@
 import {
-  PlayCircle,
   CheckCircle2,
-  Circle,
   ChevronDown,
   ChevronUp,
+  Circle,
+  Code,
+  FileText,
   HelpCircle,
+  PlayCircle,
+  Trophy,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { ModuleSummary } from "../types";
+import type { ModuleSummary, QuizStatus } from "../types";
 import { lessonVideoService } from "../services/lesson-video.service";
 
 interface SidebarProps {
@@ -17,13 +20,33 @@ interface SidebarProps {
   activeLectureId: string | null;
   onSelectLecture: (lectureId: string) => void;
   overallProgress?: number;
-  refreshTrigger?: number; // 👈 NEW PROP
+  finalQuiz?: QuizStatus | null;
+  refreshTrigger?: number;
 }
 
 const formatDuration = (seconds: number) => {
+  if (!seconds || seconds <= 0) return "";
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
+};
+
+const statusLabel = (quiz?: QuizStatus | null) => {
+  if (!quiz) return "Disponibil";
+  if (quiz.statusLabel) return quiz.statusLabel;
+  const score = quiz.latestScore ?? quiz.lastScore;
+  if (score !== undefined && score !== null) return `Finalizat - ${score}%`;
+  if (quiz.status === "promovat") return "Finalizat";
+  if (quiz.status === "picat") return "Incercat";
+  return "Disponibil";
+};
+
+const lessonMetaLabel = (type?: string, durationSecs?: number) => {
+  const duration = formatDuration(durationSecs ?? 0);
+  if (duration) return duration;
+  if (type === "pdf") return "Document";
+  if (type === "markdown") return "Text";
+  return "Durata indisponibila";
 };
 
 interface LectureProgressBarProps {
@@ -52,7 +75,8 @@ export default function Sidebar({
   activeLectureId,
   onSelectLecture,
   overallProgress = 0,
-  refreshTrigger = 0, // 👈 DEFAULT TO 0
+  finalQuiz,
+  refreshTrigger = 0,
 }: SidebarProps) {
   const navigate = useNavigate();
   const [modules, setModules] = useState<ModuleSummary[]>([]);
@@ -64,41 +88,45 @@ export default function Sidebar({
       try {
         const data = await lessonVideoService.getModules(studentId, courseId);
         setModules(data);
-        
-        // Only auto-expand the first module if none are currently expanded
         if (data && data.length > 0 && expandedModules.length === 0) {
           setExpandedModules([data[0].moduleId]);
         }
       } catch (error) {
-        console.error("Eroare la încărcarea modulelor", error);
+        console.error("Eroare la incarcarea modulelor", error);
       } finally {
         setLoading(false);
       }
     };
 
     void fetchModules();
-  }, [studentId, courseId, refreshTrigger]); // 👈 ADDED TO DEPENDENCY ARRAY
+    // Keep the user's current accordion state during background refreshes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studentId, courseId, refreshTrigger]);
 
   const toggleModule = (moduleId: string) => {
     setExpandedModules((prev) =>
       prev.includes(moduleId)
         ? prev.filter((id) => id !== moduleId)
-        : [...prev, moduleId]
+        : [...prev, moduleId],
     );
   };
 
-  // 👈 Only show the loading state on the INITIAL load, not during background refreshes
+  const openQuiz = (quiz?: QuizStatus | null) => {
+    if (!quiz?.quizId) return;
+    navigate(`/student/quizzes/${quiz.quizId}?courseId=${courseId}`);
+  };
+
   if (loading && modules.length === 0) {
     return (
       <div className="bg-card border border-border rounded-2xl p-6 shadow-sm sticky top-24 text-muted-foreground text-center">
-        Se încarcă lecțiile...
+        Se incarca lectiile...
       </div>
     );
   }
 
   return (
     <div className="bg-card border border-border rounded-2xl p-6 shadow-sm sticky top-24">
-      <h3 className="font-bold text-xl text-foreground mb-6">Conținut curs</h3>
+      <h3 className="font-bold text-xl text-foreground mb-6">Continut curs</h3>
 
       <div className="mb-6">
         <div className="flex justify-between text-sm font-medium mb-2">
@@ -138,7 +166,7 @@ export default function Sidebar({
                       {moduleItem.title}
                     </h4>
                     <p className="text-xs text-muted-foreground">
-                      {completedLectures}/{lectures.length} lecții
+                      {completedLectures}/{lectures.length} lectii
                     </p>
                   </div>
                 </div>
@@ -152,9 +180,13 @@ export default function Sidebar({
               {isExpanded && (
                 <div className="p-2 space-y-1 bg-card">
                   {lectures.map((lecture) => {
-                    const isActive =
-                      lecture.watchedPercent > 0 && !lecture.completed;
+                    const isActive = lecture.watchedPercent > 0 && !lecture.completed;
                     const isSelected = lecture.lectureId === activeLectureId;
+                    const LectureIcon = lecture.type === "pdf"
+                      ? FileText
+                      : lecture.type === "markdown"
+                        ? Code
+                        : PlayCircle;
 
                     return (
                       <div
@@ -168,20 +200,14 @@ export default function Sidebar({
                       >
                         <div className="mt-0.5">
                           {lecture.completed ? (
-                            <CheckCircle2
-                              size={18}
-                              className="text-emerald-500"
-                            />
+                            <CheckCircle2 size={18} className="text-emerald-500" />
                           ) : isActive ? (
-                            <PlayCircle size={18} className="text-primary" />
+                            <LectureIcon size={18} className="text-primary" />
                           ) : (
-                            <Circle
-                              size={18}
-                              className="text-muted-foreground/50"
-                            />
+                            <Circle size={18} className="text-muted-foreground/50" />
                           )}
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <h5
                             className={`text-sm ${
                               lecture.completed
@@ -193,44 +219,74 @@ export default function Sidebar({
                           </h5>
                           {isActive ? (
                             <div className="mt-2 flex items-center gap-2">
-                              <LectureProgressBar
-                                percent={lecture.watchedPercent}
-                              />
+                              <LectureProgressBar percent={lecture.watchedPercent} />
                               <span className="text-xs text-primary font-medium">
                                 {lecture.watchedPercent}%
                               </span>
                             </div>
                           ) : (
                             <p className="text-xs text-muted-foreground mt-1">
-                              {formatDuration(lecture.durationSecs)}
+                              {lessonMetaLabel(lecture.type, lecture.durationSecs)}
                             </p>
+                          )}
+
+                          {lecture.quiz?.quizId && (
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                openQuiz(lecture.quiz);
+                              }}
+                              className="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-md border border-primary/20 bg-primary/5 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10"
+                            >
+                              <HelpCircle size={13} className="shrink-0" />
+                              <span className="shrink-0">Quiz lectie</span>
+                              <span className="truncate text-muted-foreground">
+                                {statusLabel(lecture.quiz)}
+                              </span>
+                            </button>
                           )}
                         </div>
                       </div>
                     );
                   })}
 
-                  {moduleItem.quiz && (
-                    <div
-                      onClick={() => navigate(`/student/quizzes/${moduleItem.quiz!.quizId}`)}
-                      className="flex items-center gap-3 p-3 mt-2 rounded-lg bg-accent/20 border border-accent/40 cursor-pointer hover:bg-accent/30 transition-colors"
+                  {moduleItem.quiz?.quizId && (
+                    <button
+                      type="button"
+                      onClick={() => openQuiz(moduleItem.quiz)}
+                      className="flex w-full items-center gap-3 p-3 mt-2 rounded-lg bg-accent/20 border border-accent/40 cursor-pointer hover:bg-accent/30 transition-colors text-left"
                     >
-                      <HelpCircle size={18} className="text-foreground" />
-                      <div>
+                      <HelpCircle size={18} className="text-foreground shrink-0" />
+                      <div className="min-w-0">
                         <h5 className="text-sm font-medium text-foreground">
                           Quiz Modul {moduleItem.order}
                         </h5>
                         <p className="text-xs text-emerald-600 font-medium mt-0.5">
-                          {moduleItem.quiz.statusLabel}
+                          {statusLabel(moduleItem.quiz)}
                         </p>
                       </div>
-                    </div>
+                    </button>
                   )}
                 </div>
               )}
             </div>
           );
         })}
+
+        {finalQuiz?.quizId && (
+          <button
+            type="button"
+            onClick={() => openQuiz(finalQuiz)}
+            className="flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4 text-left hover:bg-primary/10"
+          >
+            <Trophy size={18} className="text-primary shrink-0" />
+            <div className="min-w-0">
+              <h4 className="text-sm font-bold text-foreground">Quiz final curs</h4>
+              <p className="text-xs text-muted-foreground">{statusLabel(finalQuiz)}</p>
+            </div>
+          </button>
+        )}
       </div>
     </div>
   );
