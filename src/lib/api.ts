@@ -499,16 +499,63 @@ export function markAllNotificationsRead() {
   return request<void>("/notifications/read-all", { method: "PATCH" });
 }
 
-export interface QuizAttemptRequest {
-  quizId: string;
-  courseId: string;
+// ── Quiz attempt lifecycle (timer + anti-cheat flow) ───────────────────────
+//
+// IMPORTANT: the FE never sends score/passed/correct. Grading is server-side.
+// The previous shape (score + passed in the request) was a security hole and
+// the review explicitly called it out — we removed it here.
+//
+// Also: BE returns `timeLimitSeconds` (seconds, NOT minutes). Schiporash's
+// branch quietly conflated minutes/seconds in spots; we lock it down to
+// seconds at the boundary so callers can't get it wrong.
+
+export interface StartQuizAttemptResponse {
+  attemptId: string;
+  startedAt: string;
+  /** Total time allowed for the attempt, in seconds (NOT minutes). */
+  timeLimitSeconds: number;
+  status: string;
+}
+
+export function startQuizAttempt(quizId: string): Promise<StartQuizAttemptResponse> {
+  return request<StartQuizAttemptResponse>("/quiz-attempts/start", {
+    method: "POST",
+    body: JSON.stringify({ quizId }),
+  });
+}
+
+export interface SubmitQuizAttemptAnswer {
+  questionId: string;
+  selectedIdx: number;
+  writtenAnswer?: string;
+}
+
+export interface SubmitAttemptPayload {
+  answers: SubmitQuizAttemptAnswer[];
+}
+
+export interface SubmitQuizAttemptResponse {
+  id: string;
   score: number;
   passed: boolean;
   timeTakenSecs?: number;
 }
 
-export function submitQuizAttempt(req: QuizAttemptRequest) {
-  return request<{ id: string }>("/quiz-attempts", { method: "POST", body: JSON.stringify(req) });
+export function submitQuizAttempt(
+  attemptId: string,
+  payload: SubmitAttemptPayload,
+): Promise<SubmitQuizAttemptResponse> {
+  return request<SubmitQuizAttemptResponse>(
+    `/quiz-attempts/${attemptId}/submit`,
+    { method: "POST", body: JSON.stringify(payload) },
+  );
+}
+
+export function abandonQuizAttempt(attemptId: string): Promise<void> {
+  return request<void>(`/quiz-attempts/${attemptId}/abandon`, {
+    method: "POST",
+    body: "{}",
+  });
 }
 
 // ── Enrollment ──────────────────────────────────────────
