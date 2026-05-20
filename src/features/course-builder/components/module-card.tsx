@@ -21,12 +21,14 @@ import {
   MoreHorizontal,
   Pencil,
   Plus,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 import type { Lesson, Module, Quiz } from "@/lib/course-types";
 import { LessonEditor, LessonItem } from "./lesson-editor";
 import { QuizEditor } from "./quiz-editor";
 import { QuizLibraryPicker } from "./quiz-library-picker";
+import { AiGeneratePdfDialog } from "./ai-generate-pdf-dialog";
 import * as api from "@/lib/api";
 import {
   deleteLectureQuiz,
@@ -35,6 +37,8 @@ import {
   upsertModuleQuiz,
   type MyQuiz,
 } from "@/features/course-builder/services/my-quizzes.service";
+import { aiDraftToFeQuiz } from "@/features/course-builder/services/ai.mappers";
+import type { AiQuizDraft } from "@/features/course-builder/services/ai.service";
 import { toast } from "sonner";
 
 interface ModuleCardProps {
@@ -142,6 +146,7 @@ export function ModuleCard({
   const [activeLessonQuizKey, setActiveLessonQuizKey] = useState<string | null>(null);
   const [pickerModuleId, setPickerModuleId] = useState<string | null>(null);
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
 
   const moduleItems = getModuleContentItems(module);
   const editingLesson = lessonEditorState?.mode === "edit"
@@ -385,6 +390,63 @@ export function ModuleCard({
     }
   };
 
+  const handleAiAccept = async (summary: string, draft: AiQuizDraft) => {
+    const lessonTitle = draft.title?.trim() || "Rezumat AI";
+    const order = module.lessons.length;
+    const feQuiz = aiDraftToFeQuiz(draft, "Quiz AI");
+
+    try {
+      const createdLecture = await api.addLectureToModule(courseId, module.id, {
+        title: lessonTitle,
+        type: "markdown",
+        content: summary,
+        videoUrl: summary,
+        order,
+        durationSecs: 0,
+      });
+
+      const persistedLessonId = createdLecture.id;
+
+      let savedQuiz: Quiz | undefined;
+      try {
+        savedQuiz = await upsertLectureQuiz(courseId, module.id, persistedLessonId, feQuiz);
+      } catch (quizErr) {
+        console.error(quizErr);
+        toast.error(
+          quizErr instanceof Error ? quizErr.message : "Eroare la salvarea quiz-ului AI",
+        );
+      }
+
+      const newLesson: Lesson = {
+        id: persistedLessonId,
+        title: lessonTitle,
+        type: "markdown",
+        content: summary,
+        order,
+        quiz: savedQuiz ?? feQuiz,
+      };
+
+      onUpdate({
+        ...module,
+        lessons: [...module.lessons, newLesson],
+      });
+      onCourseRefresh?.().catch((refreshErr) =>
+        console.error("Course refetch failed:", refreshErr),
+      );
+
+      if (savedQuiz) {
+        toast.success("Lectie si quiz generate cu AI");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Eroare la generarea cu AI");
+      // No rollback per spec; refresh to reconcile any partial state.
+      onCourseRefresh?.().catch((refreshErr) =>
+        console.error("Course refetch failed:", refreshErr),
+      );
+    }
+  };
+
   const handleDropOnItem = (targetId: string) => {
     if (!draggedItemId) return;
     applyOrder(reorderItems(moduleItems, draggedItemId, targetId));
@@ -439,6 +501,7 @@ export function ModuleCard({
                         <DropdownMenuItem onClick={() => setIsEditing(true)}><Pencil className="mr-2 h-4 w-4" /> Redenumire</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setLessonEditorState({ mode: "create" })}><Plus className="mr-2 h-4 w-4" /> Adauga Lectie</DropdownMenuItem>
                         <DropdownMenuItem onClick={openQuizFlow}><CircleHelp className="mr-2 h-4 w-4" /> {module.quiz ? "Editeaza Quiz" : "Adauga Quiz"}</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setAiDialogOpen(true)}><Sparkles className="mr-2 h-4 w-4" /> Genereaza cu AI ✨</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={onDelete} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Sterge</DropdownMenuItem>
                       </DropdownMenuContent>
@@ -480,7 +543,7 @@ export function ModuleCard({
                     </div>
                   ))}
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -497,6 +560,15 @@ export function ModuleCard({
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       {module.quiz ? "Editeaza Quiz" : "Quiz Nou"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full border-dashed border border-border"
+                      onClick={() => setAiDialogOpen(true)}
+                    >
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Genereaza cu AI ✨
                     </Button>
                   </div>
                 </div>
@@ -532,6 +604,11 @@ export function ModuleCard({
         onCancel={() => setPickerModuleId(null)}
         onSelect={handleAttachExistingQuiz}
         onCreateNew={openInPlaceQuizEditor}
+      />
+      <AiGeneratePdfDialog
+        open={aiDialogOpen}
+        onOpenChange={setAiDialogOpen}
+        onAccept={handleAiAccept}
       />
     </>
   );
