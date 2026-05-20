@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
+
 import Header from "../components/Header";
 import VideoPlayer from "../components/VideoPlayer";
 import LessonContent, { inferLessonType } from "../components/LessonContent";
@@ -28,7 +29,6 @@ export default function LessonVideoPage() {
   }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const navigate = useNavigate();
 
   const [courseData, setCourseData] = useState<CourseHeader | null>(null);
   const [loading, setLoading] = useState(true);
@@ -260,57 +260,54 @@ export default function LessonVideoPage() {
           <Header />
         </div>
 
-<main className="max-w-[1200px] mx-auto lg:px-8 lg:py-8">
+        <main className="max-w-[1200px] mx-auto lg:px-8 lg:py-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 lg:gap-8">
-            
             {/* MAIN CONTENT */}
             <div className="lg:col-span-2 flex flex-col gap-8">
-              
-              {/* Streak Badge din branch-ul tău */}
+
+              {/* Streak Badge adăugat din branch-ul de feature */}
               <div className="flex justify-end">
                 <StreakBadge studentId={studentId ?? ""} />
               </div>
 
-              {/* Logica condițională (Video / Text) din main */}
+              {/* Logica de redare din branch-ul main (Video / Text) */}
               {lessonType === "video" ? (
-                videoSrc ? (
-                  <VideoPlayer
-                    src={videoSrc}
-                    savedPosition={lectureDetails?.positionSecs || 0}
-                    studentId={studentId ?? ""}
-                    courseId={courseId ?? ""}
-                    lectureId={activeLectureId || ""}
-                    onTimeUpdate={setCurrentTime}
-                    targetTime={seekRequest}
-                    onMarkerClick={handleSeekAndHighlight}
-                    markers={groupedMarkersList}
-                    onProgressSaved={handleProgressSaved}
-                    onDurationDetected={handleDurationDetected}
-                  />
-                ) : (
-                  <div className="bg-card border border-border rounded-2xl p-8 text-center text-muted-foreground">
-                    Video-ul nu este disponibil.
-                    <div className="mt-4">
-                      <Button onClick={() => void handleMarkComplete()} disabled={lectureDetails?.completed}>
-                        {lectureDetails?.completed ? "Parcurs" : "Marcheaza ca parcursa"}
-                      </Button>
-                    </div>
-                  </div>
-                )
+                  videoSrc ? (
+                      <VideoPlayer
+                          src={videoSrc}
+                          savedPosition={lectureDetails?.positionSecs || 0}
+                          studentId={studentId ?? ""}
+                          courseId={courseId ?? ""}
+                          lectureId={activeLectureId || ""}
+                          onTimeUpdate={setCurrentTime}
+                          targetTime={seekRequest}
+                          onMarkerClick={handleSeekAndHighlight}
+                          markers={groupedMarkersList}
+                          onProgressSaved={handleProgressSaved}
+                          onDurationDetected={handleDurationDetected}
+                      />
+                  ) : (
+                      <div className="bg-card border border-border rounded-2xl p-8 text-center text-muted-foreground">
+                        Video-ul nu este disponibil.
+                        <div className="mt-4">
+                          <Button onClick={() => void handleMarkComplete()} disabled={lectureDetails?.completed}>
+                            {lectureDetails?.completed ? "Parcurs" : "Marcheaza ca parcursa"}
+                          </Button>
+                        </div>
+                      </div>
+                  )
               ) : lectureDetails ? (
-                <LessonContent lecture={lectureDetails} onMarkComplete={handleMarkComplete} />
+                  <LessonContent lecture={lectureDetails} onMarkComplete={handleMarkComplete} />
               ) : (
-                <div className="bg-card border border-border rounded-2xl p-8 text-center text-muted-foreground">
-                  Lectia nu este disponibila.
-                </div>
+                  <div className="bg-card border border-border rounded-2xl p-8 text-center text-muted-foreground">
+                    Lectia nu este disponibila.
+                  </div>
               )}
 
-              {/* Buton Quiz din branch-ul tău */}
+              {/* Buton de Quiz din branch-ul de feature */}
               {currentModuleQuizId && (
                   <button
-                      onClick={() =>
-                          navigate(`/student/quizzes/${currentModuleQuizId}`)
-                      }
+                      onClick={() => navigate(`/student/quizzes/${currentModuleQuizId}`)}
                       className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-4 rounded-xl transition-colors duration-200 shadow-md"
                   >
                     Mergi la Quiz
@@ -322,7 +319,7 @@ export default function LessonVideoPage() {
                 <CourseInfo courseData={courseData} />
               </div>
 
-              {/* COMMENTS din branch-ul tău */}
+              {/* COMMENTS */}
               <div className="bg-card border border-border rounded-2xl p-8 shadow-sm">
                 <CommentsSection
                     studentId={studentId ?? ""}
@@ -336,7 +333,7 @@ export default function LessonVideoPage() {
                 />
               </div>
 
-              {/* REVIEW din branch-ul tău */}
+              {/* REVIEW */}
               <div className="bg-card border border-border rounded-2xl p-8 shadow-sm">
                 <ReviewSection
                     studentId={studentId ?? ""}
@@ -346,16 +343,18 @@ export default function LessonVideoPage() {
               </div>
             </div>
 
-          <div className="hidden lg:block lg:col-span-1">
-            <Sidebar
-              studentId={studentId ?? ""}
-              courseId={courseId ?? ""}
-              activeLectureId={activeLectureId}
-              onSelectLecture={handleSelectLecture}
-              overallProgress={courseData?.overallProgress ?? 0}
-              finalQuiz={courseData?.finalQuiz}
-              refreshTrigger={refreshTrigger} 
-            />
+            {/* SIDEBAR */}
+            <div className="hidden lg:block lg:col-span-1">
+              <Sidebar
+                  studentId={studentId ?? ""}
+                  courseId={courseId ?? ""}
+                  activeLectureId={activeLectureId}
+                  onSelectLecture={handleSelectLecture}
+                  overallProgress={courseData?.overallProgress ?? 0}
+                  finalQuiz={courseData?.finalQuiz}
+                  refreshTrigger={refreshTrigger}
+              />
+            </div>
           </div>
         </main>
       </div>
