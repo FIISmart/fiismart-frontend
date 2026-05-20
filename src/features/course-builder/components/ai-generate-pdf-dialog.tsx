@@ -218,7 +218,7 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept, existingPdfs
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[720px] max-h-[90vh] overflow-y-auto bg-card">
+      <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto bg-card p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle className="font-serif text-lg sm:text-xl flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
@@ -270,7 +270,7 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept, existingPdfs
 
             <div className="space-y-2">
               <Label>Document PDF</Label>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -282,13 +282,13 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept, existingPdfs
                   type="button"
                   variant="secondary"
                   onClick={() => fileInputRef.current?.click()}
-                  className="gap-2"
+                  className="gap-2 self-start sm:self-auto"
                 >
                   <Upload className="h-4 w-4" />
                   {file ? "Schimba PDF" : "Alege PDF"}
                 </Button>
                 {file && (
-                  <span className="text-sm text-muted-foreground flex items-center gap-2 truncate">
+                  <span className="text-sm text-muted-foreground flex items-center gap-2 min-w-0">
                     <FileText className="h-4 w-4 shrink-0" />
                     <span className="truncate">{file.name}</span>
                   </span>
@@ -308,7 +308,7 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept, existingPdfs
                     const parsed = parseInt(event.target.value, 10);
                     if (Number.isFinite(parsed)) setQuestionCount(parsed);
                   }}
-                  className="bg-muted w-32"
+                  className="bg-muted w-full sm:w-32"
                 />
               </div>
 
@@ -317,7 +317,7 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept, existingPdfs
                 <RadioGroup
                   value={language}
                   onValueChange={(value) => setLanguage(value as Language)}
-                  className="flex items-center gap-4"
+                  className="flex flex-wrap items-center gap-4"
                 >
                   <label className="flex items-center gap-2 cursor-pointer">
                     <RadioGroupItem value="ro" />
@@ -367,7 +367,7 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept, existingPdfs
                 value={editedSummary}
                 onChange={(event) => setEditedSummary(event.target.value)}
                 rows={8}
-                className="min-h-[180px] bg-muted font-mono text-sm"
+                className="min-h-[180px] bg-muted text-sm leading-relaxed"
               />
             </div>
 
@@ -382,14 +382,14 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept, existingPdfs
                   <AccordionItem
                     key={qIndex}
                     value={`q-${qIndex}`}
-                    className="border border-border rounded-xl px-4 bg-muted/30"
+                    className="border border-border rounded-xl px-3 sm:px-4 bg-muted/30"
                   >
                     <AccordionTrigger className="hover:no-underline py-3">
-                      <div className="flex items-center gap-3 text-left">
-                        <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/20 text-primary text-sm font-medium">
+                      <div className="flex items-center gap-3 text-left min-w-0 flex-1">
+                        <span className="flex items-center justify-center w-7 h-7 shrink-0 rounded-full bg-primary/20 text-primary text-sm font-medium">
                           {qIndex + 1}
                         </span>
-                        <span className="font-medium text-sm truncate max-w-[400px]">
+                        <span className="font-medium text-sm truncate min-w-0 flex-1">
                           {q.text || "Intrebare noua..."}
                         </span>
                       </div>
@@ -413,14 +413,17 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept, existingPdfs
                           }
                         >
                           {q.options.map((option, oIndex) => (
-                            <div key={oIndex} className="flex items-center gap-3">
-                              <RadioGroupItem value={oIndex.toString()} />
+                            <div key={oIndex} className="flex items-center gap-3 min-w-0">
+                              <RadioGroupItem
+                                value={oIndex.toString()}
+                                className="shrink-0"
+                              />
                               <Input
                                 value={option}
                                 onChange={(event) =>
                                   updateOption(qIndex, oIndex, event.target.value)
                                 }
-                                className="flex-1 bg-card"
+                                className="flex-1 min-w-0 bg-card"
                               />
                             </div>
                           ))}
