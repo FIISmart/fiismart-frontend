@@ -8,6 +8,7 @@ import { Spinner } from "@/components/ui/spinner";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -184,6 +185,9 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept }: Props) {
             <Sparkles className="h-5 w-5 text-primary" />
             Genereaza lectie + quiz cu AI
           </DialogTitle>
+          <DialogDescription>
+            Incarca un PDF; Gemini va produce un rezumat in Markdown si un set de intrebari multiple-choice pe care le poti edita inainte de adaugarea in curs.
+          </DialogDescription>
         </DialogHeader>
 
         {stage === "pick" && (
