@@ -18,6 +18,10 @@ import MyQuizzesPage from "@/features/course-builder/pages/MyQuizzesPage";
 import CoursesListPage from "@/features/courses/pages/CoursesListPage";
 import StudentCoursesPage from "@/features/dashboard-student/pages/StudentCoursesPage";
 import StudentCourseDetailPage from "@/features/dashboard-student/pages/StudentCourseDetailPage";
+import AdminDashboardPage from "@/features/admin/pages/AdminDashboardPage";
+import AdminUsersPage from "@/features/admin/pages/AdminUsersPage";
+import AdminCoursesPage from "@/features/admin/pages/AdminCoursesPage";
+import AdminEnrollmentsPage from "@/features/admin/pages/AdminEnrollmentsPage";
 import { Toaster } from "sonner";
 
 export default function App() {
@@ -50,8 +54,16 @@ export default function App() {
         <Route path="/professor/courses/:courseId" element={<CourseBuilderPage />} />
       </Route>
 
+      {/* Admin-only */}
+      <Route element={<ProtectedRoute allowedRoles={[UserRole.ADMIN]} />}>
+        <Route path="/admin/dashboard"   element={<AdminDashboardPage />} />
+        <Route path="/admin/users"       element={<AdminUsersPage />} />
+        <Route path="/admin/courses"     element={<AdminCoursesPage />} />
+        <Route path="/admin/enrollments" element={<AdminEnrollmentsPage />} />
+      </Route>
+
       {/* Role-aware dashboard alias */}
-      <Route element={<ProtectedRoute allowedRoles={[UserRole.STUDENT, UserRole.PROFESSOR]} />}>
+      <Route element={<ProtectedRoute allowedRoles={[UserRole.STUDENT, UserRole.PROFESSOR, UserRole.ADMIN]} />}>
         <Route path="/dashboard" element={<RoleDashboardRedirect />} />
       </Route>
 

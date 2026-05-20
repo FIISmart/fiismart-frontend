@@ -102,6 +102,7 @@ export default function VideoPlayer({
 
   const syncWithBackend = useCallback(
     async (currTime: number, dur: number) => {
+      if (!lectureId || lectureId === "undefined") return;
       if (currTime <= 0 || dur <= 0) return;
       const watchedPercent = Math.floor((currTime / dur) * 100);
       try {
