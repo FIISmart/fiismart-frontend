@@ -19,14 +19,24 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Sparkles, Upload, FileText } from "lucide-react";
+import { Sparkles, Upload, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { fetchAsFile } from "@/lib/api";
 import {
   generateFromPdf,
   type AiPdfGenerateResponse,
   type AiQuizDraft,
   type AiQuizQuestionDraft,
 } from "../services/ai.service";
+
+export type ExistingPdfOption = {
+  /** Lesson id (used as React key + identity for the picker). */
+  id: string;
+  /** Lesson title — shown in the picker. */
+  title: string;
+  /** Stored file URL (typically /api/v1/files/{id}). */
+  url: string;
+};
 
 type Stage = "pick" | "loading" | "preview";
 
@@ -36,13 +46,19 @@ interface Props {
   open: boolean;
   onOpenChange: (next: boolean) => void;
   onAccept: (summary: string, quiz: AiQuizDraft) => void;
+  /**
+   * PDFs already attached to the current module — shown as a picker so
+   * the professor can re-use one instead of re-uploading from disk.
+   */
+  existingPdfs?: ExistingPdfOption[];
 }
 
-export function AiGeneratePdfDialog({ open, onOpenChange, onAccept }: Props) {
+export function AiGeneratePdfDialog({ open, onOpenChange, onAccept, existingPdfs = [] }: Props) {
   const [stage, setStage] = useState<Stage>("pick");
   const [file, setFile] = useState<File | null>(null);
   const [questionCount, setQuestionCount] = useState<number>(5);
   const [language, setLanguage] = useState<Language>("ro");
+  const [loadingExistingId, setLoadingExistingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -65,6 +81,7 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept }: Props) {
     setFile(null);
     setQuestionCount(5);
     setLanguage("ro");
+    setLoadingExistingId(null);
     setEditedSummary("");
     setEditedQuestions([]);
     setQuizMeta({ title: "Quiz AI" });
@@ -93,6 +110,28 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept }: Props) {
       return;
     }
     setFile(picked);
+  };
+
+  const handlePickExisting = async (option: ExistingPdfOption) => {
+    if (loadingExistingId) return;
+    setLoadingExistingId(option.id);
+    try {
+      // Derive a sane filename: prefer the lesson title, fall back to "lectie.pdf".
+      const safeTitle = option.title.trim().replace(/[^\w.\-() ]+/g, "_") || "lectie";
+      const filename = safeTitle.toLowerCase().endsWith(".pdf") ? safeTitle : `${safeTitle}.pdf`;
+      const fetched = await fetchAsFile(option.url, filename);
+      if (fetched.type !== "application/pdf") {
+        toast.error("Fisierul atasat lectiei nu este un PDF.");
+        return;
+      }
+      setFile(fetched);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Nu am putut incarca PDF-ul existent.",
+      );
+    } finally {
+      setLoadingExistingId(null);
+    }
   };
 
   const handleGenerate = async () => {
@@ -192,6 +231,43 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept }: Props) {
 
         {stage === "pick" && (
           <div className="space-y-5 py-4">
+            {existingPdfs.length > 0 && (
+              <div className="space-y-2">
+                <Label>PDF-uri din acest modul</Label>
+                <div className="flex flex-col gap-2 rounded-xl border border-border bg-muted/40 p-2 max-h-[180px] overflow-y-auto">
+                  {existingPdfs.map((option) => {
+                    const isLoading = loadingExistingId === option.id;
+                    const isSelected =
+                      file?.name.replace(/\.pdf$/i, "").toLowerCase() ===
+                      option.title.trim().replace(/[^\w.\-() ]+/g, "_").toLowerCase();
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => handlePickExisting(option)}
+                        disabled={isLoading || loadingExistingId !== null}
+                        className={`flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                          isSelected
+                            ? "bg-primary/15 text-primary"
+                            : "hover:bg-muted text-foreground"
+                        } disabled:opacity-60`}
+                      >
+                        {isLoading ? (
+                          <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                        ) : (
+                          <FileText className="h-4 w-4 shrink-0" />
+                        )}
+                        <span className="truncate">{option.title}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Sau incarca unul nou mai jos.
+                </p>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Document PDF</Label>
               <div className="flex items-center gap-3">

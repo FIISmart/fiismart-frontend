@@ -435,6 +435,32 @@ export function uploadThumbnail(file: File) {
   return postMultipart("/files/thumbnail", file);
 }
 
+/**
+ * Fetches a previously uploaded file (from /api/v1/files/{id} or similar)
+ * and wraps it as a browser `File` so it can be replayed through any
+ * multipart-upload code path. `urlOrPath` may be a path-only URL (the form
+ * the BE stores: "/api/v1/files/abc..."); we forward it untouched and
+ * attach the bearer token. Throws an ApiError on non-2xx.
+ */
+export async function fetchAsFile(
+  urlOrPath: string,
+  filename: string,
+  signal?: AbortSignal,
+): Promise<File> {
+  const res = await fetch(urlOrPath, {
+    method: "GET",
+    headers: { ...authHeader() },
+    signal,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => res.statusText);
+    throw new ApiError(text || `Fetch failed: ${res.status}`, res.status);
+  }
+  const blob = await res.blob();
+  const type = blob.type || "application/pdf";
+  return new File([blob], filename, { type });
+}
+
 /** Upload a lecture file (PDF/DOC/DOCX/ZIP/TXT/MD, max 50MB). */
 export function uploadLectureFile(file: File) {
   return postMultipart("/files/lecture", file);

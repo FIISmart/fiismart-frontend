@@ -616,6 +616,13 @@ export function ModuleCard({
         open={aiDialogOpen}
         onOpenChange={setAiDialogOpen}
         onAccept={handleAiAccept}
+        existingPdfs={module.lessons
+          .filter((lesson) => lesson.type === "pdf" && !!lesson.content)
+          .map((lesson) => ({
+            id: lesson.id,
+            title: lesson.title || "PDF fara titlu",
+            url: lesson.content,
+          }))}
       />
     </>
   );
