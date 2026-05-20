@@ -71,9 +71,27 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept }: Props) {
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const picked = event.target.files?.[0] ?? null;
-    setFile(picked);
-    // allow re-picking the same file later
+    // allow re-picking the same file later, no matter the validation outcome
     event.target.value = "";
+    if (!picked) {
+      setFile(null);
+      return;
+    }
+    // The accept="application/pdf" attribute is only a filter hint — users
+    // can drag-and-drop or override the picker. Validate explicitly so we
+    // don't pay the upload round-trip just to get a BE rejection.
+    if (picked.type !== "application/pdf") {
+      toast.error("Doar fisiere PDF sunt acceptate.");
+      setFile(null);
+      return;
+    }
+    const MAX_BYTES = 15 * 1024 * 1024;
+    if (picked.size > MAX_BYTES) {
+      toast.error("PDF-ul depaseste limita de 15 MB.");
+      setFile(null);
+      return;
+    }
+    setFile(picked);
   };
 
   const handleGenerate = async () => {
