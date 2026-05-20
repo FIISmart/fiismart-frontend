@@ -8,8 +8,10 @@ interface CourseCardProps {
   studentsCount: number | string;
   rating: number | string;
   status: "Activ" | "Draft";
-  gradientClass: string;
+  idx: number;
 }
+
+const HEADER_COLORS = ["bg-[#b1a7d1]", "bg-[#8ad6cc]", "bg-pink-300", "bg-orange-200"];
 
 export function CourseCard({
   courseId,
@@ -18,56 +20,49 @@ export function CourseCard({
   studentsCount,
   rating,
   status,
-  gradientClass,
+  idx
 }: CourseCardProps) {
   const navigate = useNavigate();
+  const headerColor = HEADER_COLORS[idx % HEADER_COLORS.length];
+
   return (
-    <div className="bg-edu-card border border-edu-border rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col">
-      <div className={`h-32 w-full relative ${gradientClass}`}>
-        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm text-edu-foreground px-3 py-1 rounded-full text-xs font-bold shadow-sm">
+    <div className="bg-white rounded-[22px] overflow-hidden shadow-sm border border-black/5 flex flex-col group h-full">
+      <div className={`h-32 ${headerColor} relative group-hover:h-36 transition-all duration-300`}>
+        <div className={`absolute top-3 right-3 ${status === "Activ" ? "bg-[#22c55e]" : "bg-amber-500"} text-white px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase shadow-sm`}>
           {status}
         </div>
       </div>
-
-      <div className="p-5 flex flex-col flex-1">
-        <div className="mb-4 flex-1">
-          <h3
-            className="font-poppins font-bold text-lg text-edu-foreground line-clamp-1"
-            title={title}
-          >
-            {title}
-          </h3>
-          <p className="text-sm text-edu-muted-fg mt-1">{subtitle}</p>
-        </div>
-
-        <div className="flex items-center justify-between text-sm text-edu-muted-fg mb-4">
-          <div className="flex items-center gap-1.5">
-            <Users size={16} className="text-edu-primary" />
-            <span className="font-medium">{studentsCount} studenți</span>
+      <div className="p-6 flex flex-col flex-1">
+        <h3 className="font-bold text-[15.5px] text-[#1a1a2e] mb-1 truncate leading-tight tracking-tight" title={title}>
+          {title}
+        </h3>
+        <p className="text-[12.5px] text-gray-400 font-bold mb-6 line-clamp-1">
+          {subtitle}
+        </p>
+        <div className="flex justify-between items-center py-3 border-b border-gray-50 mb-7 text-gray-500 font-bold text-[12px] mt-auto">
+          <div className="flex items-center gap-2">
+            <Users size={15} className="text-gray-300" />
+            {studentsCount} studenți
           </div>
-          <div className="flex items-center gap-1.5">
-            <Star size={16} className="text-amber-400 fill-amber-400" />
-            <span className="font-medium">{rating}</span>
+          <div className="flex items-center gap-2 text-[#1a1a2e]">
+            <Star size={15} className="text-yellow-400 fill-yellow-400" />
+            {rating}
           </div>
         </div>
-
-        <div className="grid grid-cols-2 gap-3 pt-4 border-t border-edu-border/50">
+        <div className="grid grid-cols-2 gap-3">
           <button
+            type="button"
             onClick={() => navigate(`/professor/courses/${courseId}`)}
-            className="py-2 px-4 rounded-xl border border-edu-border text-edu-foreground font-medium text-sm hover:bg-edu-bg transition text-center"
+            className="bg-[#9b8ec7]/10 text-[#9b8ec7] py-2.5 rounded-xl text-[10.5px] font-black hover:bg-[#9b8ec7]/20 transition-all uppercase tracking-tight focus:outline-none"
           >
-            Editează
+            EDITEAZĂ
           </button>
-
           <button
+            type="button"
             onClick={() => navigate(`/professor/courses/${courseId}`)}
-            className={`py-2 px-4 rounded-xl font-medium text-sm transition text-center ${
-              status === "Activ"
-                ? "bg-edu-accent/30 text-edu-foreground hover:bg-edu-accent/50"
-                : "bg-edu-muted text-edu-muted-fg hover:bg-edu-border/50"
-            }`}
+            className="bg-gray-100 text-gray-500 py-2.5 rounded-xl text-[10.5px] font-black hover:bg-gray-200 transition-all uppercase tracking-tight focus:outline-none"
           >
-            {status === "Activ" ? "Public" : "Vezi Draft"}
+            {status === "Activ" ? "VEZI" : "DRAFT"}
           </button>
         </div>
       </div>

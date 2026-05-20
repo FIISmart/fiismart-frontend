@@ -4,10 +4,10 @@ import {
   Clock,
   Send,
   ChevronDown,
+  ThumbsUp,
 } from "lucide-react";
 import type { CourseComment } from "../types";
 import { lessonVideoService } from "../services/lesson-video.service";
-import CommentItem from "./CommentItem"; // Make sure this path is correct!
 
 interface Props {
   studentId: string;
@@ -33,89 +33,74 @@ export default function CommentsSection({
   const [comments, setComments] = useState<CourseComment[]>([]);
   const [text, setText] = useState("");
   const [sortBy, setSortBy] = useState<string>("recent");
-  const [selectedTimestamp, setSelectedTimestamp] = useState<number | null>(null);
-
-  function parseTimestamp(val: unknown): number {
-    if (val == null) return 0;
-    if (typeof val === "number") return val;
-    if (typeof val === "string") {
-      if (/^[0-9]+$/.test(val)) return parseInt(val, 10);
-      if (val.includes(":")) {
-        const parts = val.split(":").map((p) => parseInt(p, 10));
-        if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-        if (parts.length === 2) return parts[0] * 60 + parts[1];
-      }
-      const n = Number(val);
-      return Number.isFinite(n) ? n : 0;
-    }
-    return 0;
-  }
+  const [selectedTimestamp, setSelectedTimestamp] = useState<number | null>(
+    null
+  );
 
   const fetchComments = useCallback(async () => {
     if (!lectureId) return;
     try {
-      // 1. We always fetch "recent" from the backend to bypass backend sorting issues
       const data = await lessonVideoService.getComments(
         studentId,
         courseId,
         lectureId,
-        "recent" 
+        sortBy
       );
-      
-      const normalized = (data ?? []).map((c: any) => {
-        const raw = c.timestampSecs ?? c.videoTimestamp ?? c.positionSecs ?? c.timestamp ?? 0;
-        const parsedTime = parseTimestamp(raw);
-        return {
-          ...c,
-          timestampSecs: parsedTime,
-          videoTimestamp: parsedTime, // Ensure CommentItem gets the right prop
-          isLikedByMe: c.isLikedByMe ?? c.likedByMe, // Fix the mismatch between components
-        };
-      });
-      setComments(normalized);
+      setComments(data);
 
       setTimeout(() => {
-        onCommentsLoaded(normalized);
+        onCommentsLoaded(data);
       }, 0);
     } catch (error) {
       console.error("Eroare la fetch comentarii:", error);
     }
-  }, [studentId, courseId, lectureId, onCommentsLoaded]); // Removed sortBy dependency
+  }, [studentId, courseId, lectureId, sortBy, onCommentsLoaded]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchComments();
   }, [fetchComments]);
 
   const handleAddComment = async () => {
     if (!text.trim()) return;
     try {
-      const payload = {
+      await lessonVideoService.addComment(studentId, courseId, lectureId, {
         body: text,
         timestampSecs: selectedTimestamp ?? 0,
         videoTimestamp: selectedTimestamp ?? 0,
-      };
-      const createdComment = await lessonVideoService.addComment(
-        studentId,
-        courseId,
-        lectureId,
-        payload
-      );
-
+      });
       setText("");
       setSelectedTimestamp(null);
-
-      setComments((prev) => [
-        {
-          ...createdComment,
-          timestampSecs: parseTimestamp(createdComment.timestampSecs ?? payload.timestampSecs),
-          videoTimestamp: parseTimestamp(createdComment.videoTimestamp ?? payload.videoTimestamp),
-        },
-        ...prev,
-      ]);
-
+      await fetchComments();
       void onRefreshComments();
     } catch (error) {
       console.error("Eroare la postare:", error);
+    }
+  };
+
+  const handleToggleLike = async (
+    commentId: string,
+    currentIsLiked: boolean
+  ) => {
+    setComments((prev) =>
+      prev.map((c) => {
+        if (c.commentId === commentId) {
+          return {
+            ...c,
+            likedByMe: !currentIsLiked,
+            likeCount: currentIsLiked
+              ? Math.max(0, c.likeCount - 1)
+              : c.likeCount + 1,
+          };
+        }
+        return c;
+      })
+    );
+
+    try {
+      await lessonVideoService.toggleLike(studentId, commentId);
+    } catch (error) {
+      console.error("Eroare la like:", error);
     }
   };
 
@@ -125,29 +110,19 @@ export default function CommentsSection({
     );
   };
 
-  // 2. We sort the comments locally here on the frontend!
   const displayedComments = useMemo(() => {
-    // Start with a fresh copy of the array
-    let sorted = [...comments];
+    if (!activeCommentId) return comments;
+    const activeIndex = comments.findIndex(
+      (c) => c.commentId === activeCommentId
+    );
 
-    // Apply sorting logic
-    if (sortBy === "popular") {
-      sorted.sort((a, b) => (b.likeCount || 0) - (a.likeCount || 0));
-    } else if (sortBy === "oldest") {
-      sorted.reverse(); // Since base array is "recent", reversing makes it "oldest"
+    if (activeIndex > 0) {
+      const newCommentsList = [...comments];
+      const [activeComment] = newCommentsList.splice(activeIndex, 1);
+      return [activeComment, ...newCommentsList];
     }
-
-    // Pull the active (seeked) comment to the very top
-    if (activeCommentId) {
-      const activeIndex = sorted.findIndex((c) => c.commentId === activeCommentId);
-      if (activeIndex > 0) {
-        const [activeComment] = sorted.splice(activeIndex, 1);
-        return [activeComment, ...sorted];
-      }
-    }
-
-    return sorted;
-  }, [comments, activeCommentId, sortBy]);
+    return comments;
+  }, [comments, activeCommentId]);
 
   return (
     <div className="space-y-6">
@@ -165,8 +140,8 @@ export default function CommentsSection({
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
             >
-              <option value="recent">Cele mai vechi</option>
-              <option value="oldest">Cele mai noi</option>
+              <option value="recent">Cele mai noi</option>
+              <option value="oldest">Cele mai vechi</option>
               <option value="popular">Cele mai apreciate</option>
             </select>
             <ChevronDown size={14} />
@@ -216,17 +191,84 @@ export default function CommentsSection({
       </div>
 
       <div className="space-y-4 pt-4">
-        {/* 3. Replaced inline HTML with your CommentItem component to support replies! */}
         {displayedComments.map((comment) => (
-          <CommentItem
+          <div
             key={comment.commentId}
-            // @ts-expect-error Ignoring strict DTO type mismatch
-            comment={comment}
-            studentId={studentId}
-            onTimestampClick={(time) => onSeek(time, comment.commentId)}
-            onRefresh={fetchComments} // Let CommentItem refetch data after a like/reply
-            activeCommentId={activeCommentId}
-          />
+            className={`flex gap-4 p-3 rounded-xl transition-all ${
+              activeCommentId === comment.commentId
+                ? "bg-secondary/20 border border-secondary"
+                : ""
+            }`}
+          >
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shrink-0 ${
+                comment.authorRole === "Profesor"
+                  ? "bg-primary"
+                  : "bg-secondary"
+              }`}
+            >
+              {comment.authorName.substring(0, 2).toUpperCase()}
+            </div>
+
+            <div className="flex-1">
+              <div
+                className={`p-4 rounded-2xl border ${
+                  activeCommentId === comment.commentId
+                    ? "bg-card border-secondary"
+                    : "bg-muted/20 border-border/50"
+                }`}
+              >
+                <div className="flex justify-between mb-2">
+                  <span className="font-semibold text-sm">
+                    {comment.authorName}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {comment.timeAgo}
+                  </span>
+                </div>
+
+                <p className="text-sm text-muted-foreground">{comment.body}</p>
+
+                <div className="flex items-center gap-3 mt-3">
+                  {comment.timestampSecs !== undefined &&
+                  comment.timestampSecs > 0 ? (
+                    <div
+                      onClick={() =>
+                        onSeek(
+                          comment.timestampSecs as number,
+                          comment.commentId
+                        )
+                      }
+                      className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-md bg-secondary/30 text-secondary-foreground cursor-pointer hover:bg-secondary/50 transition-colors"
+                    >
+                      <Clock size={12} />
+                      {comment.timestampSecs}s
+                    </div>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleToggleLike(comment.commentId, comment.likedByMe)
+                    }
+                    className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md transition-colors ${
+                      comment.likedByMe
+                        ? "bg-primary/20 text-primary"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                    }`}
+                  >
+                    <ThumbsUp
+                      size={14}
+                      fill={comment.likedByMe ? "currentColor" : "none"}
+                    />
+                    <span>
+                      {comment.likeCount > 0 ? comment.likeCount : "Apreciază"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         ))}
       </div>
     </div>

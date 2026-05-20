@@ -67,9 +67,7 @@ export function QuizzesTable({ quizzes }: QuizzesTableProps) {
                       <MoreVertical
                         size={16}
                         className="text-gray-300 ml-auto cursor-pointer hover:text-gray-500"
-                        onClick={() => {
-                          if (quiz.quizId) navigate(`/student/quizzes/${quiz.quizId}`);
-                        }}
+                        onClick={() => navigate(`/student/quizzes/${quiz.quizId}`)}
                       />
                     </td>
                   </tr>

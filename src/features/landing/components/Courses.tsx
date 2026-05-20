@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Play, Star, Users, Clock } from "lucide-react";
-
-type Category = "Toate" | "Programare" | "Design" | "Marketing" | "Business" | "Data" | "Limba";
+import { landingService, PopularCourse } from "../services/landing.service";
 
 interface Course {
-  id: number;
-  category: Category;
+  id: string | number;
+  category: string;
   title: string;
   instructor: string;
   duration: string;
@@ -15,77 +14,58 @@ interface Course {
   color: string;
 }
 
-const categories: Category[] = ["Toate", "Programare", "Design", "Marketing", "Business", "Data", "Limba"];
+const DEFAULT_CATEGORIES: string[] = ["Toate", "Programare", "Design", "Marketing", "Business", "Data", "Limba"];
 
-const courses: Course[] = [
-  {
-    id: 1,
-    category: "Programare",
-    title: "Programare Python de la Zero",
-    instructor: "Prof. Andrei C.",
-    duration: "12 ore",
-    students: "4.2K",
-    rating: 4.9,
-    tag: "Popular",
-    color: "from-accent/30 to-primary/20",
-  },
-  {
-    id: 2,
-    category: "Business",
-    title: "Matematica pentru BDO",
-    instructor: "Prof. Elena M.",
-    duration: "8 ore",
-    students: "2.1K",
-    rating: 4.8,
-    tag: "Nou",
-    color: "from-secondary/30 to-accent/20",
-  },
-  {
-    id: 3,
-    category: "Programare",
-    title: "Unity C# de la 0",
-    instructor: "Prof. Radu D.",
-    duration: "20 ore",
-    students: "1.7K",
-    rating: 4.7,
-    color: "from-primary/20 to-secondary/20",
-  },
-  {
-    id: 4,
-    category: "Design",
-    title: "Design Grafic cu Figma",
-    instructor: "Prof. Maria S.",
-    duration: "10 ore",
-    students: "3.1K",
-    rating: 4.9,
-    tag: "Recomandat",
-    color: "from-accent/40 to-primary/10",
-  },
-  {
-    id: 5,
-    category: "Marketing",
-    title: "SEO & Marketing Digital",
-    instructor: "Prof. Ion P.",
-    duration: "6 ore",
-    students: "2.8K",
-    rating: 4.6,
-    color: "from-secondary/20 to-accent/30",
-  },
-  {
-    id: 6,
-    category: "Data",
-    title: "Excel & Analiza de Date",
-    instructor: "Prof. Cristina L.",
-    duration: "9 ore",
-    students: "5.6K",
-    rating: 4.8,
-    tag: "Gratuit",
-    color: "from-primary/15 to-secondary/30",
-  },
+const COLORS = [
+  "from-accent/30 to-primary/20",
+  "from-secondary/30 to-accent/20",
+  "from-primary/20 to-secondary/20",
+  "from-accent/40 to-primary/10",
+  "from-secondary/20 to-accent/30",
+  "from-primary/15 to-secondary/30",
 ];
 
 export default function Courses() {
-  const [activeCategory, setActiveCategory] = useState<Category>("Toate");
+  const [activeCategory, setActiveCategory] = useState<string>("Toate");
+  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setIsLoading(true);
+    Promise.all([
+      landingService.getCategories(),
+      landingService.getPopularCourses(),
+    ])
+      .then(([categoriesMap, popularCourses]) => {
+        // Backend categories map: { "CategoryName": count }
+        const catList = Object.keys(categoriesMap);
+        if (catList.length > 0) {
+          // Ensure "Toate" is first if it exists or add it
+          const filteredCats = catList.filter(c => c !== "Toate");
+          setCategories(["Toate", ...filteredCats]);
+        }
+
+        const mapped: Course[] = popularCourses.map((c: PopularCourse, idx: number) => ({
+          id: idx, // No ID from this specific backend DTO
+          category: "Programare", // Backend doesn't return category for popular courses yet
+          title: c.title,
+          instructor: "Profesor FiiSmart",
+          duration: "10 ore", // Static for now
+          students: c.enrollmentCount >= 1000 ? `${(c.enrollmentCount / 1000).toFixed(1)}K` : `${c.enrollmentCount}`,
+          rating: c.avgRating || 5.0,
+          tag: idx === 0 ? "Popular" : undefined,
+          color: COLORS[idx % COLORS.length],
+        }));
+        setCourses(mapped);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch landing courses:", err);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, []);
 
   const filtered =
     activeCategory === "Toate"
@@ -126,48 +106,58 @@ export default function Courses() {
 
         {/* Course Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map((course) => (
-            <div
-              key={course.id}
-              className="landing-card group overflow-hidden p-0"
-            >
-              {/* Thumbnail */}
-              <div className={`relative h-44 bg-gradient-to-br ${course.color} flex items-center justify-center`}>
-                {course.tag && (
-                  <span className="absolute top-3 left-3 bg-primary text-white text-caption font-medium px-3 py-1 rounded-full">
-                    {course.tag}
-                  </span>
-                )}
-                <button className="w-12 h-12 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-card group-hover:scale-110 transition-transform duration-300">
-                  <Play size={20} className="text-primary ml-0.5" fill="currentColor" />
-                </button>
-              </div>
+          {isLoading ? (
+             <div className="col-span-full py-20 text-center text-muted-foreground animate-pulse">
+                Se incarca cursurile...
+             </div>
+          ) : filtered.length === 0 ? (
+            <div className="col-span-full py-20 text-center text-muted-foreground">
+              Nu am gasit cursuri pentru aceasta categorie.
+            </div>
+          ) : (
+            filtered.map((course) => (
+              <div
+                key={course.id}
+                className="landing-card group overflow-hidden p-0"
+              >
+                {/* Thumbnail */}
+                <div className={`relative h-44 bg-gradient-to-br ${course.color} flex items-center justify-center`}>
+                  {course.tag && (
+                    <span className="absolute top-3 left-3 bg-primary text-white text-caption font-medium px-3 py-1 rounded-full">
+                      {course.tag}
+                    </span>
+                  )}
+                  <button className="w-12 h-12 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-card group-hover:scale-110 transition-transform duration-300">
+                    <Play size={20} className="text-primary ml-0.5" fill="currentColor" />
+                  </button>
+                </div>
 
-              {/* Info */}
-              <div className="p-5">
-                <span className="badge text-caption mb-2 py-1 px-3">{course.category}</span>
-                <h3 className="font-heading font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">
-                  {course.title}
-                </h3>
-                <p className="text-body-sm text-muted-foreground mb-3">{course.instructor}</p>
+                {/* Info */}
+                <div className="p-5">
+                  <span className="badge text-caption mb-2 py-1 px-3">{course.category}</span>
+                  <h3 className="font-heading font-semibold text-foreground mb-2 group-hover:text-primary transition-colors line-clamp-1">
+                    {course.title}
+                  </h3>
+                  <p className="text-body-sm text-muted-foreground mb-3">{course.instructor}</p>
 
-                <div className="flex items-center justify-between text-caption text-muted-foreground border-t border-border pt-3">
-                  <div className="flex items-center gap-1">
-                    <Clock size={12} />
-                    <span>{course.duration}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Users size={12} />
-                    <span>{course.students}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Star size={12} className="fill-amber-400 text-amber-400" />
-                    <span className="font-medium text-foreground">{course.rating}</span>
+                  <div className="flex items-center justify-between text-caption text-muted-foreground border-t border-border pt-3">
+                    <div className="flex items-center gap-1">
+                      <Clock size={12} />
+                      <span>{course.duration}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Users size={12} />
+                      <span>{course.students}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Star size={12} className="fill-amber-400 text-amber-400" />
+                      <span className="font-medium text-foreground">{course.rating}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </section>

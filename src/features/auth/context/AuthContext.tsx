@@ -31,6 +31,8 @@ import {
 import { exchangeCode } from "../services/cognito.service";
 import { apiFetch } from "@/lib/api";
 
+const MOCK_USER_KEY = "fiismart_mock_user";
+
 interface AuthContextValue extends AuthState {
   login: (payload: LoginPayload) => Promise<AuthUser>;
   /** Înregistrare — returnează mesaj, fără auto-login (trebuie verificat email-ul). */
@@ -44,6 +46,8 @@ interface AuthContextValue extends AuthState {
   loginWithCognito: (code: string, state: string) => Promise<AuthUser>;
   /** Utilizatorii Google fără rol selectat apelează aceasta după ce aleg rolul. */
   assignRole: (role: UserRole, firstName?: string, lastName?: string) => Promise<AuthUser>;
+  /** Dev-only: setează un utilizator mock fără backend. */
+  loginAsMock: (role: UserRole) => AuthUser;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -54,6 +58,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    const mockJson =
+      typeof window !== "undefined" ? window.localStorage.getItem(MOCK_USER_KEY) : null;
+    if (mockJson) {
+      try {
+        setUser(JSON.parse(mockJson) as AuthUser);
+        setIsLoading(false);
+        return;
+      } catch {
+        window.localStorage.removeItem(MOCK_USER_KEY);
+      }
+    }
     (async () => {
       const me = await getCurrentUser();
       if (!cancelled) {
@@ -99,6 +114,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(async (): Promise<void> => {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(MOCK_USER_KEY);
+    }
     await logoutRequest();
     setUser(null);
   }, []);
@@ -106,14 +124,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithCognito = useCallback(
     async (code: string, state: string): Promise<AuthUser> => {
       const tokens = await exchangeCode(code, state);
-      // ID Token-ul conține claim-ul `email` pentru utilizatorii federați (Google).
-      // Access Token-ul Cognito pentru Google nu include `email`, deci backend-ul
-      // ar salva un placeholder "_pending_<sub>" în loc de adresa reală.
-      setToken(tokens.idToken, "cognito");
+      setToken(tokens.accessToken, "cognito");
       if (tokens.refreshToken) setRefreshToken(tokens.refreshToken);
 
       const me = await apiFetch<AuthUser>("/auth/me", {
-        headers: { Authorization: `Bearer ${tokens.idToken}` },
+        headers: { Authorization: `Bearer ${tokens.accessToken}` },
       });
       // Nu setăm user în context dacă necesită selecția rolului —
       // pagina CompleteProfilePage va chema assignRole și va face setUser după.
@@ -131,6 +146,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return updated;
   }, []);
 
+  const loginAsMock = useCallback((role: UserRole): AuthUser => {
+    const mockUser: AuthUser =
+      role === UserRole.PROFESSOR
+        ? {
+            id: "dev-professor-aaaaaaaaaaaaaaaaaaaaaa",
+            email: "professor@dev.local",
+            firstName: "Dev",
+            lastName: "Professor",
+            displayName: "Dev Professor",
+            role: UserRole.PROFESSOR,
+            emailVerified: true,
+          }
+        : {
+            id: "dev-student-bbbbbbbbbbbbbbbbbbbbbbb",
+            email: "student@dev.local",
+            firstName: "Dev",
+            lastName: "Student",
+            displayName: "Dev Student",
+            role: UserRole.STUDENT,
+            emailVerified: true,
+          };
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(MOCK_USER_KEY, JSON.stringify(mockUser));
+    }
+    setUser(mockUser);
+    return mockUser;
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -145,9 +188,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       loginWithCognito,
       assignRole,
+      loginAsMock,
     }),
     [user, isLoading, login, signup, verifyEmail, resendVerification,
-     forgotPassword, resetPassword, logout, loginWithCognito, assignRole]
+     forgotPassword, resetPassword, logout, loginWithCognito, assignRole, loginAsMock]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

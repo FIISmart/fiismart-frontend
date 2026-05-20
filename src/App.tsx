@@ -7,7 +7,6 @@ import CompleteProfilePage from "@/features/auth/pages/CompleteProfilePage";
 import UnauthorizedPage from "@/features/auth/pages/UnauthorizedPage";
 import TermsOfServicePage from "@/features/auth/components/TermsOfServicePage";
 import PrivacyPolicyPage from "@/features/auth/components/PrivacyPolicyPage";
-import RoleDashboardRedirect from "@/features/auth/components/RoleDashboardRedirect";
 import LandingPage from "@/features/landing/pages/LandingPage";
 import ProfessorDashboardPage from "@/features/dashboard-prof/pages/ProfessorDashboardPage";
 import StudentDashboardPage from "@/features/dashboard-student/pages/StudentDashboardPage";
@@ -16,8 +15,9 @@ import QuizPlayerPage from "@/features/quiz/pages/QuizPlayerPage";
 import CourseBuilderPage from "@/features/course-builder/pages/CourseBuilderPage";
 import MyQuizzesPage from "@/features/course-builder/pages/MyQuizzesPage";
 import CoursesListPage from "@/features/courses/pages/CoursesListPage";
-import StudentCoursesPage from "@/features/dashboard-student/pages/StudentCoursesPage";
-import StudentCourseDetailPage from "@/features/dashboard-student/pages/StudentCourseDetailPage";
+import TimetablePage from "@/features/timetable/pages/TimetablePage";
+import StatisticsPage from "@/features/statistics/pages/StatisticsPage";
+import { DevNav } from "@/components/DevNav";
 import { Toaster } from "sonner";
 
 export default function App() {
@@ -36,23 +36,27 @@ export default function App() {
       {/* Student-only */}
       <Route element={<ProtectedRoute allowedRoles={[UserRole.STUDENT]} />}>
         <Route path="/student/dashboard" element={<StudentDashboardPage />} />
-        <Route path="/student/courses" element={<StudentCoursesPage />} />
-        <Route path="/student/courses/:courseId" element={<StudentCourseDetailPage />} />
-        <Route path="/student/courses/:courseId/lectures/:lectureId" element={<LessonVideoPage />} />
+        <Route path="/student/timetable" element={<TimetablePage />} />
+        <Route path="/student/statistics" element={<StatisticsPage />} />
+
+        {/* ← adaugă astea */}
+        <Route path="/student/courses" element={<CoursesListPage />} />
+        <Route path="/student/courses/:courseId" element={<CourseBuilderPage />} />
+
+        <Route
+          path="/student/courses/:courseId/lectures/:lectureId"
+          element={<LessonVideoPage />}
+        />
         <Route path="/student/quizzes/:quizId" element={<QuizPlayerPage />} />
       </Route>
 
       {/* Professor-only */}
       <Route element={<ProtectedRoute allowedRoles={[UserRole.PROFESSOR]} />}>
         <Route path="/professor/dashboard" element={<ProfessorDashboardPage />} />
+        <Route path="/professor/timetable" element={<TimetablePage />} />
         <Route path="/professor/courses" element={<CoursesListPage />} />
         <Route path="/professor/quizzes" element={<MyQuizzesPage />} />
         <Route path="/professor/courses/:courseId" element={<CourseBuilderPage />} />
-      </Route>
-
-      {/* Role-aware dashboard alias */}
-      <Route element={<ProtectedRoute allowedRoles={[UserRole.STUDENT, UserRole.PROFESSOR]} />}>
-        <Route path="/dashboard" element={<RoleDashboardRedirect />} />
       </Route>
 
       {/* Compatibility shims for legacy / external links */}
@@ -62,6 +66,7 @@ export default function App() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    <DevNav />
     <Toaster richColors position="top-right" />
     </>
   );

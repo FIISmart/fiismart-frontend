@@ -317,7 +317,6 @@ export default function MyQuizzesPage() {
         onSave={handleSaveQuiz}
         onCancel={closeEditor}
         isOpen={editorOpen}
-        supportsWritten
       />
 
       <AlertDialog open={deletingQuiz !== null} onOpenChange={() => setDeletingQuiz(null)}>

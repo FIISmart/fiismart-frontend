@@ -28,29 +28,16 @@ import { LessonEditor, LessonItem } from "./lesson-editor";
 import { QuizEditor } from "./quiz-editor";
 import { QuizLibraryPicker } from "./quiz-library-picker";
 import * as api from "@/lib/api";
-import {
-  deleteLectureQuiz,
-  deleteModuleQuiz,
-  upsertLectureQuiz,
-  upsertModuleQuiz,
-  type MyQuiz,
-} from "@/features/course-builder/services/my-quizzes.service";
+import { deleteModuleQuiz, upsertModuleQuiz, type MyQuiz } from "@/features/course-builder/services/my-quizzes.service";
 import { toast } from "sonner";
 
 interface ModuleCardProps {
   courseId: string;
   module: Module;
   moduleIndex: number;
-  isExpanded: boolean;
-  onExpandedChange: (open: boolean) => void;
   onUpdate: (module: Module) => void;
   onDelete: () => void;
-  onCourseRefresh?: () => Promise<void>;
 }
-
-type LessonEditorState =
-  | { mode: "create" }
-  | { mode: "edit"; lessonId: string };
 
 type ModuleContentItem =
   | { type: "lesson"; id: string; order: number; lesson: Lesson }
@@ -127,36 +114,21 @@ export function ModuleCard({
   courseId,
   module,
   moduleIndex,
-  isExpanded,
-  onExpandedChange,
   onUpdate,
   onDelete,
-  onCourseRefresh,
 }: ModuleCardProps) {
+  const [isExpanded, setIsExpanded] = useState(module.isExpanded ?? true);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(module.title);
   const [editDescription, setEditDescription] = useState(module.description || "");
-  const [lessonEditorState, setLessonEditorState] = useState<LessonEditorState | null>(null);
+  const [lessonEditorOpen, setLessonEditorOpen] = useState(false);
+  const [editingLesson, setEditingLesson] = useState<Lesson | undefined>();
+  const [quizEditorOpen, setQuizEditorOpen] = useState(false);
   const [editingQuiz, setEditingQuiz] = useState<Quiz | undefined>();
-  const [activeModuleQuizId, setActiveModuleQuizId] = useState<string | null>(null);
-  const [activeLessonQuizKey, setActiveLessonQuizKey] = useState<string | null>(null);
-  const [pickerModuleId, setPickerModuleId] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
 
   const moduleItems = getModuleContentItems(module);
-  const editingLesson = lessonEditorState?.mode === "edit"
-    ? module.lessons.find((lesson) => lesson.id === lessonEditorState.lessonId)
-    : undefined;
-  const editingLessonId = lessonEditorState?.mode === "edit"
-    ? lessonEditorState.lessonId
-    : null;
-  const activeLessonQuizLessonId =
-    activeLessonQuizKey?.startsWith(`${module.id}:`)
-      ? activeLessonQuizKey.slice(module.id.length + 1)
-      : null;
-  const editingLessonQuiz = activeLessonQuizLessonId
-    ? module.lessons.find((lesson) => lesson.id === activeLessonQuizLessonId)
-    : undefined;
 
   const applyOrder = (items: ModuleContentItem[]) => {
     const quizItem = items.find((item) => item.type === "quiz");
@@ -216,30 +188,20 @@ export function ModuleCard({
 
   const handleSaveLesson = async (lesson: Lesson) => {
     try {
-      if (editingLessonId) {
-        await api.updateLectureInModule(courseId, module.id, editingLessonId, {
+      if (editingLesson) {
+        await api.updateLectureInModule(courseId, module.id, lesson.id, {
           title: lesson.title,
-          type: lesson.type,
-          content: lesson.content,
           videoUrl: lesson.content,
-          pdfUrl: lesson.type === "pdf" ? lesson.content : undefined,
           durationSecs: (lesson.duration || 0) * 60,
         });
 
-        const newLessons = module.lessons.map((l) =>
-          l.id === editingLessonId
-            ? { ...l, ...lesson, id: editingLessonId, order: l.order, quiz: l.quiz }
-            : l,
-        );
+        const newLessons = module.lessons.map((l) => (l.id === lesson.id ? { ...lesson, order: l.order } : l));
         onUpdate({ ...module, lessons: newLessons });
         toast.success("Lectie actualizata");
       } else {
         const created = await api.addLectureToModule(courseId, module.id, {
           title: lesson.title,
-          type: lesson.type,
-          content: lesson.content,
           videoUrl: lesson.content,
-          pdfUrl: lesson.type === "pdf" ? lesson.content : undefined,
           order: moduleItems.length,
           durationSecs: (lesson.duration || 0) * 60,
         });
@@ -254,7 +216,8 @@ export function ModuleCard({
       console.error(err);
       toast.error(err instanceof Error ? err.message : "Eroare la salvarea lectiei");
     }
-    setLessonEditorState(null);
+    setLessonEditorOpen(false);
+    setEditingLesson(undefined);
   };
 
   const handleDeleteLesson = async (lessonId: string) => {
@@ -278,20 +241,15 @@ export function ModuleCard({
       shuffleQuestions: false,
       questions: [],
     });
-    setActiveModuleQuizId(quiz?.id ?? "new");
+    setQuizEditorOpen(true);
   };
 
   const openQuizFlow = () => {
     if (module.quiz) {
       openQuizEditor(module.quiz);
     } else {
-      setPickerModuleId(module.id);
+      setPickerOpen(true);
     }
-  };
-
-  const openInPlaceQuizEditor = () => {
-    setPickerModuleId(null);
-    openQuizEditor(undefined);
   };
 
   const handleAttachExistingQuiz = async (source: MyQuiz) => {
@@ -299,8 +257,7 @@ export function ModuleCard({
       const saved = await upsertModuleQuiz(courseId, module.id, source);
       const nextQuiz = { ...saved, order: moduleItems.length };
       onUpdate(reindexModule({ ...module, quiz: nextQuiz }));
-      onCourseRefresh?.().catch((err) => console.error("Course refetch failed:", err));
-      setPickerModuleId(null);
+      setPickerOpen(false);
       toast.success("Quiz adăugat din bibliotecă.");
     } catch (err) {
       console.error(err);
@@ -316,8 +273,7 @@ export function ModuleCard({
       });
       const nextQuiz = { ...saved, order: editingQuiz?.order ?? moduleItems.length };
       onUpdate(reindexModule({ ...module, quiz: nextQuiz }));
-      onCourseRefresh?.().catch((err) => console.error("Course refetch failed:", err));
-      setActiveModuleQuizId(null);
+      setQuizEditorOpen(false);
       setEditingQuiz(undefined);
       toast.success("Quiz salvat.");
     } catch (err) {
@@ -330,55 +286,9 @@ export function ModuleCard({
     try {
       await deleteModuleQuiz(courseId, module.id);
       onUpdate(reindexModule({ ...module, quiz: undefined }));
-      onCourseRefresh?.().catch((err) => console.error("Course refetch failed:", err));
-      setActiveModuleQuizId(null);
+      setQuizEditorOpen(false);
       setEditingQuiz(undefined);
       toast.success("Quiz eliminat din modul.");
-    } catch (err) {
-      console.error(err);
-      toast.error(err instanceof Error ? err.message : "Eroare la stergerea quiz-ului");
-    }
-  };
-
-  const openLessonQuizEditor = (lesson: Lesson) => {
-    setActiveLessonQuizKey(`${module.id}:${lesson.id}`);
-  };
-
-  const closeLessonQuizEditor = () => {
-    setActiveLessonQuizKey(null);
-  };
-
-  const updateLessonQuizInState = (lessonId: string, quiz?: Quiz) => {
-    onUpdate({
-      ...module,
-      lessons: module.lessons.map((lesson) =>
-        lesson.id === lessonId ? { ...lesson, quiz } : lesson,
-      ),
-    });
-  };
-
-  const handleSaveLessonQuiz = async (quiz: Quiz) => {
-    if (!editingLessonQuiz) return;
-
-    try {
-      const saved = await upsertLectureQuiz(courseId, module.id, editingLessonQuiz.id, quiz);
-      updateLessonQuizInState(editingLessonQuiz.id, saved);
-      onCourseRefresh?.().catch((err) => console.error("Course refetch failed:", err));
-      closeLessonQuizEditor();
-      toast.success("Quiz salvat.");
-    } catch (err) {
-      console.error(err);
-      toast.error(err instanceof Error ? err.message : "Eroare la salvarea quiz-ului");
-    }
-  };
-
-  const handleRemoveLessonQuiz = async (lesson: Lesson) => {
-    try {
-      await deleteLectureQuiz(courseId, module.id, lesson.id);
-      updateLessonQuizInState(lesson.id, undefined);
-      onCourseRefresh?.().catch((err) => console.error("Course refetch failed:", err));
-      if (editingLessonQuiz?.id === lesson.id) closeLessonQuizEditor();
-      toast.success("Quiz eliminat din lectie.");
     } catch (err) {
       console.error(err);
       toast.error(err instanceof Error ? err.message : "Eroare la stergerea quiz-ului");
@@ -400,7 +310,7 @@ export function ModuleCard({
               <GripVertical className="h-5 w-5" />
             </button>
 
-            <Collapsible open={isExpanded} onOpenChange={onExpandedChange} className="flex-1">
+            <Collapsible open={isExpanded} onOpenChange={setIsExpanded} className="flex-1">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   {isEditing ? (
@@ -437,7 +347,7 @@ export function ModuleCard({
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => setIsEditing(true)}><Pencil className="mr-2 h-4 w-4" /> Redenumire</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setLessonEditorState({ mode: "create" })}><Plus className="mr-2 h-4 w-4" /> Adauga Lectie</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setLessonEditorOpen(true)}><Plus className="mr-2 h-4 w-4" /> Adauga Lectie</DropdownMenuItem>
                         <DropdownMenuItem onClick={openQuizFlow}><CircleHelp className="mr-2 h-4 w-4" /> {module.quiz ? "Editeaza Quiz" : "Adauga Quiz"}</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={onDelete} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Sterge</DropdownMenuItem>
@@ -464,10 +374,8 @@ export function ModuleCard({
                         {item.type === "lesson" ? (
                           <LessonItem
                             lesson={item.lesson}
-                            onEdit={(l) => setLessonEditorState({ mode: "edit", lessonId: l.id })}
+                            onEdit={(l) => { setEditingLesson(l); setLessonEditorOpen(true); }}
                             onDelete={handleDeleteLesson}
-                            onEditQuiz={openLessonQuizEditor}
-                            onDeleteQuiz={handleRemoveLessonQuiz}
                           />
                         ) : (
                           <QuizItem
@@ -485,7 +393,7 @@ export function ModuleCard({
                       variant="ghost"
                       size="sm"
                       className="w-full border-dashed border border-border"
-                      onClick={() => setLessonEditorState({ mode: "create" })}
+                      onClick={() => setLessonEditorOpen(true)}
                     >
                       <Plus className="h-4 w-4 mr-2" /> Lectie Noua
                     </Button>
@@ -509,29 +417,20 @@ export function ModuleCard({
       <LessonEditor
         lesson={editingLesson}
         onSave={handleSaveLesson}
-        onCancel={() => setLessonEditorState(null)}
-        isOpen={lessonEditorState?.mode === "create" || editingLesson !== undefined}
+        onCancel={() => { setLessonEditorOpen(false); setEditingLesson(undefined); }}
+        isOpen={lessonEditorOpen}
       />
       <QuizEditor
         quiz={editingQuiz}
         onSave={handleSaveModuleQuiz}
-        onCancel={() => { setActiveModuleQuizId(null); setEditingQuiz(undefined); }}
+        onCancel={() => { setQuizEditorOpen(false); setEditingQuiz(undefined); }}
         onRemove={module.quiz ? () => handleRemoveModuleQuiz() : undefined}
-        isOpen={activeModuleQuizId !== null}
-      />
-      <QuizEditor
-        quiz={editingLessonQuiz?.quiz}
-        onSave={handleSaveLessonQuiz}
-        onCancel={closeLessonQuizEditor}
-        onRemove={editingLessonQuiz?.quiz ? () => handleRemoveLessonQuiz(editingLessonQuiz) : undefined}
-        isOpen={activeLessonQuizKey !== null && editingLessonQuiz !== undefined}
-        supportsWritten
+        isOpen={quizEditorOpen}
       />
       <QuizLibraryPicker
-        isOpen={pickerModuleId === module.id}
-        onCancel={() => setPickerModuleId(null)}
+        isOpen={pickerOpen}
+        onCancel={() => setPickerOpen(false)}
         onSelect={handleAttachExistingQuiz}
-        onCreateNew={openInPlaceQuizEditor}
       />
     </>
   );

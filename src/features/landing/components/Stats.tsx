@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { TrendingUp } from "lucide-react";
+import { landingService, LandingStats } from "../services/landing.service";
 
 interface StatItem {
   value: number;
@@ -9,7 +10,7 @@ interface StatItem {
   sublabel: string;
 }
 
-const stats: StatItem[] = [
+const DEFAULT_STATS: StatItem[] = [
   { value: 50, suffix: "K+", label: "Studenti activi", sublabel: "Pe platforma noastra" },
   { value: 1200, suffix: "+", label: "Cursuri publicate", sublabel: "In toate domeniile" },
   { value: 500, suffix: "+", label: "Profesori verificati", sublabel: "Experti in domeniu" },
@@ -63,7 +64,44 @@ const Counter = ({ value, suffix, isVisible }: CounterProps) => {
 
 export default function Stats() {
   const [isVisible, setIsVisible] = useState(false);
+  const [backendStats, setBackendStats] = useState<StatItem[]>(DEFAULT_STATS);
   const sectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    landingService.getStatistics()
+      .then((data: LandingStats) => {
+        const mapped: StatItem[] = [
+          { 
+            value: data.activeStudents, 
+            suffix: data.activeStudents >= 1000 ? "+" : "+", 
+            label: "Studenti activi", 
+            sublabel: "Pe platforma noastra" 
+          },
+          { 
+            value: data.freeCourses, 
+            suffix: "+", 
+            label: "Cursuri publicate", 
+            sublabel: "In toate domeniile" 
+          },
+          { 
+            value: data.totalTeachers, 
+            suffix: "+", 
+            label: "Profesori verificati", 
+            sublabel: "Experti in domeniu" 
+          },
+          { 
+            value: parseInt(data.satisfactionRate), 
+            suffix: "%", 
+            label: "Rata de satisfactie", 
+            sublabel: "Studentii nostri" 
+          },
+        ];
+        setBackendStats(mapped);
+      })
+      .catch(() => {
+        // Fallback already set to DEFAULT_STATS
+      });
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -96,7 +134,7 @@ export default function Stats() {
 
         {/* Stats Row 1 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => (
+          {backendStats.map((stat, index) => (
             <div
               key={index}
               className="landing-card text-center group"

@@ -35,8 +35,6 @@ type Props = {
   onTimeUpdate?: (time: number) => void;
   markers?: VideoMarker[];
   onMarkerClick?: (time: number, id: string) => void;
-  onProgressSaved?: () => void; // Passed from parent to trigger UI refresh
-  onDurationDetected?: (durationSecs: number) => void;
 };
 
 function formatTime(time: number): string {
@@ -59,8 +57,6 @@ export default function VideoPlayer({
   onTimeUpdate,
   markers = [],
   onMarkerClick,
-  onProgressSaved,
-  onDurationDetected,
 }: Props) {
   const youtubeId = useMemo(() => (src ? getYouTubeId(src) : null), [src]);
   const isYouTube = Boolean(youtubeId);
@@ -76,29 +72,7 @@ export default function VideoPlayer({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  // --- TIMER FIX: Refs to keep track of time without triggering re-renders ---
-  const timeRef = useRef(0);
-  const durationRef = useRef(0);
-
-  // Keep refs in sync with the actual state
-  useEffect(() => {
-    timeRef.current = currentTime;
-    durationRef.current = duration;
-  }, [currentTime, duration]);
-  // --------------------------------------------------------------------------
-
   const [showMarkers, setShowMarkers] = useState(true);
-  const reportedDurationRef = useRef(0);
-
-  const reportDuration = useCallback((value: number) => {
-    if (!Number.isFinite(value) || value <= 0) return;
-    const rounded = Math.round(value);
-    setDuration(value);
-    if (Math.abs(reportedDurationRef.current - rounded) > 1) {
-      reportedDurationRef.current = rounded;
-      onDurationDetected?.(rounded);
-    }
-  }, [onDurationDetected]);
 
   const syncWithBackend = useCallback(
     async (currTime: number, dur: number) => {
@@ -109,34 +83,22 @@ export default function VideoPlayer({
           watchedPercent,
           positionSecs: Math.floor(currTime),
           completed: watchedPercent >= 95,
-          durationSecs: Math.round(dur),
         });
-        
-        // Tell the parent component to refresh the sidebar
-        if (onProgressSaved) {
-          onProgressSaved();
-        }
       } catch (error) {
         console.error("Eroare la salvare progres:", error);
       }
     },
-    [studentId, courseId, lectureId, onProgressSaved]
+    [studentId, courseId, lectureId]
   );
 
-  // --- TIMER FIX: The updated interval that reads from refs ---
   useEffect(() => {
     const interval = setInterval(() => {
-      const curr = timeRef.current;
-      const dur = durationRef.current;
-
-      if (curr > 0 && dur > 0) {
-        void syncWithBackend(curr, dur);
+      if (currentTime > 0 && duration > 0) {
+        void syncWithBackend(currentTime, duration);
       }
-    }, 10000); // 10 seconds
-
+    }, 10000);
     return () => clearInterval(interval);
-  }, [syncWithBackend]); 
-  // ------------------------------------------------------------
+  }, [currentTime, duration, syncWithBackend]);
 
   useEffect(() => {
     if (isYouTube) return;
@@ -144,7 +106,7 @@ export default function VideoPlayer({
     if (!video) return;
 
     const onLoaded = () => {
-      reportDuration(video.duration);
+      setDuration(video.duration);
       if (savedPosition > 0) video.currentTime = savedPosition;
     };
 
@@ -164,7 +126,7 @@ export default function VideoPlayer({
       video.removeEventListener("timeupdate", onTime);
       video.removeEventListener("ended", onEnd);
     };
-  }, [isYouTube, onTimeUpdate, reportDuration, savedPosition]);
+  }, [isYouTube, onTimeUpdate, savedPosition]);
 
   useEffect(() => {
     if (!isYouTube || !youtubeId) return;
@@ -181,7 +143,7 @@ export default function VideoPlayer({
         },
         events: {
           onReady: (e: { target: YouTubePlayerType }) => {
-            reportDuration(e.target.getDuration());
+            setDuration(e.target.getDuration());
           },
         },
       });
@@ -198,7 +160,7 @@ export default function VideoPlayer({
 
         if (duration === 0) {
           const d = player.getDuration();
-          if (d > 0) reportDuration(d);
+          if (d > 0) setDuration(d);
         }
       }, 500);
     });
@@ -208,7 +170,7 @@ export default function VideoPlayer({
       ytPlayerRef.current?.destroy();
       ytPlayerRef.current = null;
     };
-  }, [isYouTube, youtubeId, onTimeUpdate, savedPosition, duration, reportDuration]);
+  }, [isYouTube, youtubeId, onTimeUpdate, savedPosition, duration]);
 
   useEffect(() => {
     if (!targetTime) return;
@@ -227,7 +189,8 @@ export default function VideoPlayer({
     setIsPlaying(true);
   }, [targetTime, isYouTube]);
 
-  // Imperatively update the progress bar fill width and marker positions
+  // Imperatively update the progress bar fill width and marker positions, to
+  // avoid using inline `style={{...}}` props.
   useEffect(() => {
     const fill = progressFillRef.current;
     if (fill) {

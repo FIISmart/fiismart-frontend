@@ -12,26 +12,17 @@ export type MyQuiz = Quiz & {
 };
 
 export function quizToModuleQuizPayload(quiz: Quiz): api.ModuleQuizPayload {
+  const writtenQuestion = quiz.questions.find((q) => q.type === "written");
+  if (writtenQuestion) {
+    throw new Error("Quiz-urile de modul/lecție/curs final acceptă doar întrebări grilă (multiple choice).");
+  }
+
   return {
     title: quiz.title,
     passingScore: quiz.passingScore ?? 70,
     timeLimit: quiz.timeLimit ?? 30,
     shuffleQuestions: quiz.shuffleQuestions ?? false,
     questions: quiz.questions.map((question) => {
-      const isWritten = question.type === "written";
-      if (isWritten) {
-        const correctText =
-          typeof question.correctAnswer === "string" ? question.correctAnswer.trim() : "";
-        return {
-          text: question.question,
-          type: "written",
-          points: 1,
-          options: [],
-          correctIdx: 0,
-          correctText,
-          explanation: question.explanation?.trim() || undefined,
-        };
-      }
       const options = (question.options ?? []).filter((option) => option.trim());
       const correctIdx =
         typeof question.correctAnswer === "number" ? question.correctAnswer : 0;
@@ -132,7 +123,6 @@ export async function deleteCourseQuiz(courseId: string): Promise<void> {
 export async function getMyQuizzes(courseId: string): Promise<MyQuiz[]> {
   const quizzes = await api.getCourseBuilderQuizzes(courseId);
   return quizzes
-    .filter((quiz) => quiz && quiz.id)
     .map((quiz) => ({
       ...mapQuizToFE(quiz),
       courseId: quiz.courseId,

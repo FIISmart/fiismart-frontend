@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Video, FileText, Code, Clock, Trash2, Pencil, Upload, Loader2, CircleHelp } from "lucide-react";
+import { Video, FileText, Code, Clock, Trash2, Pencil, Upload, Loader2 } from "lucide-react";
 import type { Lesson, LessonType } from "@/lib/course-types";
 import { generateId } from "@/lib/course-types";
 import * as api from "@/lib/api"; // Added for upload helper
@@ -84,7 +84,7 @@ export function LessonEditor({ lesson, onSave, onCancel, isOpen }: LessonEditorP
   const isValid = title.trim() !== "" && content.trim() !== "" && !isUploading;
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onCancel(); }}>
+    <Dialog open={isOpen} onOpenChange={() => onCancel()}>
       <DialogContent className="max-w-[600px] bg-card max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-serif text-lg sm:text-xl">
@@ -218,14 +218,10 @@ export function LessonItem({
   lesson,
   onEdit,
   onDelete,
-  onEditQuiz,
-  onDeleteQuiz,
 }: {
   lesson: Lesson;
   onEdit: (l: Lesson) => void;
   onDelete: (id: string) => void;
-  onEditQuiz?: (lesson: Lesson) => void;
-  onDeleteQuiz?: (lesson: Lesson) => void;
 }) {
   return (
     <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl border border-border group hover:border-primary/30 transition-colors">
@@ -237,37 +233,9 @@ export function LessonItem({
         <p className="text-xs text-muted-foreground">
           {lessonTypeLabels[lesson.type]} {lesson.duration && `• ${lesson.duration}m`}
         </p>
-        {lesson.quiz && (
-          <p className="text-xs text-primary mt-1 flex items-center gap-1">
-            <CircleHelp className="h-3 w-3" />
-            Quiz: {lesson.quiz.title} ({lesson.quiz.questions.length} intrebari)
-          </p>
-        )}
       </div>
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        {onEditQuiz && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => onEditQuiz(lesson)}
-            title={lesson.quiz ? "Editeaza quiz-ul lectiei" : "Adauga quiz la lectie"}
-          >
-            <CircleHelp className="h-4 w-4" />
-          </Button>
-        )}
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(lesson)}><Pencil className="h-4 w-4" /></Button>
-        {lesson.quiz && onDeleteQuiz && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-destructive"
-            onClick={() => onDeleteQuiz(lesson)}
-            title="Sterge quiz-ul lectiei"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        )}
         <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onDelete(lesson.id)}><Trash2 className="h-4 w-4" /></Button>
       </div>
     </div>

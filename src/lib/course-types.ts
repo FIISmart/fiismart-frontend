@@ -8,7 +8,6 @@ export interface Lesson {
   content: string; 
   duration?: number;
   order: number;
-  quiz?: Quiz;
 }
 
 export interface QuizQuestion {
@@ -37,6 +36,7 @@ export interface Module {
   lessons: Lesson[];
   quiz?: Quiz;
   order: number;
+  isExpanded?: boolean;
 }
 
 export interface Comment {
@@ -93,26 +93,12 @@ export function mapCourseToFE(course: any, quizzes?: any[] | null, comments?: an
   // The backend CourseResponse already includes the modules list — no need for a
   // separate /builder/modules round-trip. Map nested lectures on the spot.
   const moduleQuizzes = Array.isArray(quizzes)
-    ? quizzes.filter((quiz) => quiz && quiz.quizScope === "module" && quiz.moduleId)
-    : [];
-  const lectureQuizzes = Array.isArray(quizzes)
-    ? quizzes.filter((quiz) => quiz && quiz.quizScope === "lecture" && quiz.lectureId)
+    ? quizzes.filter((quiz) => quiz.quizScope === "module" && quiz.moduleId)
     : [];
   const modules: Module[] = Array.isArray(course.modules)
     ? course.modules.map((m: any, index: number) => {
         const matchingQuiz = moduleQuizzes.find((quiz) => quiz.moduleId === m.id);
         const quiz: Quiz | undefined = matchingQuiz ? mapQuizToFE(matchingQuiz) : undefined;
-        const lessons: Lesson[] = Array.isArray(m.lectures)
-          ? m.lectures.map((lecture: any) => {
-              const lesson = mapLectureToLesson(lecture);
-              const matchingLectureQuiz = lectureQuizzes.find(
-                (candidate) => candidate.moduleId === m.id && candidate.lectureId === lecture.id,
-              );
-              return matchingLectureQuiz
-                ? { ...lesson, quiz: mapQuizToFE(matchingLectureQuiz) }
-                : lesson;
-            })
-          : [];
 
         return {
           id: m.id,
@@ -120,7 +106,7 @@ export function mapCourseToFE(course: any, quizzes?: any[] | null, comments?: an
           description: m.description,
           order: m.order ?? index,
           quiz,
-          lessons,
+          lessons: Array.isArray(m.lectures) ? m.lectures.map(mapLectureToLesson) : [],
         };
       })
     : [];
@@ -150,21 +136,18 @@ export function mapCourseToFE(course: any, quizzes?: any[] | null, comments?: an
 export function mapLectureToLesson(lecture: any): Lesson {
   // BE stores all lesson content in videoUrl regardless of type.
   // Detect the type from the content so PDFs/markdown render correctly after reload.
-  const content: string = lecture.content || lecture.pdfUrl || lecture.videoUrl || '';
+  const content: string = lecture.videoUrl || '';
   const normalized = content.toLowerCase();
 
-  let detectedType: LessonType =
-    lecture.type === 'pdf' || lecture.type === 'markdown' || lecture.type === 'video'
-      ? lecture.type
-      : 'video';
-  if (!lecture.type && (normalized.endsWith('.pdf') || normalized.includes('/api/files/'))) {
+  let detectedType: LessonType = 'video';
+  if (normalized.endsWith('.pdf') || normalized.includes('/api/files/')) {
     // GridFS-uploaded files come back as /api/files/{id} with no extension — assume PDF/doc.
     if (normalized.endsWith('.pdf')) detectedType = 'pdf';
     else if (normalized.endsWith('.md') || normalized.endsWith('.markdown')) detectedType = 'markdown';
     else detectedType = 'pdf';
-  } else if (!lecture.type && (normalized.endsWith('.md') || normalized.endsWith('.markdown'))) {
+  } else if (normalized.endsWith('.md') || normalized.endsWith('.markdown')) {
     detectedType = 'markdown';
-  } else if (!lecture.type && content && !content.startsWith('http')) {
+  } else if (content && !content.startsWith('http')) {
     detectedType = 'markdown';
   }
 
@@ -179,26 +162,15 @@ export function mapLectureToLesson(lecture: any): Lesson {
 }
 
 export function mapQuizToFE(quiz: any): Quiz {
-  if (!quiz || typeof quiz !== "object") {
-    return {
-      id: "",
-      title: "",
-      passingScore: 70,
-      timeLimit: 30,
-      shuffleQuestions: false,
-      questions: [],
-    };
-  }
-
   return {
-    id: quiz.id ?? "",
-    title: quiz.title ?? "",
-    passingScore: quiz.passingScore ?? 70,
-    timeLimit: quiz.timeLimit ?? 30,
-    shuffleQuestions: quiz.shuffleQuestions ?? false,
-    questions: (Array.isArray(quiz.questions) ? quiz.questions : []).filter(Boolean).map((q: any) => ({
-      id: q.id ?? generateId(),
-      question: q.text ?? "",
+    id: quiz.id,
+    title: quiz.title,
+    passingScore: quiz.passingScore,
+    timeLimit: quiz.timeLimit,
+    shuffleQuestions: quiz.shuffleQuestions,
+    questions: (quiz.questions ?? []).map((q: any) => ({
+      id: q.id,
+      question: q.text,
       type: q.type === 'written' ? 'written' : 'multiple_choice',
       options: q.options || [],
       correctAnswer: q.type === 'written' ? (q.correctText ?? "") : (q.correctIdx ?? 0),

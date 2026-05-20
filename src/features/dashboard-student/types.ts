@@ -20,11 +20,9 @@ export interface StudentCourse {
   overallProgress: number;
   enrollmentCount: number;
   avgRating: number;
-  courseId?: string;
 }
 
 export interface StudentQuiz {
-  quizId?: string;
   titluQuiz: string;
   numeCurs: string;
   incercari: number;

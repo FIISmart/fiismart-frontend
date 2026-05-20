@@ -1,8 +1,7 @@
-import { User, GraduationCap, LogOut } from "lucide-react";
+import { Bell, User, GraduationCap, LogOut } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { toast } from "sonner";
-import { NotificationBell } from "@/features/notifications/NotificationBell";
 
 export default function Header() {
   const { logout, user } = useAuth();
@@ -32,7 +31,13 @@ export default function Header() {
         </nav>
 
         <div className="flex items-center gap-4 text-muted-foreground">
-          <NotificationBell />
+          <button
+            type="button"
+            className="relative hover:text-foreground transition-colors"
+          >
+            <Bell size={20} />
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-card" />
+          </button>
 
           <div
             title={user?.email}

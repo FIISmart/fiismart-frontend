@@ -13,7 +13,7 @@ export default function UnauthorizedPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const homeFor = "/dashboard";
+  const homeFor = user?.role === UserRole.PROFESSOR ? "/professor/dashboard" : "/student/dashboard";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-edu-bg px-6 py-12">

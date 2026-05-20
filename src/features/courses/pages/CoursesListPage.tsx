@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Plus, GraduationCap, BookOpen, Clock, Users, Trash2, HelpCircle, ArrowLeft } from "lucide-react";
+import { Plus, GraduationCap, BookOpen, Clock, Users, Trash2, HelpCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import * as api from "@/lib/api";
 import { useAuth } from "@/features/auth/context/AuthContext";
@@ -125,11 +125,6 @@ export default function CoursesListPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <Button asChild variant="ghost" size="icon">
-                <Link to="/professor/dashboard">
-                  <ArrowLeft className="h-5 w-5" />
-                </Link>
-              </Button>
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                 <GraduationCap className="h-6 w-6 text-primary" />
               </div>
