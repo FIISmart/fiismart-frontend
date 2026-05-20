@@ -5,7 +5,7 @@ import {
   useState,
   useCallback,
 } from "react";
-import { Play, Pause, Eye, EyeOff, ThumbsUp, MessageSquare, Clock } from "lucide-react";
+import { Play, Pause, Eye, EyeOff, MessageSquare, Clock } from "lucide-react";
 import { loadYouTubeAPI } from "../types/loadYouTubeAPI";
 import { getYouTubeId } from "../types/videoUtils";
 import { lessonVideoService } from "../services/lesson-video.service";
@@ -46,18 +46,18 @@ function formatTime(time: number): string {
 }
 
 export default function VideoPlayer({
-  src,
-  savedPosition = 0,
-  studentId,
-  courseId,
-  lectureId,
-  targetTime,
-  onTimeUpdate,
-  markers = [],
-  onMarkerClick,
-  onProgressSaved,
-  onDurationDetected,
-}: Props) {
+                                      src,
+                                      savedPosition = 0,
+                                      studentId,
+                                      courseId,
+                                      lectureId,
+                                      targetTime,
+                                      onTimeUpdate,
+                                      markers = [],
+                                      onMarkerClick,
+                                      onProgressSaved,
+                                      onDurationDetected,
+                                    }: Props) {
   const youtubeId = useMemo(() => (src ? getYouTubeId(src) : null), [src]);
   const isYouTube = Boolean(youtubeId);
 
@@ -80,15 +80,12 @@ export default function VideoPlayer({
 
   const timeRef = useRef(0);
   const durationRef = useRef(0);
+  const reportedDurationRef = useRef(0);
 
   useEffect(() => {
     timeRef.current = currentTime;
     durationRef.current = duration;
   }, [currentTime, duration]);
-  // --------------------------------------------------------------------------
-
-  const [showMarkers, setShowMarkers] = useState(true);
-  const reportedDurationRef = useRef(0);
 
   const reportDuration = useCallback((value: number) => {
     if (!Number.isFinite(value) || value <= 0) return;
@@ -101,20 +98,23 @@ export default function VideoPlayer({
   }, [onDurationDetected]);
 
   const syncWithBackend = useCallback(
-    async (currTime: number, dur: number) => {
-      if (currTime <= 0 || dur <= 0) return;
-      const watchedPercent = Math.floor((currTime / dur) * 100);
-      try {
-        await lessonVideoService.saveProgress(studentId, courseId, lectureId, {
-          watchedPercent,
-          positionSecs: Math.floor(currTime),
-          completed: watchedPercent >= 95,
-          durationSecs: Math.round(dur),
-        });
-        
-        // Tell the parent component to refresh the sidebar
-        if (onProgressSaved) {
-          onProgressSaved();
+      async (currTime: number, dur: number) => {
+        if (currTime <= 0 || dur <= 0) return;
+        const watchedPercent = Math.floor((currTime / dur) * 100);
+        try {
+          await lessonVideoService.saveProgress(studentId, courseId, lectureId, {
+            watchedPercent,
+            positionSecs: Math.floor(currTime),
+            completed: watchedPercent >= 95,
+            durationSecs: Math.round(dur),
+          });
+
+          // Tell the parent component to refresh the sidebar
+          if (onProgressSaved) {
+            onProgressSaved();
+          }
+        } catch (error) {
+          console.error("Eroare la salvare progres:", error);
         }
       },
       [studentId, courseId, lectureId, onProgressSaved]
