@@ -78,8 +78,13 @@ export function getLatestQuizAttempt(studentId: string, quizId: string): Promise
  * Offline / dev mock derived from the original `quizData.ts`. The shape was
  * normalized to match the unified `QuizQuestion` interface (string id, the
  * answer key as `correctIdx`, options as a flat string array).
+ *
+ * REVIEW #7: gated behind `import.meta.env.DEV`. In a production build the
+ * `MOCK_QUESTIONS` export resolves to an empty array, so any code path that
+ * accidentally falls back to the mock will surface immediately ("quiz has no
+ * questions") instead of silently serving fake data to real students.
  */
-export const MOCK_QUESTIONS: QuizQuestion[] = [
+const _MOCK_QUESTIONS_DEV: QuizQuestion[] = [
   {
     id: "1",
     text: "What does HTML stand for?",
@@ -174,3 +179,7 @@ export const MOCK_QUESTIONS: QuizQuestion[] = [
       "The 'const' keyword is used to declare variables whose values cannot be reassigned.",
   },
 ];
+
+export const MOCK_QUESTIONS: QuizQuestion[] = import.meta.env.DEV
+  ? _MOCK_QUESTIONS_DEV
+  : [];
