@@ -412,8 +412,12 @@ export function ModuleCard({
         savedQuiz = await upsertLectureQuiz(courseId, module.id, persistedLessonId, feQuiz);
       } catch (quizErr) {
         console.error(quizErr);
+        // Be explicit: the lesson DID save. Only the quiz failed. Without
+        // this, the user sees a generic error and assumes the whole flow
+        // was rolled back (it wasn't — they'd find a quiz-less lesson on
+        // the next refresh and think the AI didn't produce one).
         toast.error(
-          quizErr instanceof Error ? quizErr.message : "Eroare la salvarea quiz-ului AI",
+          "Lectia a fost salvata, dar quiz-ul nu — incearca din editorul de quiz.",
         );
       }
 
@@ -423,7 +427,10 @@ export function ModuleCard({
         type: "markdown",
         content: summary,
         order,
-        quiz: savedQuiz ?? feQuiz,
+        // Use only the BE-confirmed quiz (or undefined on partial failure).
+        // The local draft (feQuiz) has a client-generated id that won't
+        // match anything in the BE — keeping it would mislead the editor.
+        quiz: savedQuiz,
       };
 
       onUpdate({
