@@ -176,8 +176,6 @@ export default function AuthPage() {
             <span className="text-xl font-semibold tracking-tight text-edu-foreground">FIISmart</span>
           </div>
 
-          {import.meta.env.DEV && view === "tabs" && <DevPreviewLogin onLogin={goAfterAuth} />}
-
           {view === "tabs" && isCognitoConfigured && <GoogleLoginButton />}
 
           {/* ── Login / Signup tabs ── */}
@@ -700,27 +698,3 @@ function GoogleLoginButton() {
   );
 }
 
-// ── Dev preview login ────────────────────────────────────────────────────────
-
-function DevPreviewLogin({ onLogin }: { onLogin: (user: AuthUser) => void }) {
-  const { loginAsMock } = useAuth();
-  return (
-    <Card className="border-dashed border-amber-400/60 bg-amber-50/40">
-      <CardContent className="p-4 space-y-3">
-        <p className="text-xs font-medium text-amber-900/80">
-          Dev preview — skip auth și navighează paginile protejate:
-        </p>
-        <div className="grid grid-cols-2 gap-2">
-          <Button type="button" variant="outline" className="text-sm"
-            onClick={() => onLogin(loginAsMock(UserRole.STUDENT))}>
-            Continue as Student
-          </Button>
-          <Button type="button" variant="outline" className="text-sm"
-            onClick={() => onLogin(loginAsMock(UserRole.PROFESSOR))}>
-            Continue as Professor
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}

@@ -69,7 +69,7 @@ export function CourseCard({ course, idx }: CourseCardProps) {
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
-            onClick={() => navigate(`/student/courses/${course.courseId}/quiz`)}
+            onClick={() => navigate(`/student/courses/${course.courseId ?? ""}`)}
             className="bg-[#9b8ec7]/10 text-[#9b8ec7] py-2.5 rounded-xl text-[10.5px] font-black hover:bg-[#9b8ec7]/20 transition-all uppercase tracking-tight focus:outline-none"
           >
             QUIZ

@@ -2,9 +2,10 @@ import { useCallback, useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { Spinner } from "@/components/ui/spinner";
-
+import { Button } from "@/components/ui/button";
 import Header from "../components/Header";
 import VideoPlayer from "../components/VideoPlayer";
+import LessonContent, { inferLessonType } from "../components/LessonContent";
 import CourseInfo from "../components/CourseInfo";
 import Sidebar from "../components/Sidebar";
 import CommentsSection from "../components/CommentsSection";
@@ -25,7 +26,7 @@ export default function LessonVideoPage() {
     courseId: string;
     lectureId: string;
   }>();
-
+  const navigate = useNavigate();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -168,7 +169,64 @@ export default function LessonVideoPage() {
     setRefreshTrigger((prev) => prev + 1);
   }, []);
 
-  // Loading states
+  const handleSelectLecture = useCallback((nextLectureId: string) => {
+    setActiveLectureId(nextLectureId);
+    if (courseId) {
+      navigate(`/student/courses/${courseId}/lectures/${nextLectureId}`);
+    }
+  }, [courseId, navigate]);
+
+  const handleMarkComplete = useCallback(async (durationSecs?: number) => {
+    if (!studentId || !courseId || !activeLectureId) return;
+    const nextDuration = durationSecs ?? lectureDetails?.durationSecs;
+    try {
+      await lessonVideoService.saveProgress(studentId, courseId, activeLectureId, {
+        watchedPercent: 100,
+        positionSecs: nextDuration ?? 0,
+        completed: true,
+        durationSecs: nextDuration && nextDuration > 0 ? nextDuration : undefined,
+      });
+      setLectureDetails((prev) => prev ? {
+        ...prev,
+        completed: true,
+        watchedPercent: 100,
+        positionSecs: nextDuration ?? prev.positionSecs,
+        durationSecs: nextDuration ?? prev.durationSecs,
+      } : prev);
+      handleProgressSaved();
+    } catch (err) {
+      console.error("Eroare la marcarea lectiei ca parcursa:", err);
+    }
+  }, [activeLectureId, courseId, handleProgressSaved, lectureDetails?.durationSecs, studentId]);
+
+  const handleDurationDetected = useCallback(async (durationSecs: number) => {
+    if (!studentId || !courseId || !activeLectureId || durationSecs <= 0) return;
+    const currentDuration = lectureDetails?.durationSecs ?? 0;
+    if (currentDuration > 0 && Math.abs(currentDuration - durationSecs) <= 1) return;
+
+    try {
+      await lessonVideoService.saveProgress(studentId, courseId, activeLectureId, {
+        watchedPercent: lectureDetails?.watchedPercent ?? 0,
+        positionSecs: lectureDetails?.positionSecs ?? 0,
+        completed: Boolean(lectureDetails?.completed),
+        durationSecs,
+      });
+      setLectureDetails((prev) => prev ? { ...prev, durationSecs } : prev);
+      handleProgressSaved();
+    } catch (err) {
+      console.error("Eroare la salvarea duratei lectiei:", err);
+    }
+  }, [
+    activeLectureId,
+    courseId,
+    handleProgressSaved,
+    lectureDetails?.completed,
+    lectureDetails?.durationSecs,
+    lectureDetails?.positionSecs,
+    lectureDetails?.watchedPercent,
+    studentId,
+  ]);
+
   if (!user) {
     return (
         <div className="min-h-screen flex items-center justify-center bg-edu-bg">
@@ -193,33 +251,61 @@ export default function LessonVideoPage() {
     );
   }
 
+  const lessonType = inferLessonType(lectureDetails);
+  const videoSrc = lectureDetails?.videoUrl || lectureDetails?.content || undefined;
+
   return (
       <div className="min-h-screen bg-edu-bg">
         <div className="hidden lg:block">
           <Header />
         </div>
 
-        <main className="max-w-[1200px] mx-auto lg:px-8 lg:py-8">
+<main className="max-w-[1200px] mx-auto lg:px-8 lg:py-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 lg:gap-8">
+            
             {/* MAIN CONTENT */}
             <div className="lg:col-span-2 flex flex-col gap-8">
-
+              
+              {/* Streak Badge din branch-ul tău */}
               <div className="flex justify-end">
                 <StreakBadge studentId={studentId ?? ""} />
               </div>
-              <VideoPlayer
-                  src={lectureDetails?.videoUrl}
-                  savedPosition={lectureDetails?.positionSecs || 0}
-                  studentId={studentId ?? ""}
-                  courseId={courseId ?? ""}
-                  lectureId={activeLectureId || ""}
-                  onTimeUpdate={setCurrentTime}
-                  targetTime={seekRequest}
-                  onMarkerClick={handleSeekAndHighlight}
-                  markers={groupedMarkersList}
-                  onProgressSaved={handleProgressSaved}
-              />
 
+              {/* Logica condițională (Video / Text) din main */}
+              {lessonType === "video" ? (
+                videoSrc ? (
+                  <VideoPlayer
+                    src={videoSrc}
+                    savedPosition={lectureDetails?.positionSecs || 0}
+                    studentId={studentId ?? ""}
+                    courseId={courseId ?? ""}
+                    lectureId={activeLectureId || ""}
+                    onTimeUpdate={setCurrentTime}
+                    targetTime={seekRequest}
+                    onMarkerClick={handleSeekAndHighlight}
+                    markers={groupedMarkersList}
+                    onProgressSaved={handleProgressSaved}
+                    onDurationDetected={handleDurationDetected}
+                  />
+                ) : (
+                  <div className="bg-card border border-border rounded-2xl p-8 text-center text-muted-foreground">
+                    Video-ul nu este disponibil.
+                    <div className="mt-4">
+                      <Button onClick={() => void handleMarkComplete()} disabled={lectureDetails?.completed}>
+                        {lectureDetails?.completed ? "Parcurs" : "Marcheaza ca parcursa"}
+                      </Button>
+                    </div>
+                  </div>
+                )
+              ) : lectureDetails ? (
+                <LessonContent lecture={lectureDetails} onMarkComplete={handleMarkComplete} />
+              ) : (
+                <div className="bg-card border border-border rounded-2xl p-8 text-center text-muted-foreground">
+                  Lectia nu este disponibila.
+                </div>
+              )}
+
+              {/* Buton Quiz din branch-ul tău */}
               {currentModuleQuizId && (
                   <button
                       onClick={() =>
@@ -236,7 +322,7 @@ export default function LessonVideoPage() {
                 <CourseInfo courseData={courseData} />
               </div>
 
-              {/* COMMENTS */}
+              {/* COMMENTS din branch-ul tău */}
               <div className="bg-card border border-border rounded-2xl p-8 shadow-sm">
                 <CommentsSection
                     studentId={studentId ?? ""}
@@ -250,7 +336,7 @@ export default function LessonVideoPage() {
                 />
               </div>
 
-              {/* REVIEW */}
+              {/* REVIEW din branch-ul tău */}
               <div className="bg-card border border-border rounded-2xl p-8 shadow-sm">
                 <ReviewSection
                     studentId={studentId ?? ""}
@@ -260,17 +346,16 @@ export default function LessonVideoPage() {
               </div>
             </div>
 
-            {/* SIDEBAR */}
-            <div className="hidden lg:block lg:col-span-1">
-              <Sidebar
-                  studentId={studentId ?? ""}
-                  courseId={courseId ?? ""}
-                  activeLectureId={activeLectureId}
-                  onSelectLecture={setActiveLectureId}
-                  overallProgress={courseData?.overallProgress ?? 0}
-                  refreshTrigger={refreshTrigger}
-              />
-            </div>
+          <div className="hidden lg:block lg:col-span-1">
+            <Sidebar
+              studentId={studentId ?? ""}
+              courseId={courseId ?? ""}
+              activeLectureId={activeLectureId}
+              onSelectLecture={handleSelectLecture}
+              overallProgress={courseData?.overallProgress ?? 0}
+              finalQuiz={courseData?.finalQuiz}
+              refreshTrigger={refreshTrigger} 
+            />
           </div>
         </main>
       </div>

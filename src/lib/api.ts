@@ -21,40 +21,16 @@ function authHeader(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-/**
- * Shared fetch primitive every feature should use to talk to the backend.
- * Sends JSON by default, attaches the bearer token from localStorage when present,
- * throws on non-2xx with the server's message when present, and returns
- * `undefined` for 204 No Content.
- *
- * In dev (`import.meta.env.DEV`), if the real backend errors (e.g. 404 because
- * the API is offline), we dynamically import the dev mock layer and try to
- * resolve the request against it. The dev module is guarded by the `DEV` flag
- * so it gets tree-shaken out of production bundles.
- */
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  let res: Response;
-  try {
-    res = await fetch(`${API_BASE}${path}`, {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...authHeader(),
-        ...options?.headers,
-      },
-    });
-  } catch (networkErr) {
-    if (import.meta.env.DEV) {
-      const mocked = await tryDevMockRequest(path, options);
-      if (mocked !== undefined) return mocked as T;
-    }
-    throw networkErr;
-  }
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeader(),
+      ...options?.headers,
+    },
+  });
   if (!res.ok) {
-    if (import.meta.env.DEV) {
-      const mocked = await tryDevMockRequest(path, options);
-      if (mocked !== undefined) return mocked as T;
-    }
     const err = await res.json().catch(() => ({ message: res.statusText }));
     let errMessage: string = err.message || `Request failed: ${res.status}`;
     if (errMessage === "Validation failed" && err.errors) {
@@ -65,23 +41,6 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
   }
   if (res.status === 204) return undefined as T;
   return res.json();
-}
-
-/**
- * Dev-only helper. Dynamically loads `./devMocks` (so it's code-split out of
- * the prod bundle) and asks it to resolve the request. Returns whatever the
- * mock returns: `undefined` when no rule matched, otherwise the mock body.
- */
-async function tryDevMockRequest(
-  path: string,
-  options?: RequestInit,
-): Promise<unknown | undefined> {
-  try {
-    const mod = await import("./devMocks");
-    return mod.tryDevMock(path, options);
-  } catch {
-    return undefined;
-  }
 }
 
 const request = apiFetch;
@@ -114,7 +73,10 @@ export interface CourseAPI {
 export interface LectureAPI {
   id: string;
   title: string;
+  type?: string | null;
+  content?: string | null;
   videoUrl: string | null;
+  pdfUrl?: string | null;
   order: number;
   durationSecs: number;
 }
@@ -163,6 +125,7 @@ export interface ModuleQuizQuestionAPI {
   points: number;
   options: string[];
   correctIdx: number;
+  correctText?: string | null;
   explanation: string | null;
 }
 
@@ -197,7 +160,7 @@ export function deleteModule(courseId: string, moduleId: string) {
 export function addLectureToModule(
   courseId: string, 
   moduleId: string, 
-  data: { title: string; videoUrl?: string; order: number; durationSecs: number }
+  data: { title: string; type?: string; content?: string; videoUrl?: string; pdfUrl?: string; order: number; durationSecs: number }
 ) {
   return request<LectureAPI>(`/courses/${courseId}/builder/modules/${moduleId}/lectures`, {
     method: "POST",
@@ -238,6 +201,10 @@ export interface CommentAPI {
 
 export function getCoursesByTeacher(teacherId: string) {
   return request<CourseAPI[]>(`/courses?teacherId=${teacherId}`);
+}
+
+export function getPublishedCourses() {
+  return request<CourseAPI[]>(`/courses?published=true`);
 }
 
 export function createCourse(data: { title: string; description: string; teacherId: string; tags?: string[] }) {
@@ -313,6 +280,7 @@ export interface ModuleQuizQuestionPayload {
   points?: number;
   options: string[];
   correctIdx: number;
+  correctText?: string | null;
   explanation?: string;
 }
 
@@ -428,26 +396,13 @@ async function postMultipart(path: string, file: File): Promise<UploadResponse> 
   const formData = new FormData();
   formData.append("file", file);
 
-  let res: Response;
-  try {
-    res = await fetch(`${API_BASE}${path}`, {
-      method: "POST",
-      headers: { ...authHeader() }, // browser sets the multipart Content-Type itself
-      body: formData,
-    });
-  } catch (networkErr) {
-    if (import.meta.env.DEV) {
-      const mocked = await tryDevMockRequest(path, { method: "POST" });
-      if (mocked !== undefined) return mocked as UploadResponse;
-    }
-    throw networkErr;
-  }
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: { ...authHeader() },
+    body: formData,
+  });
 
   if (!res.ok) {
-    if (import.meta.env.DEV) {
-      const mocked = await tryDevMockRequest(path, { method: "POST" });
-      if (mocked !== undefined) return mocked as UploadResponse;
-    }
     const err = await res.json().catch(() => ({ message: res.statusText }));
     let errMessage: string = err.message || `Upload failed: ${res.status}`;
     if (errMessage === "Validation failed" && err.errors) {
@@ -472,3 +427,54 @@ export function uploadLectureFile(file: File) {
 // ── Existing Course/Comment endpoints remain largely the same...
 export function getCourse(id: string) { return request<CourseAPI>(`/courses/${id}`); }
 export function publishCourse(id: string) { return request<CourseAPI>(`/courses/${id}/publish`, { method: "PATCH" }); }
+
+// ── Notifications ───────────────────────────────────────
+
+export interface NotificationAPI {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  read: boolean;
+  courseId?: string;
+  lectureId?: string;
+  createdAt: string;
+}
+
+export function getNotifications() {
+  return request<NotificationAPI[]>("/notifications");
+}
+
+export function getUnreadNotificationCount() {
+  return request<{ count: number }>("/notifications/unread-count");
+}
+
+export function markNotificationRead(id: string) {
+  return request<void>(`/notifications/${id}/read`, { method: "PATCH" });
+}
+
+export function markAllNotificationsRead() {
+  return request<void>("/notifications/read-all", { method: "PATCH" });
+}
+
+export interface QuizAttemptRequest {
+  quizId: string;
+  courseId: string;
+  score: number;
+  passed: boolean;
+  timeTakenSecs?: number;
+}
+
+export function submitQuizAttempt(req: QuizAttemptRequest) {
+  return request<{ id: string }>("/quiz-attempts", { method: "POST", body: JSON.stringify(req) });
+}
+
+// ── Enrollment ──────────────────────────────────────────
+
+export function checkMyEnrollment(courseId: string) {
+  return request<{ enrolled: boolean }>(`/enrollments/me/${courseId}/status`);
+}
+
+export function enrollMe(courseId: string) {
+  return request<{ id: string }>(`/enrollments/me/${courseId}`, { method: "POST" });
+}

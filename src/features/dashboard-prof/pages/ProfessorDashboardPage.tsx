@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   WifiOff,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { Spinner } from "@/components/ui/spinner";
@@ -48,11 +49,7 @@ export function ProfessorDashboardPage() {
     setIsLoading(true);
     setHasFetchError(false);
 
-    apiFetch<DashboardOverviewResponse>("/teacher-dashboard/me/overview", {
-      headers: {
-        "X-Dev-UserId": teacherId,
-      },
-    })
+    apiFetch<DashboardOverviewResponse>("/teacher-dashboard/me/overview")
       .then((backendData) => {
         if (cancelled) return;
         setData(backendData);
@@ -156,12 +153,14 @@ export function ProfessorDashboardPage() {
               description="Adaugă un test scurt pentru evaluarea studenților."
               icon={<PlusCircle size={28} />}
               bgColorClass="bg-edu-secondary/50"
+              to="/professor/quizzes"
             />
             <ActionCard
               title="Course Builder"
               description="Configurează și publică un curs nou pas cu pas."
               icon={<LayoutDashboard size={28} />}
               bgColorClass="bg-edu-accent/60"
+              to="/professor/courses"
             />
           </div>
 
@@ -170,12 +169,12 @@ export function ProfessorDashboardPage() {
               <h3 className="text-2xl font-bold font-poppins text-edu-foreground">
                 Cursurile Mele (Preview)
               </h3>
-              <a
-                href="#"
+              <Link
+                to="/professor/courses"
                 className="text-sm font-medium text-edu-primary hover:text-edu-secondary transition"
               >
                 Vezi toate
-              </a>
+              </Link>
             </div>
 
             {data.coursesPreview.length === 0 ? (
@@ -197,6 +196,7 @@ export function ProfessorDashboardPage() {
                   return (
                     <CourseCard
                       key={course.courseId}
+                      courseId={course.courseId}
                       title={course.title}
                       subtitle={course.description}
                       studentsCount={course.enrollmentCount}

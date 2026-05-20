@@ -139,7 +139,7 @@ export function QuizEditor({
   const isValid = title.trim() !== "" && questions.length > 0;
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => onCancel()}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onCancel(); }}>
       <DialogContent className="max-w-[700px] max-h-[85vh] overflow-y-auto bg-card">
         <DialogHeader>
           <DialogTitle className="font-serif text-xl flex items-center gap-2">
