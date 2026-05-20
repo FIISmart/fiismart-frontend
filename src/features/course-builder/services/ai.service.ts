@@ -23,12 +23,14 @@ export type AiPdfGenerateResponse = {
 export type GenerateFromPdfOptions = {
   questionCount?: number;
   language?: "ro" | "en";
+  signal?: AbortSignal;
 };
 
 /**
  * Calls the backend AI endpoint to generate a markdown summary and a quiz draft
  * from the given PDF. The browser handles the multipart boundary; we attach the
  * standard Bearer token via apiFetch's underlying postMultipartForm helper.
+ * Pass `opts.signal` to cancel an in-flight request.
  */
 export function generateFromPdf(
   file: File,
@@ -42,5 +44,9 @@ export function generateFromPdf(
   formData.append("questionCount", String(questionCount));
   formData.append("language", language);
 
-  return postMultipartForm<AiPdfGenerateResponse>("/ai/pdf/generate", formData);
+  return postMultipartForm<AiPdfGenerateResponse>(
+    "/ai/pdf/generate",
+    formData,
+    opts?.signal,
+  );
 }

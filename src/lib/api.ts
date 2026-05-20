@@ -401,12 +401,20 @@ async function postMultipart(path: string, file: File): Promise<UploadResponse> 
 /**
  * POST a pre-built FormData to `path`. The browser sets the multipart
  * boundary automatically (do NOT set Content-Type). Bearer auth is attached.
+ * Pass `signal` to support cancellation (e.g. user closing the dialog
+ * mid-upload). On abort, fetch throws an AbortError that callers can
+ * detect via `err.name === "AbortError"`.
  */
-export async function postMultipartForm<T>(path: string, formData: FormData): Promise<T> {
+export async function postMultipartForm<T>(
+  path: string,
+  formData: FormData,
+  signal?: AbortSignal,
+): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
     headers: { ...authHeader() },
     body: formData,
+    signal,
   });
 
   if (!res.ok) {

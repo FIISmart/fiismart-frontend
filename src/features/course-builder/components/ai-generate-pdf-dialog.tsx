@@ -43,6 +43,7 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept }: Props) {
   const [questionCount, setQuestionCount] = useState<number>(5);
   const [language, setLanguage] = useState<Language>("ro");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const [editedSummary, setEditedSummary] = useState<string>("");
   const [editedQuestions, setEditedQuestions] = useState<AiQuizQuestionDraft[]>([]);
@@ -52,9 +53,13 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept }: Props) {
     timeLimit?: number;
   }>({ title: "Quiz AI" });
 
-  // Reset all internal state whenever the dialog closes.
+  // Reset all internal state whenever the dialog closes. Also aborts any
+  // in-flight Gemini call — a Gemini round-trip can take ~60s and the user
+  // expects closing the dialog to actually cancel.
   useEffect(() => {
     if (open) return;
+    abortRef.current?.abort();
+    abortRef.current = null;
     setStage("pick");
     setFile(null);
     setQuestionCount(5);
@@ -74,11 +79,14 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept }: Props) {
   const handleGenerate = async () => {
     if (!file) return;
     const safeCount = Math.min(Math.max(questionCount, 3), 10);
+    const controller = new AbortController();
+    abortRef.current = controller;
     setStage("loading");
     try {
       const response: AiPdfGenerateResponse = await generateFromPdf(file, {
         questionCount: safeCount,
         language,
+        signal: controller.signal,
       });
       setEditedSummary(response.summary);
       setEditedQuestions(response.quiz.questions);
@@ -89,10 +97,22 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept }: Props) {
       });
       setStage("preview");
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        // User cancelled — close-effect already reset state. Do not toast.
+        return;
+      }
       const message = err instanceof Error ? err.message : "Eroare la generarea cu AI";
       toast.error(message);
       setStage("pick");
+    } finally {
+      if (abortRef.current === controller) abortRef.current = null;
     }
+  };
+
+  const handleAbortLoading = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setStage("pick");
   };
 
   const updateQuestionText = (index: number, text: string) => {
@@ -230,11 +250,14 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept }: Props) {
         )}
 
         {stage === "loading" && (
-          <div className="flex flex-col items-center justify-center gap-3 py-16">
+          <div className="flex flex-col items-center justify-center gap-4 py-16">
             <Spinner className="h-8 w-8 text-primary" />
             <p className="text-sm text-muted-foreground text-center">
               Se genereaza... poate dura pana la 60 de secunde.
             </p>
+            <Button variant="outline" size="sm" onClick={handleAbortLoading}>
+              Anuleaza
+            </Button>
           </div>
         )}
 
