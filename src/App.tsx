@@ -5,6 +5,7 @@ import AuthPage from "@/features/auth/pages/AuthPage";
 import AuthCallbackPage from "@/features/auth/pages/AuthCallbackPage";
 import CompleteProfilePage from "@/features/auth/pages/CompleteProfilePage";
 import UnauthorizedPage from "@/features/auth/pages/UnauthorizedPage";
+import BannedPage from "@/features/auth/pages/BannedPage";
 import TermsOfServicePage from "@/features/auth/components/TermsOfServicePage";
 import PrivacyPolicyPage from "@/features/auth/components/PrivacyPolicyPage";
 import RoleDashboardRedirect from "@/features/auth/components/RoleDashboardRedirect";
@@ -36,6 +37,7 @@ export default function App() {
       <Route path="/terms" element={<TermsOfServicePage />} />
       <Route path="/privacy" element={<PrivacyPolicyPage />} />
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
+      <Route path="/banned" element={<BannedPage />} />
 
       {/* Student-only */}
       <Route element={<ProtectedRoute allowedRoles={[UserRole.STUDENT]} />}>

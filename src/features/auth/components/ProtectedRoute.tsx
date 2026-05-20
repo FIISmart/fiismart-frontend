@@ -33,6 +33,10 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
     return <Navigate to="/auth" replace state={{ from: location }} />;
   }
 
+  if (user.banned) {
+    return <Navigate to="/banned" replace />;
+  }
+
   if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
     return <Navigate to="/unauthorized" replace />;
   }

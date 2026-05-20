@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Search, Trash2, Pencil, ShieldCheck, UserX, UserCheck } from "lucide-react";
+import { Search, Trash2, Pencil, ShieldCheck, UserX, UserCheck, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { adminGetUsers, adminUpdateUser, adminDeleteUser, type AdminUserAPI } from "@/lib/api";
 import { useAuth } from "@/features/auth/context/AuthContext";
@@ -61,6 +61,15 @@ export default function AdminUsersPage() {
 
   const handleSaveEdit = async () => {
     if (!editUser) return;
+    const isSelf = editUser.id === currentUser?.id;
+    const originalIsAdmin = editUser.isAdmin ?? editUser.role === "admin";
+    if (isSelf && editForm.isAdmin !== originalIsAdmin) {
+      toast.error("Nu îți poți modifica propriul rol de administrator!", {
+        description: "Acțiunea este interzisă pentru a preveni pierderea accesului la panou.",
+        duration: 5000,
+      });
+      return;
+    }
     setEditLoading(true);
     try {
       const updated = await adminUpdateUser(editUser.id, {
@@ -78,7 +87,13 @@ export default function AdminUsersPage() {
   };
 
   const toggleBan = async (u: AdminUserAPI) => {
-    if (u.id === currentUser?.id) return toast.error("Nu te poți bana pe tine însuți.");
+    if (u.id === currentUser?.id) {
+      toast.error("Nu îți poți suspenda propriul cont de administrator!", {
+        description: "Acțiunea este interzisă pentru a preveni blocarea accesului tău la panou.",
+        duration: 5000,
+      });
+      return;
+    }
     try {
       const updated = await adminUpdateUser(u.id, { banned: !u.banned });
       setUsers((prev) => prev.map((x) => x.id === updated.id ? updated : x));
@@ -208,6 +223,12 @@ export default function AdminUsersPage() {
             <DialogTitle>Editează utilizatorul</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            {editUser?.id === currentUser?.id && (
+              <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
+                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>Editezi propriul cont. Modificarea rolului de administrator este interzisă.</span>
+              </div>
+            )}
             <div>
               <label className="text-sm font-medium text-foreground">Email</label>
               <p className="text-sm text-muted-foreground mt-1">{editUser?.email}</p>
@@ -220,7 +241,7 @@ export default function AdminUsersPage() {
                 placeholder="Nume afișat"
               />
             </div>
-            <div className="flex items-center justify-between rounded-xl border border-input bg-background px-4 py-3">
+            <div className={`flex items-center justify-between rounded-xl border px-4 py-3 ${editUser?.id === currentUser?.id ? "border-input bg-muted/40 opacity-60" : "border-input bg-background"}`}>
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-[#5A5470]" />
                 <span className="text-sm font-medium text-foreground">Rol Admin</span>
@@ -229,10 +250,20 @@ export default function AdminUsersPage() {
                 type="button"
                 role="switch"
                 aria-checked={editForm.isAdmin}
-                onClick={() => setEditForm((f) => ({ ...f, isAdmin: !f.isAdmin }))}
+                disabled={editUser?.id === currentUser?.id}
+                onClick={() => {
+                  if (editUser?.id === currentUser?.id) {
+                    toast.error("Nu îți poți modifica propriul rol de administrator!", {
+                      description: "Acțiunea este interzisă pentru a preveni pierderea accesului la panou.",
+                      duration: 5000,
+                    });
+                    return;
+                  }
+                  setEditForm((f) => ({ ...f, isAdmin: !f.isAdmin }));
+                }}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-ring ${
                   editForm.isAdmin ? "bg-[#5A5470]" : "bg-muted"
-                }`}
+                } ${editUser?.id === currentUser?.id ? "cursor-not-allowed" : "cursor-pointer"}`}
               >
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
