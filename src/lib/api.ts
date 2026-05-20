@@ -395,11 +395,26 @@ export interface UploadResponse {
 async function postMultipart(path: string, file: File): Promise<UploadResponse> {
   const formData = new FormData();
   formData.append("file", file);
+  return postMultipartForm<UploadResponse>(path, formData);
+}
 
+/**
+ * POST a pre-built FormData to `path`. The browser sets the multipart
+ * boundary automatically (do NOT set Content-Type). Bearer auth is attached.
+ * Pass `signal` to support cancellation (e.g. user closing the dialog
+ * mid-upload). On abort, fetch throws an AbortError that callers can
+ * detect via `err.name === "AbortError"`.
+ */
+export async function postMultipartForm<T>(
+  path: string,
+  formData: FormData,
+  signal?: AbortSignal,
+): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
     headers: { ...authHeader() },
     body: formData,
+    signal,
   });
 
   if (!res.ok) {
@@ -411,12 +426,39 @@ async function postMultipart(path: string, file: File): Promise<UploadResponse> 
     }
     throw new ApiError(errMessage, res.status, err.code);
   }
+  if (res.status === 204) return undefined as T;
   return res.json();
 }
 
 /** Upload a cover image for a course (JPG/PNG/WebP/GIF, max 5MB). */
 export function uploadThumbnail(file: File) {
   return postMultipart("/files/thumbnail", file);
+}
+
+/**
+ * Fetches a previously uploaded file (from /api/v1/files/{id} or similar)
+ * and wraps it as a browser `File` so it can be replayed through any
+ * multipart-upload code path. `urlOrPath` may be a path-only URL (the form
+ * the BE stores: "/api/v1/files/abc..."); we forward it untouched and
+ * attach the bearer token. Throws an ApiError on non-2xx.
+ */
+export async function fetchAsFile(
+  urlOrPath: string,
+  filename: string,
+  signal?: AbortSignal,
+): Promise<File> {
+  const res = await fetch(urlOrPath, {
+    method: "GET",
+    headers: { ...authHeader() },
+    signal,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => res.statusText);
+    throw new ApiError(text || `Fetch failed: ${res.status}`, res.status);
+  }
+  const blob = await res.blob();
+  const type = blob.type || "application/pdf";
+  return new File([blob], filename, { type });
 }
 
 /** Upload a lecture file (PDF/DOC/DOCX/ZIP/TXT/MD, max 50MB). */
