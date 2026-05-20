@@ -140,18 +140,19 @@ export function QuizEditor({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onCancel(); }}>
-      <DialogContent className="max-w-[700px] max-h-[85vh] overflow-y-auto bg-card">
+      <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto bg-card p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle className="font-serif text-xl flex items-center gap-2">
-            <HelpCircle className="h-5 w-5 text-primary" />
-            {quiz ? "Editează Quiz" : "Adaugă Quiz la Modul"}
+          <DialogTitle className="font-serif text-lg sm:text-xl flex items-center gap-2">
+            <HelpCircle className="h-5 w-5 text-primary shrink-0" />
+            <span className="truncate">{quiz ? "Editează Quiz" : "Adaugă Quiz la Modul"}</span>
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-6 py-4">
           <div className="space-y-2">
-            <Label>Titlu Quiz</Label>
+            <Label htmlFor="quiz-title">Titlu Quiz</Label>
             <Input
+              id="quiz-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="bg-muted"
@@ -159,8 +160,8 @@ export function QuizEditor({
           </div>
 
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="text-base font-semibold">Întrebări</Label>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Label className="text-base font-semibold">Întrebări ({questions.length})</Label>
               <Button variant="outline" size="sm" onClick={addQuestion} className="gap-2">
                 <Plus className="h-4 w-4" /> Adaugă Întrebare
               </Button>
@@ -168,37 +169,41 @@ export function QuizEditor({
 
             <Accordion type="multiple" defaultValue={["q-0"]} className="space-y-3">
               {questions.map((q, qIndex) => (
-                <AccordionItem key={q.id} value={`q-${qIndex}`} className="border border-border rounded-xl px-4 bg-muted/30">
+                <AccordionItem
+                  key={q.id}
+                  value={`q-${qIndex}`}
+                  className="border border-border rounded-xl px-3 sm:px-4 bg-muted/30"
+                >
                   <AccordionTrigger className="hover:no-underline py-3">
-                    <div className="flex items-center gap-3 text-left">
-                      <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/20 text-primary text-sm font-medium">
+                    <div className="flex items-center gap-3 text-left min-w-0 flex-1">
+                      <span className="flex items-center justify-center w-7 h-7 shrink-0 rounded-full bg-primary/20 text-primary text-sm font-medium">
                         {qIndex + 1}
                       </span>
-                      <span className="font-medium text-sm truncate max-w-[400px]">
+                      <span className="font-medium text-sm truncate min-w-0 flex-1">
                         {q.question || "Întrebare nouă..."}
                       </span>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="pb-4 space-y-4">
                     <div className="flex flex-col sm:flex-row gap-4">
-                      <div className="flex-1 space-y-2">
+                      <div className="flex-1 min-w-0 space-y-2">
                         <Label>Textul Întrebării</Label>
                         <Textarea
                           value={q.question}
                           onChange={(e) => updateQuestion(qIndex, { question: e.target.value })}
-                          className="bg-card"
+                          className="bg-card min-h-[80px]"
                         />
                       </div>
-                      <div className="w-full sm:w-48 space-y-2">
+                      <div className="w-full sm:w-48 sm:shrink-0 space-y-2">
                         <Label>Tip Răspuns</Label>
-                        <Select 
-                          value={q.type} 
-                          onValueChange={(v: any) => updateQuestion(qIndex, { 
-                            type: v, 
-                            correctAnswer: v === "written" ? "" : 0 
+                        <Select
+                          value={q.type}
+                          onValueChange={(v) => updateQuestion(qIndex, {
+                            type: v as QuizQuestion["type"],
+                            correctAnswer: v === "written" ? "" : 0,
                           })}
                         >
-                          <SelectTrigger className="bg-card">
+                          <SelectTrigger className="bg-card w-full">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -213,18 +218,19 @@ export function QuizEditor({
 
                     {q.type === "multiple_choice" ? (
                       <div className="space-y-3">
-                        <Label>Opțiuni</Label>
+                        <Label>Opțiuni (selectează răspunsul corect)</Label>
                         <RadioGroup
-                          value={q.correctAnswer.toString()}
-                          onValueChange={(v) => updateQuestion(qIndex, { correctAnswer: parseInt(v) })}
+                          value={String(q.correctAnswer)}
+                          onValueChange={(v) => updateQuestion(qIndex, { correctAnswer: parseInt(v, 10) })}
                         >
                           {(q.options ?? []).map((option, oIndex) => (
-                            <div key={oIndex} className="flex items-center gap-3">
-                              <RadioGroupItem value={oIndex.toString()} />
+                            <div key={oIndex} className="flex items-center gap-3 min-w-0">
+                              <RadioGroupItem value={oIndex.toString()} className="shrink-0" />
                               <Input
                                 value={option}
                                 onChange={(e) => updateOption(qIndex, oIndex, e.target.value)}
-                                className="flex-1 bg-card"
+                                placeholder={`Opțiunea ${oIndex + 1}`}
+                                className="flex-1 min-w-0 bg-card"
                               />
                             </div>
                           ))}
@@ -239,13 +245,23 @@ export function QuizEditor({
                           onChange={(e) => updateQuestion(qIndex, { correctAnswer: e.target.value })}
                           className="bg-card"
                         />
-                        <p className="text-xs text-muted-foreground">Studentul trebuie să introducă exact acest text.</p>
+                        <p className="text-xs text-muted-foreground">
+                          Studentul trebuie să introducă exact acest text (case-insensitive, fără spații la capete).
+                        </p>
                       </div>
                     )}
 
-                    <Button variant="ghost" size="sm" className="text-destructive mt-2" onClick={() => removeQuestion(qIndex)}>
-                      <Trash2 className="h-4 w-4 mr-2" /> Șterge Întrebarea
-                    </Button>
+                    <div className="flex justify-end pt-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive"
+                        onClick={() => removeQuestion(qIndex)}
+                        disabled={questions.length <= 1}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" /> Șterge Întrebarea
+                      </Button>
+                    </div>
                   </AccordionContent>
                 </AccordionItem>
               ))}
@@ -253,15 +269,25 @@ export function QuizEditor({
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
+        <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-2">
           {quiz && onRemove && (
-            <Button variant="ghost" className="text-destructive sm:mr-auto" onClick={onRemove}>
+            <Button
+              variant="ghost"
+              className="text-destructive w-full sm:w-auto sm:mr-auto"
+              onClick={onRemove}
+            >
               <Trash2 className="h-4 w-4 mr-2" /> Șterge Quiz
             </Button>
           )}
-          <Button variant="outline" onClick={onCancel}>Anulează</Button>
-          <Button onClick={handleSave} disabled={!isValid || isSaving}>
-            {isSaving ? "Se salveaza..." : "Salvează"}
+          <Button variant="outline" onClick={onCancel} className="w-full sm:w-auto">
+            Anulează
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={!isValid || isSaving}
+            className="w-full sm:w-auto"
+          >
+            {isSaving ? "Se salvează..." : "Salvează"}
           </Button>
         </DialogFooter>
       </DialogContent>
