@@ -395,7 +395,14 @@ export interface UploadResponse {
 async function postMultipart(path: string, file: File): Promise<UploadResponse> {
   const formData = new FormData();
   formData.append("file", file);
+  return postMultipartForm<UploadResponse>(path, formData);
+}
 
+/**
+ * POST a pre-built FormData to `path`. The browser sets the multipart
+ * boundary automatically (do NOT set Content-Type). Bearer auth is attached.
+ */
+export async function postMultipartForm<T>(path: string, formData: FormData): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
     headers: { ...authHeader() },
@@ -411,6 +418,7 @@ async function postMultipart(path: string, file: File): Promise<UploadResponse> 
     }
     throw new ApiError(errMessage, res.status, err.code);
   }
+  if (res.status === 204) return undefined as T;
   return res.json();
 }
 
