@@ -115,4 +115,28 @@ export interface AddCommentPayload {
   body: string;
   timestampSecs: number;
   videoTimestamp: number;
+  parentCommentId?: string | null;
+}
+
+export interface GroupedVideoMarker {
+  time: number;
+  comments: CourseComment[];
+  count: number;
+}
+export interface ReviewRequest {
+  rating: number;
+  comment: string;
+}
+
+export interface ReviewResponse {
+  id: string;
+  authorName: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+}
+
+export interface StreakResponse {
+  currentStreak: number;
+  hasCompletedToday: boolean;
 }

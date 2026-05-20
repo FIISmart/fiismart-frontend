@@ -5,10 +5,11 @@ import {
   useState,
   useCallback,
 } from "react";
-import { Play, Pause, Eye, EyeOff } from "lucide-react";
+import { Play, Pause, Eye, EyeOff, MessageSquare, Clock } from "lucide-react";
 import { loadYouTubeAPI } from "../types/loadYouTubeAPI";
 import { getYouTubeId } from "../types/videoUtils";
 import { lessonVideoService } from "../services/lesson-video.service";
+import type { CourseComment, GroupedVideoMarker } from "../types";
 
 interface YouTubePlayerType {
   getCurrentTime: () => number;
@@ -20,11 +21,6 @@ interface YouTubePlayerType {
   destroy: () => void;
 }
 
-interface VideoMarker {
-  time: number;
-  id: string;
-}
-
 type Props = {
   src?: string;
   savedPosition?: number;
@@ -33,7 +29,7 @@ type Props = {
   lectureId: string;
   targetTime?: { time: number; id: number } | null;
   onTimeUpdate?: (time: number) => void;
-  markers?: VideoMarker[];
+  markers?: GroupedVideoMarker[];
   onMarkerClick?: (time: number, id: string) => void;
   onProgressSaved?: () => void; // Passed from parent to trigger UI refresh
   onDurationDetected?: (durationSecs: number) => void;
@@ -50,18 +46,18 @@ function formatTime(time: number): string {
 }
 
 export default function VideoPlayer({
-  src,
-  savedPosition = 0,
-  studentId,
-  courseId,
-  lectureId,
-  targetTime,
-  onTimeUpdate,
-  markers = [],
-  onMarkerClick,
-  onProgressSaved,
-  onDurationDetected,
-}: Props) {
+                                      src,
+                                      savedPosition = 0,
+                                      studentId,
+                                      courseId,
+                                      lectureId,
+                                      targetTime,
+                                      onTimeUpdate,
+                                      markers = [],
+                                      onMarkerClick,
+                                      onProgressSaved,
+                                      onDurationDetected,
+                                    }: Props) {
   const youtubeId = useMemo(() => (src ? getYouTubeId(src) : null), [src]);
   const isYouTube = Boolean(youtubeId);
 
@@ -70,25 +66,26 @@ export default function VideoPlayer({
   const ytPlayerRef = useRef<YouTubePlayerType | null>(null);
 
   const progressFillRef = useRef<HTMLDivElement | null>(null);
-  const markerRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const markerRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [showMarkers, setShowMarkers] = useState(true);
 
-  // --- TIMER FIX: Refs to keep track of time without triggering re-renders ---
+  // --- STATE NOU: Markerul peste care se află mouse-ul în prezent ---
+  const [hoveredMarker, setHoveredMarker] = useState<GroupedVideoMarker | null>(null);
+  const [hoveredMarkerComments, setHoveredMarkerComments] = useState<Record<number, CourseComment[]>>({});
+  const hoveredMarkerCommentsRef = useRef<Record<number, CourseComment[]>>({});
+
   const timeRef = useRef(0);
   const durationRef = useRef(0);
+  const reportedDurationRef = useRef(0);
 
-  // Keep refs in sync with the actual state
   useEffect(() => {
     timeRef.current = currentTime;
     durationRef.current = duration;
   }, [currentTime, duration]);
-  // --------------------------------------------------------------------------
-
-  const [showMarkers, setShowMarkers] = useState(true);
-  const reportedDurationRef = useRef(0);
 
   const reportDuration = useCallback((value: number) => {
     if (!Number.isFinite(value) || value <= 0) return;
@@ -101,42 +98,38 @@ export default function VideoPlayer({
   }, [onDurationDetected]);
 
   const syncWithBackend = useCallback(
-    async (currTime: number, dur: number) => {
-      if (currTime <= 0 || dur <= 0) return;
-      const watchedPercent = Math.floor((currTime / dur) * 100);
-      try {
-        await lessonVideoService.saveProgress(studentId, courseId, lectureId, {
-          watchedPercent,
-          positionSecs: Math.floor(currTime),
-          completed: watchedPercent >= 95,
-          durationSecs: Math.round(dur),
-        });
-        
-        // Tell the parent component to refresh the sidebar
-        if (onProgressSaved) {
-          onProgressSaved();
+      async (currTime: number, dur: number) => {
+        if (currTime <= 0 || dur <= 0) return;
+        const watchedPercent = Math.floor((currTime / dur) * 100);
+        try {
+          await lessonVideoService.saveProgress(studentId, courseId, lectureId, {
+            watchedPercent,
+            positionSecs: Math.floor(currTime),
+            completed: watchedPercent >= 95,
+            durationSecs: Math.round(dur),
+          });
+
+          // Tell the parent component to refresh the sidebar
+          if (onProgressSaved) {
+            onProgressSaved();
+          }
+        } catch (error) {
+          console.error("Eroare la salvare progres:", error);
         }
-      } catch (error) {
-        console.error("Eroare la salvare progres:", error);
-      }
-    },
-    [studentId, courseId, lectureId, onProgressSaved]
+      },
+      [studentId, courseId, lectureId, onProgressSaved]
   );
 
-  // --- TIMER FIX: The updated interval that reads from refs ---
   useEffect(() => {
     const interval = setInterval(() => {
       const curr = timeRef.current;
       const dur = durationRef.current;
-
       if (curr > 0 && dur > 0) {
         void syncWithBackend(curr, dur);
       }
-    }, 10000); // 10 seconds
-
+    }, 10000);
     return () => clearInterval(interval);
-  }, [syncWithBackend]); 
-  // ------------------------------------------------------------
+  }, [syncWithBackend]);
 
   useEffect(() => {
     if (isYouTube) return;
@@ -188,9 +181,7 @@ export default function VideoPlayer({
 
       interval = window.setInterval(() => {
         const player = ytPlayerRef.current;
-        if (!player || typeof player.getCurrentTime !== "function") {
-          return;
-        }
+        if (!player || typeof player.getCurrentTime !== "function") return;
 
         const t = player.getCurrentTime();
         setCurrentTime(t);
@@ -215,7 +206,7 @@ export default function VideoPlayer({
 
     if (!isYouTube && videoRef.current) {
       videoRef.current.currentTime = targetTime.time;
-      videoRef.current.play().catch(() => {});
+      videoRef.current.play().catch(() => { });
     }
 
     if (isYouTube && ytPlayerRef.current) {
@@ -223,11 +214,9 @@ export default function VideoPlayer({
       ytPlayerRef.current.playVideo();
     }
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsPlaying(true);
   }, [targetTime, isYouTube]);
 
-  // Imperatively update the progress bar fill width and marker positions
   useEffect(() => {
     const fill = progressFillRef.current;
     if (fill) {
@@ -239,19 +228,48 @@ export default function VideoPlayer({
   useEffect(() => {
     if (!duration) return;
     for (const m of markers) {
-      const el = markerRefs.current[m.id];
+      const el = markerRefs.current[m.time];
       if (el) {
         el.style.left = `${(m.time / duration) * 100}%`;
       }
     }
   }, [markers, duration]);
 
+  const loadBackendMarkerComments = useCallback(
+      async (time: number) => {
+        if (!studentId || !courseId || !lectureId) return;
+        if (hoveredMarkerCommentsRef.current[time]) return;
+
+        try {
+          const comments = await lessonVideoService.getComments(
+              studentId,
+              courseId,
+              lectureId,
+              "recent",
+              { skipDevMock: true }
+          );
+          const filtered = comments.filter((comment) => {
+            const commentTime = comment.videoTimestamp ?? comment.timestampSecs ?? 0;
+            return commentTime === time;
+          });
+          hoveredMarkerCommentsRef.current = {
+            ...hoveredMarkerCommentsRef.current,
+            [time]: filtered,
+          };
+          setHoveredMarkerComments(hoveredMarkerCommentsRef.current);
+        } catch (error) {
+          console.error("Eroare la încărcarea comentariilor pentru marker:", error);
+        }
+      },
+      [studentId, courseId, lectureId]
+  );
+
   const togglePlay = (): void => {
     if (!isYouTube) {
       const video = videoRef.current;
       if (!video) return;
       if (video.paused) {
-        video.play().catch(() => {});
+        video.play().catch(() => { });
         setIsPlaying(true);
       } else {
         video.pause();
@@ -294,86 +312,158 @@ export default function VideoPlayer({
     return <div className="w-full aspect-video bg-black rounded-xl animate-pulse" />;
 
   return (
-    <div className="w-full shadow-lg rounded-2xl overflow-hidden">
-      <div className="relative group">
-        {!isYouTube && (
-          <video
-            ref={videoRef}
-            src={src}
-            className="w-full aspect-video bg-black cursor-pointer"
-            onClick={togglePlay}
-          />
-        )}
-        {isYouTube && (
-          <div ref={ytContainerRef} className="w-full aspect-video bg-black" />
-        )}
-
-        {markers.length > 0 && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowMarkers(!showMarkers);
-            }}
-            className="absolute top-4 right-4 z-30 bg-black/60 hover:bg-black/80 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-2 backdrop-blur-md transition-all duration-300 opacity-0 group-hover:opacity-100 border border-white/10 shadow-lg"
-          >
-            {showMarkers ? <EyeOff size={16} /> : <Eye size={16} />}
-            {showMarkers ? "Ascunde adnotările" : "Arată adnotările"}
-          </button>
-        )}
-      </div>
-
-      <div className="bg-card p-5 border-t border-border">
-        {/* PROGRESS BAR */}
-        <div
-          className="relative w-full h-2.5 bg-muted rounded-full cursor-pointer hover:h-3 transition-all"
-          onClick={handleProgressBarClick}
-        >
-          <div
-            ref={progressFillRef}
-            className="absolute h-full w-0 bg-primary rounded-full transition-all duration-300 ease-out"
-          />
-
-          {showMarkers &&
-            markers.map((m) => (
-              <div
-                key={m.id}
-                ref={(el) => {
-                  markerRefs.current[m.id] = el;
-                }}
-                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-white border-[3px] border-primary rounded-full cursor-pointer hover:scale-150 transition-transform shadow-md z-10"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  seek(m.time);
-                  onMarkerClick?.(m.time, m.id);
-                }}
-                title={`Sari la secunda ${formatTime(m.time)}`}
+      <div className="w-full shadow-lg rounded-2xl overflow-hidden">
+        <div className="relative group">
+          {!isYouTube && (
+              <video
+                  ref={videoRef}
+                  src={src}
+                  className="w-full aspect-video bg-black cursor-pointer"
+                  onClick={togglePlay}
               />
-            ))}
+          )}
+          {isYouTube && (
+              <div ref={ytContainerRef} className="w-full aspect-video bg-black" />
+          )}
+
+          {markers.length > 0 && (
+              <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMarkers(!showMarkers);
+                  }}
+                  className="absolute top-4 right-4 z-30 bg-black/60 hover:bg-black/80 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-2 backdrop-blur-md transition-all duration-300 opacity-0 group-hover:opacity-100 border border-white/10 shadow-lg"
+              >
+                {showMarkers ? <EyeOff size={16} /> : <Eye size={16} />}
+                {showMarkers ? "Ascunde adnotările" : "Arată adnotările"}
+              </button>
+          )}
         </div>
 
-        <div className="flex items-center justify-between mt-4">
-          <div className="flex items-center gap-5 text-foreground">
-            <button
-              type="button"
-              onClick={togglePlay}
-              className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shadow-sm"
-            >
-              {isPlaying ? (
-                <Pause size={20} fill="currentColor" />
-              ) : (
-                <Play size={20} fill="currentColor" className="ml-1" />
-              )}
-            </button>
+        <div className="bg-card p-5 border-t border-border">
+          {/* PROGRESS BAR */}
+          <div
+              className="relative w-full h-2.5 bg-muted rounded-full cursor-pointer hover:h-3 transition-all group/timeline"
+              onClick={handleProgressBarClick}
+          >
+            <div
+                ref={progressFillRef}
+                className="absolute h-full w-0 bg-primary rounded-full transition-all duration-300 ease-out"
+            />
 
-            <span className="font-bold text-sm tracking-wide bg-muted px-3 py-1.5 rounded-lg border border-border">
+            {showMarkers &&
+                markers.map((m) => {
+                  const hasProfessor = m.comments.some((c) => c.authorRole === "Profesor");
+
+                  return (
+                      <div
+                          key={m.time}
+                          ref={(el) => {
+                            markerRefs.current[m.time] = el;
+                          }}
+                          onMouseEnter={() => {
+                            setHoveredMarker(m);
+                            void loadBackendMarkerComments(m.time);
+                          }}
+                          onMouseLeave={() => setHoveredMarker(null)}
+                          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-20 group/marker"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            seek(m.time);
+                            if (m.comments[0]) {
+                              onMarkerClick?.(m.time, m.comments[0].commentId);
+                            }
+                          }}
+                      >
+                        <div
+                            className={`rounded-full cursor-pointer transition-all duration-150 border-2 border-white shadow-md hover:scale-150 ${hasProfessor
+                                ? "bg-primary w-4 h-4 animate-pulse relative z-30"
+                                : m.count > 2
+                                    ? "bg-secondary w-3.5 h-3.5"
+                                    : "bg-neutral-400 w-3 h-3"
+                            }`}
+                        />
+
+                        {hoveredMarker?.time === m.time && (
+                            <div
+                                className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 bg-card/95 backdrop-blur-md border border-border p-3 rounded-2xl shadow-xl w-64 text-xs text-muted-foreground pointer-events-auto animate-in fade-in slide-in-from-bottom-1 duration-150 z-50"
+                                onMouseEnter={() => setHoveredMarker(m)}
+                                onMouseLeave={() => setHoveredMarker(null)}
+                            >
+
+                              <div className="flex justify-between items-center border-b border-border/50 pb-1.5 mb-2 font-bold text-foreground">
+                        <span className="flex items-center gap-1">
+                          <MessageSquare size={12} className="text-primary" />
+                          {m.count} {m.count === 1 ? "discuție" : "discuții"}
+                        </span>
+                                <span className="text-primary bg-primary/10 px-1.5 py-0.5 rounded text-[10px] flex items-center gap-1">
+                          <Clock size={10} /> {formatTime(m.time)}
+                        </span>
+                              </div>
+
+                              <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+                                {(hoveredMarkerComments[m.time] ?? m.comments).slice(0, 3).map((comment, cIndex) => (
+                                    <div
+                                        key={comment.commentId || cIndex}
+                                        className="space-y-0.5 border-b border-border/30 last:border-none pb-1.5 last:pb-0"
+                                    >
+                                      <div className="flex items-center gap-1.5">
+                              <span
+                                  className={`font-bold text-[11px] truncate max-w-[140px] ${comment.authorRole === "Profesor"
+                                      ? "text-primary"
+                                      : "text-foreground"
+                                  }`}
+                              >
+                                {comment.authorName}
+                              </span>
+                                        {comment.authorRole === "Profesor" && (
+                                            <span className="text-[8px] bg-primary text-white px-1 rounded font-bold uppercase tracking-wide">
+                                  PROF
+                                </span>
+                                        )}
+                                      </div>
+                                      <p className="line-clamp-1 text-muted-foreground text-[11px] leading-tight">
+                                        {comment.body}
+                                      </p>
+                                    </div>
+                                ))}
+
+                                {m.count > 3 && (
+                                    <div className="text-[10px] text-center text-primary font-bold pt-1">
+                                      + încă {m.count - 3} întrebări aici
+                                    </div>
+                                )}
+                              </div>
+                            </div>
+                        )}
+                      </div>
+                  );
+                })}
+          </div>
+
+          <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center gap-5 text-foreground">
+              <button
+                  type="button"
+                  onClick={togglePlay}
+                  className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shadow-sm"
+              >
+                {isPlaying ? (
+                    <Pause size={20} fill="currentColor" />
+                ) : (
+                    <Play size={20} fill="currentColor" className="ml-1" />
+                )}
+              </button>
+
+              <span className="font-bold text-sm tracking-wide bg-muted px-3 py-1.5 rounded-lg border border-border">
               {formatTime(currentTime)}
-              <span className="text-muted-foreground mx-2 font-normal">/</span>
-              {formatTime(duration)}
+                <span className="text-muted-foreground mx-2 font-normal">/</span>
+                {formatTime(duration)}
             </span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
   );
 }
