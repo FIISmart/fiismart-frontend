@@ -243,6 +243,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
               ts: now(),
             };
             setActiveMessages((prev) => [...prev, finalMsg]);
+            // Clear pending tool calls in the same React batch as the message
+            // append. Without this, there is a render between "message
+            // committed" and the `finally` cleanup where the assistant message
+            // (which already carries the tool calls) AND the standalone pending
+            // cards both exist — the UI briefly shows duplicates. The `finally`
+            // block becomes idempotent.
+            setPendingToolCalls([]);
             // Bring the thread to the top of the sidebar + update title.
             setSessions((prev) => {
               const others = prev.filter((s) => s.id !== ev.data.sessionId);
