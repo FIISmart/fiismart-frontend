@@ -12,6 +12,13 @@ interface Props {
 
 const OPTION_LABELS = ["A", "B", "C", "D", "E", "F"];
 
+/**
+ * Maximum length of a free-text answer. The student is shown a counter and the
+ * underlying textarea enforces the limit so a paste of an entire document
+ * doesn't reach the AI grader as a 100k+ char request.
+ */
+const FREE_TEXT_MAX_LENGTH = 5000;
+
 export default function QuizQuestionPage({
   question,
   onNext,
@@ -129,6 +136,9 @@ export default function QuizQuestionPage({
                 onChange={(event) => !isSubmitted && setWrittenAnswer(event.target.value)}
                 disabled={isSubmitted}
                 rows={isFreeText ? 8 : undefined}
+                // Clamp free-text answers to a reasonable upper bound so a
+                // pasted essay (100k chars) can't blow up the API request.
+                maxLength={isFreeText ? FREE_TEXT_MAX_LENGTH : undefined}
                 className={`w-full rounded-[16px] border-2 border-[#E5E7EB] bg-white p-4 text-[16px] text-[#4B5563] outline-none focus:border-[#9B8EC7] ${
                   isFreeText ? "min-h-[160px]" : "min-h-[140px]"
                 }`}
@@ -139,10 +149,15 @@ export default function QuizQuestionPage({
                 }
               />
               {isFreeText && !isSubmitted && (
-                <p className="mt-3 text-xs text-[#6A7282]">
-                  Răspunsul tău va fi evaluat de AI după trimitere. Această
-                  evaluare poate dura câteva secunde.
-                </p>
+                <div className="mt-3 flex items-start justify-between gap-3">
+                  <p className="text-xs text-[#6A7282]">
+                    Răspunsul tău va fi evaluat de AI după trimitere. Această
+                    evaluare poate dura câteva secunde.
+                  </p>
+                  <span className="text-xs text-[#6A7282] whitespace-nowrap tabular-nums">
+                    {writtenAnswer.length} / {FREE_TEXT_MAX_LENGTH}
+                  </span>
+                </div>
               )}
               {isFreeText && isSubmitted && (
                 <div className="mt-4 rounded-[16px] bg-[#F4F1F8] p-4 text-sm text-[#5A4A7A]">
