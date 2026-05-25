@@ -65,6 +65,30 @@ export type AiPdfStreamEvent =
   | { event: "ping"; data: unknown };
 
 /**
+ * Narrow a raw SSE envelope from `ssePost` into our typed discriminated
+ * union. Unknown event names are dropped (returns `null`) and logged in
+ * dev so we surface schema drift instead of casting blindly.
+ */
+function narrowAiPdfStreamEvent(ev: {
+  event: string;
+  data: unknown;
+}): AiPdfStreamEvent | null {
+  switch (ev.event) {
+    case "token":
+    case "done":
+    case "error":
+    case "ping":
+      return ev as AiPdfStreamEvent;
+    default:
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.warn("[ai.service] Unknown SSE event:", ev.event);
+      }
+      return null;
+  }
+}
+
+/**
  * Streaming variant of `generateFromPdf`. Yields SSE events as Gemini
  * emits tokens, then a final `done` event with the structured summary +
  * quiz. The original `generateFromPdf` remains for backward compat.
@@ -89,6 +113,7 @@ export async function* generateFromPdfStream(
   for await (const ev of ssePost("/ai/pdf/generate/stream", formData, {
     signal: opts?.signal,
   })) {
-    yield ev as AiPdfStreamEvent;
+    const narrowed = narrowAiPdfStreamEvent(ev);
+    if (narrowed) yield narrowed;
   }
 }

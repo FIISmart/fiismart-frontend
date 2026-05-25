@@ -36,6 +36,33 @@ export const renameSession = (id: string, title: string): Promise<ChatSession> =
   });
 
 /**
+ * Narrow a raw SSE envelope from `ssePost` into the typed `ChatStreamEvent`
+ * union. Unknown event names are dropped (returns `null`) and logged in
+ * dev so we surface BE schema drift instead of pushing untyped envelopes
+ * into the reducer.
+ */
+function narrowChatStreamEvent(ev: {
+  event: string;
+  data: unknown;
+}): ChatStreamEvent | null {
+  switch (ev.event) {
+    case "token":
+    case "tool_call":
+    case "tool_result":
+    case "done":
+    case "error":
+    case "ping":
+      return ev as ChatStreamEvent;
+    default:
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.warn("[chat.service] Unknown SSE event:", ev.event);
+      }
+      return null;
+  }
+}
+
+/**
  * Pornește un stream de mesaje. Yields `ChatStreamEvent`-uri pe măsură ce
  * BE-ul le emite (token / tool_call / tool_result / done / error / ping).
  *
@@ -59,10 +86,7 @@ export async function* streamMessage(
   );
 
   for await (const ev of raw) {
-    // Cast controlat: ssePost returnează `{ event: string; data: any }`,
-    // dar BE-ul respectă schema din `ChatStreamEvent`. Evenimente
-    // necunoscute sunt yielded ca atare — apelantul le ignoră via
-    // `default` în switch.
-    yield ev as ChatStreamEvent;
+    const narrowed = narrowChatStreamEvent(ev);
+    if (narrowed) yield narrowed;
   }
 }
