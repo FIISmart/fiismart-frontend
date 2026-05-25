@@ -10,6 +10,10 @@ type QuizApiQuestion = {
   correctIdx?: number | null;
   correctText?: string | null;
   explanation?: string | null;
+  // Free-text (AI-graded) fields. Optional — only present when type === 'free_text'.
+  sampleAnswer?: string | null;
+  keyConcepts?: string[] | null;
+  passThreshold?: number | null;
 };
 
 type QuizApiResponse = {
@@ -36,16 +40,28 @@ function mapQuiz(data: QuizApiResponse): Quiz {
     passingScore: data.passingScore,
     timeLimit: data.timeLimit,
     shuffleQuestions: data.shuffleQuestions,
-    questions: (data.questions ?? []).map((question, index) => ({
-      id: question.id ?? `question-${index}`,
-      text: question.text ?? "",
-      type: question.type === "written" ? "written" : "multiple_choice",
-      options: question.options ?? [],
-      correctIdx: question.correctIdx ?? undefined,
-      correctText: question.correctText,
-      points: question.points,
-      explanation: question.explanation ?? undefined,
-    })),
+    questions: (data.questions ?? []).map((question, index) => {
+      const normalizedType: "multiple_choice" | "written" | "free_text" =
+        question.type === "free_text"
+          ? "free_text"
+          : question.type === "written"
+            ? "written"
+            : "multiple_choice";
+      return {
+        id: question.id ?? `question-${index}`,
+        text: question.text ?? "",
+        type: normalizedType,
+        options: question.options ?? [],
+        correctIdx: question.correctIdx ?? undefined,
+        correctText: question.correctText,
+        points: question.points,
+        explanation: question.explanation ?? undefined,
+        sampleAnswer: question.sampleAnswer ?? undefined,
+        keyConcepts: Array.isArray(question.keyConcepts) ? question.keyConcepts : undefined,
+        passThreshold:
+          typeof question.passThreshold === "number" ? question.passThreshold : undefined,
+      };
+    }),
   };
 }
 
