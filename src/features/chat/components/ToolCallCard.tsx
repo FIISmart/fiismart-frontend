@@ -2,17 +2,16 @@
  * ToolCallCard — card pentru un tool call invocat de chatbot.
  *
  * Două tool-uri suportate (vezi planul Phase 3.2):
- *   - createQuizDraft  → randează un card "Quiz draft creat" cu CTA care
- *                        navighează la `/professor/courses` cu state-ul
- *                        `{ aiDraft: { type: "quiz", payload } }`;
- *   - createCourseDraft → similar, navighează la `/professor/courses/new`
- *                        cu state-ul `{ aiDraft: { type: "course", payload } }`.
+ *   - createQuizDraft   → navighează la `/professor/quizzes` (MyQuizzesPage)
+ *                         cu state-ul `{ aiDraft: { type: "quiz", payload } }`;
+ *                         pagina deschide `QuizEditor` pre-populat cu draft-ul.
+ *   - createCourseDraft → navighează la `/professor/courses` (CoursesListPage)
+ *                         cu state-ul `{ aiDraft: { type: "course", payload } }`;
+ *                         pagina creează cursul folosind metadata-ul din draft.
  *
  * Cât timp `tc.result` lipsește (BE încă rulează handler-ul) afișăm un
  * indicator de "se generează…"; după ce `result` sosește, devine activ
- * butonul CTA. Wiring-ul efectiv în course-builder (citirea
- * `location.state.aiDraft`) e responsabilitatea Phase 7 — aici doar
- * trimitem state-ul; el va rămâne disponibil pentru pickup ulterior.
+ * butonul CTA.
  */
 import { FileQuestion, GraduationCap, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -33,11 +32,11 @@ export function ToolCallCard({ toolCall }: Props) {
     const payload = toolCall.result;
     close();
     if (toolCall.name === "createQuizDraft") {
-      navigate("/professor/courses", {
+      navigate("/professor/quizzes", {
         state: { aiDraft: { type: "quiz", payload } },
       });
     } else if (toolCall.name === "createCourseDraft") {
-      navigate("/professor/courses/new", {
+      navigate("/professor/courses", {
         state: { aiDraft: { type: "course", payload } },
       });
     }
