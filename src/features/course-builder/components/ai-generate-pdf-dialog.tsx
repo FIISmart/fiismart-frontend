@@ -23,7 +23,7 @@ import { Sparkles, Upload, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { fetchAsFile } from "@/lib/api";
 import {
-  generateFromPdf,
+  generateFromPdfStream,
   type AiPdfGenerateResponse,
   type AiQuizDraft,
   type AiQuizQuestionDraft,
@@ -70,6 +70,13 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept, existingPdfs
     timeLimit?: number;
   }>({ title: "Quiz AI" });
 
+  // Live token stream preview shown during the "loading" stage. Updated
+  // on every `token` SSE event. Kept separate from `editedSummary` because
+  // raw tokens may contain the JSON envelope (we don't try to parse it
+  // mid-stream — the BE sends the structured payload via the `done` event).
+  const [streamingPreview, setStreamingPreview] = useState<string>("");
+  const [streamingTokenCount, setStreamingTokenCount] = useState<number>(0);
+
   // Reset all internal state whenever the dialog closes. Also aborts any
   // in-flight Gemini call — a Gemini round-trip can take ~60s and the user
   // expects closing the dialog to actually cancel.
@@ -85,6 +92,8 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept, existingPdfs
     setEditedSummary("");
     setEditedQuestions([]);
     setQuizMeta({ title: "Quiz AI" });
+    setStreamingPreview("");
+    setStreamingTokenCount(0);
   }, [open]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -140,18 +149,55 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept, existingPdfs
     const controller = new AbortController();
     abortRef.current = controller;
     setStage("loading");
+    setStreamingPreview("");
+    setStreamingTokenCount(0);
+
+    let finalResponse: AiPdfGenerateResponse | null = null;
+    let streamError: string | null = null;
+
     try {
-      const response: AiPdfGenerateResponse = await generateFromPdf(file, {
+      for await (const ev of generateFromPdfStream(file, {
         questionCount: safeCount,
         language,
         signal: controller.signal,
-      });
-      setEditedSummary(response.summary);
-      setEditedQuestions(response.quiz.questions);
+      })) {
+        if (ev.event === "token") {
+          const text = ev.data?.text ?? "";
+          if (text) {
+            setStreamingPreview((prev) => prev + text);
+            // Token count is an approximation — Gemini emits chunks of
+            // varying granularity. We display it as a progress signal,
+            // not a billing measure.
+            setStreamingTokenCount((n) => n + 1);
+          }
+        } else if (ev.event === "done") {
+          finalResponse = ev.data;
+        } else if (ev.event === "error") {
+          streamError = ev.data?.message ?? "Eroare la generarea cu AI";
+          break;
+        }
+        // `ping` and any other heartbeat events are ignored.
+      }
+
+      if (streamError) {
+        toast.error(streamError);
+        setStage("pick");
+        return;
+      }
+
+      if (!finalResponse) {
+        // Stream ended without a `done` event — surface as a soft error.
+        toast.error("Stream-ul s-a incheiat fara rezultat. Incearca din nou.");
+        setStage("pick");
+        return;
+      }
+
+      setEditedSummary(finalResponse.summary);
+      setEditedQuestions(finalResponse.quiz.questions);
       setQuizMeta({
-        title: response.quiz.title || "Quiz AI",
-        passingScore: response.quiz.passingScore,
-        timeLimit: response.quiz.timeLimit,
+        title: finalResponse.quiz.title || "Quiz AI",
+        passingScore: finalResponse.quiz.passingScore,
+        timeLimit: finalResponse.quiz.timeLimit,
       });
       setStage("preview");
     } catch (err) {
@@ -159,6 +205,9 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept, existingPdfs
         // User cancelled — close-effect already reset state. Do not toast.
         return;
       }
+      // fetch() raises a TypeError with name "AbortError" too in some
+      // browsers; guard on the name regardless of constructor.
+      if (err instanceof Error && err.name === "AbortError") return;
       const message = err instanceof Error ? err.message : "Eroare la generarea cu AI";
       toast.error(message);
       setStage("pick");
@@ -348,11 +397,29 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept, existingPdfs
         )}
 
         {stage === "loading" && (
-          <div className="flex flex-col items-center justify-center gap-4 py-16">
+          <div className="flex flex-col items-center justify-center gap-4 py-8">
             <Spinner className="h-8 w-8 text-primary" />
             <p className="text-sm text-muted-foreground text-center">
-              Se genereaza... poate dura pana la 60 de secunde.
+              {streamingTokenCount > 0
+                ? `Se genereaza... ${streamingTokenCount} fragmente primite`
+                : "Se genereaza... poate dura pana la 60 de secunde."}
             </p>
+
+            {streamingPreview && (
+              <div className="w-full">
+                <Label className="text-xs text-muted-foreground">
+                  Previzualizare in timp real
+                </Label>
+                <pre
+                  className="mt-1 max-h-[300px] overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-border bg-muted/60 p-3 text-xs leading-relaxed font-mono text-foreground/90"
+                  aria-live="polite"
+                >
+                  {streamingPreview}
+                  <span className="ml-0.5 inline-block h-3 w-1.5 align-text-bottom animate-pulse bg-primary/70" />
+                </pre>
+              </div>
+            )}
+
             <Button variant="outline" size="sm" onClick={handleAbortLoading}>
               Anuleaza
             </Button>

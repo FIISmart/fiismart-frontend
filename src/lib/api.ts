@@ -436,6 +436,156 @@ export function uploadThumbnail(file: File) {
 }
 
 /**
+ * Streaming POST helper for Server-Sent Events (SSE).
+ *
+ * `EventSource` can't POST natively, so we use `fetch` with
+ * `Accept: text/event-stream` and parse the body via a ReadableStream
+ * reader. Yields one `{event, data}` object per complete SSE event block
+ * (delimited by `\n\n`). `data:` is JSON-parsed when possible; otherwise
+ * the raw string is yielded.
+ *
+ * - Bearer auth attached automatically (mirrors `apiFetch`).
+ * - Caller-provided headers merge in (and override `Accept` if they wish).
+ * - On non-2xx the body is read as text and an `ApiError` is thrown,
+ *   matching `apiFetch`'s error shape.
+ * - Pass `init.signal` to cancel. AbortError propagates after reader
+ *   cleanup; downstream callers can match on `err.name === "AbortError"`.
+ */
+export async function* ssePost(
+  path: string,
+  body: BodyInit,
+  init?: { signal?: AbortSignal; headers?: HeadersInit; method?: string },
+): AsyncIterable<{ event: string; data: any }> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: init?.method ?? "POST",
+    headers: {
+      Accept: "text/event-stream",
+      ...authHeader(),
+      ...init?.headers,
+    },
+    body,
+    signal: init?.signal,
+  });
+
+  if (!res.ok) {
+    // Try JSON first (matches apiFetch error shape); fall back to text.
+    const raw = await res.text().catch(() => "");
+    let errMessage = `Request failed: ${res.status}`;
+    let errCode: string | undefined;
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as {
+          message?: string;
+          code?: string;
+          errors?: Record<string, string[]>;
+        };
+        errMessage = parsed.message || errMessage;
+        errCode = parsed.code;
+        if (errMessage === "Validation failed" && parsed.errors) {
+          const firstMessages = Object.values(parsed.errors).flat();
+          if (firstMessages.length > 0) errMessage = firstMessages[0];
+        }
+      } catch {
+        errMessage = raw || res.statusText || errMessage;
+      }
+    } else {
+      errMessage = res.statusText || errMessage;
+    }
+    throw new ApiError(errMessage, res.status, errCode);
+  }
+
+  if (!res.body) {
+    // Server returned no body — nothing to stream.
+    return;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder("utf-8");
+  let buffer = "";
+
+  // Wire up abort: cancel the reader so the underlying fetch stops too.
+  const onAbort = () => {
+    reader.cancel().catch(() => {
+      /* already closed */
+    });
+  };
+  init?.signal?.addEventListener("abort", onAbort);
+
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) {
+        // Flush any trailing event in the buffer (no terminating \n\n).
+        const trailing = buffer.trim();
+        if (trailing.length > 0) {
+          const ev = parseSseBlock(trailing);
+          if (ev) yield ev;
+        }
+        break;
+      }
+      buffer += decoder.decode(value, { stream: true });
+
+      let sepIdx: number;
+      // SSE events are separated by a blank line: "\n\n" (or "\r\n\r\n").
+      // We normalize CRLF to LF first to keep parsing simple.
+      buffer = buffer.replace(/\r\n/g, "\n");
+      while ((sepIdx = buffer.indexOf("\n\n")) !== -1) {
+        const rawBlock = buffer.slice(0, sepIdx);
+        buffer = buffer.slice(sepIdx + 2);
+        const ev = parseSseBlock(rawBlock);
+        if (ev) yield ev;
+      }
+    }
+  } finally {
+    init?.signal?.removeEventListener("abort", onAbort);
+    try {
+      reader.releaseLock();
+    } catch {
+      /* reader may already be released */
+    }
+  }
+}
+
+/**
+ * Parse a single SSE event block (without trailing \n\n). Supports
+ * multi-line `data:` per the SSE spec — multiple data lines are joined
+ * with `\n`. Returns null if the block has no usable content.
+ */
+function parseSseBlock(block: string): { event: string; data: any } | null {
+  let eventName = "message"; // SSE default per spec
+  const dataLines: string[] = [];
+
+  for (const line of block.split("\n")) {
+    if (!line || line.startsWith(":")) continue; // skip empty + comments
+    const colon = line.indexOf(":");
+    const field = colon === -1 ? line : line.slice(0, colon);
+    // Spec: optional single space after colon is stripped.
+    let value = colon === -1 ? "" : line.slice(colon + 1);
+    if (value.startsWith(" ")) value = value.slice(1);
+
+    if (field === "event") {
+      eventName = value;
+    } else if (field === "data") {
+      dataLines.push(value);
+    }
+    // Other fields (id, retry) are ignored for our use case.
+  }
+
+  if (dataLines.length === 0) {
+    // Heartbeat/ping events sometimes carry no data; still surface them
+    // so callers can observe the event name.
+    return { event: eventName, data: null };
+  }
+
+  const rawData = dataLines.join("\n");
+  try {
+    return { event: eventName, data: JSON.parse(rawData) };
+  } catch {
+    return { event: eventName, data: rawData };
+  }
+}
+
+/**
  * Fetches a previously uploaded file (from /api/v1/files/{id} or similar)
  * and wraps it as a browser `File` so it can be replayed through any
  * multipart-upload code path. `urlOrPath` may be a path-only URL (the form
@@ -534,11 +684,30 @@ export interface SubmitAttemptPayload {
   answers: SubmitQuizAttemptAnswer[];
 }
 
+/**
+ * Per-answer detail returned by the submit endpoint. Includes the
+ * BE-graded correctness for every question and (for free_text questions)
+ * the AI grading payload: aiScore (0-100 or null on failure), aiConfidence
+ * (0-1), aiReasoning (plain text), aiMissingConcepts (string list).
+ */
+export interface SubmitQuizAttemptAnswerResult {
+  questionId: string;
+  selectedIdx?: number;
+  writtenAnswer?: string;
+  correct: boolean;
+  aiScore?: number | null;
+  aiConfidence?: number;
+  aiReasoning?: string;
+  aiMissingConcepts?: string[];
+}
+
 export interface SubmitQuizAttemptResponse {
   id: string;
   score: number;
   passed: boolean;
   timeTakenSecs?: number;
+  /** Per-question results — optional for back-compat with older BE responses. */
+  answers?: SubmitQuizAttemptAnswerResult[];
 }
 
 export function submitQuizAttempt(
