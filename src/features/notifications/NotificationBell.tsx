@@ -28,10 +28,10 @@ export function NotificationBell({ className = "" }: NotificationBellProps) {
       <button
         type="button"
         onClick={() => setOpen((p) => !p)}
-        className="relative p-1 text-gray-400 hover:text-[#9b8ec7] transition-colors"
+        className="relative p-1 text-muted-foreground hover:text-primary transition-colors"
         aria-label="Notificări"
       >
-        <Bell size={20} />
+        <Bell className="size-5" />
         {unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
             {unreadCount > 9 ? "9+" : unreadCount}

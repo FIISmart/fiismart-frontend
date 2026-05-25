@@ -22,11 +22,6 @@ import type { Quiz, QuizAttempt } from "../types";
 
 type Phase = "start" | "question" | "result";
 
-/**
- * Local-only per-answer record. We keep `isCorrect` here purely so the result
- * page can show "X / N" before the server's authoritative response lands —
- * it is NOT sent on submit (the server grades).
- */
 interface LocalAnswer {
   questionId: string;
   selectedIdx: number;
@@ -39,21 +34,17 @@ export default function QuizPlayerPage() {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
 
-  // ── Quiz + last attempt data ───────────────────────────
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [latestAttempt, setLatestAttempt] = useState<QuizAttempt | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // ── Player state ───────────────────────────────────────
   const [phase, setPhase] = useState<Phase>("start");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<LocalAnswer[]>([]);
   const [correctAnswers, setCorrectAnswers] = useState(0);
 
-  // ── Attempt lifecycle state ────────────────────────────
   const [attemptId, setAttemptId] = useState<string | null>(null);
-  /** Seconds (NOT minutes) — comes straight from BE `timeLimitSeconds`. */
   const [timeLimitSeconds, setTimeLimitSeconds] = useState(0);
   const [starting, setStarting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -61,8 +52,6 @@ export default function QuizPlayerPage() {
   const startedAtRef = useRef<number>(Date.now());
   const answersRef = useRef<LocalAnswer[]>([]);
 
-  // Mirror answers into a ref so timeout/freeze handlers see the latest list
-  // without re-subscribing every render.
   useEffect(() => {
     answersRef.current = answers;
   }, [answers]);
@@ -70,7 +59,6 @@ export default function QuizPlayerPage() {
   const studentId = user?.id ?? "";
   const courseId = quiz?.courseId ?? searchParams.get("courseId") ?? "";
 
-  // ── Initial loads ──────────────────────────────────────
   useEffect(() => {
     if (!quizId) return;
     let cancelled = false;
@@ -110,7 +98,6 @@ export default function QuizPlayerPage() {
     };
   }, [quizId, studentId]);
 
-  // ── Derived ────────────────────────────────────────────
   const total = quiz?.questions.length ?? 0;
   const passScore = quiz?.passingScore ?? 60;
   const localScore = useMemo(
@@ -118,13 +105,10 @@ export default function QuizPlayerPage() {
     [correctAnswers, total],
   );
 
-  // ── Submission (used by manual finish AND timer timeout) ──────────────
   const submitAttempt = useCallback(
     async (finalAnswers: LocalAnswer[]) => {
       if (submittedRef.current) return;
       if (!attemptId) {
-        // Shouldn't happen — handleStart blocks start if attempt creation
-        // failed. Guard defensively.
         setError("Nu pot trimite raspunsurile: lipseste attempt-ul.");
         setPhase("result");
         return;
@@ -132,7 +116,6 @@ export default function QuizPlayerPage() {
       submittedRef.current = true;
       setSubmitting(true);
 
-      // Strip local-only fields (isCorrect) before sending. The server grades.
       const payloadAnswers: SubmitQuizAttemptAnswer[] = finalAnswers.map((a) => ({
         questionId: a.questionId,
         selectedIdx: a.selectedIdx,
@@ -143,7 +126,6 @@ export default function QuizPlayerPage() {
         const result = await submitQuizAttempt(attemptId, {
           answers: payloadAnswers,
         });
-        // Synthesize a QuizAttempt for the result banner from the BE response.
         setLatestAttempt({
           id: result.id,
           quizId: quiz?.id ?? "",
@@ -170,7 +152,6 @@ export default function QuizPlayerPage() {
             : "Rezultatul quiz-ului nu a putut fi salvat.";
         setError(msg);
         toast.error(msg);
-        // Allow retry on transient failures.
         submittedRef.current = false;
       } finally {
         setSubmitting(false);
@@ -180,8 +161,6 @@ export default function QuizPlayerPage() {
     [attemptId, quiz?.id, courseId, studentId],
   );
 
-  // ── Timer ──────────────────────────────────────────────
-  // Auto-submit when the timer hits zero.
   const onTimeout = useCallback(() => {
     if (submittedRef.current) return;
     toast.message("Timpul a expirat — trimit raspunsurile.");
@@ -194,21 +173,13 @@ export default function QuizPlayerPage() {
     /* enabled */ phase === "question" && timeLimitSeconds > 0,
   );
 
-  // ── Freeze + anti-cheat ────────────────────────────────
   const freeze = useFreeze(30);
 
   useAntiCheat({
     enabled: phase === "question",
     onViolation: ({ kind }) => {
-      // Soft signals (`hidden`, `fullscreen_exit`): freeze the UI for 30s.
-      // The main quiz timer keeps running — losing focus costs time.
-      //
-      // Hard signal (`pagehide`): user is genuinely navigating away. Fire
-      // an abandon so the server can mark the attempt invalid. No freeze
-      // here — the page is going away.
       if (kind === "pagehide") {
         if (attemptId && !submittedRef.current) {
-          // Best-effort; pagehide is fire-and-forget.
           void abandonQuizAttempt(attemptId).catch(() => {});
         }
         return;
@@ -217,7 +188,6 @@ export default function QuizPlayerPage() {
     },
   });
 
-  // ── Handlers ───────────────────────────────────────────
   const handleStart = useCallback(async () => {
     if (!quizId) return;
     setStarting(true);
@@ -233,9 +203,6 @@ export default function QuizPlayerPage() {
       startedAtRef.current = Date.now();
       setPhase("question");
     } catch (err) {
-      // REVIEW #4 fix: do NOT fail-open. If the BE cannot register the
-      // attempt, block the quiz entirely — taking it with no attemptId means
-      // the result is unrecorded and unsubmittable.
       console.error("Failed to start quiz attempt:", err);
       const msg =
         err instanceof Error
@@ -296,13 +263,12 @@ export default function QuizPlayerPage() {
     setPhase("start");
   }, []);
 
-  // ── Render ─────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F2EAE0] flex flex-col font-sans">
+      <div className="min-h-screen bg-background flex flex-col font-sans">
         <Header />
         <div className="flex-grow flex items-center justify-center">
-          <Spinner className="size-8 text-[#9B8EC7]" />
+          <Spinner className="size-8 text-primary" />
         </div>
       </div>
     );
@@ -310,10 +276,10 @@ export default function QuizPlayerPage() {
 
   if (!quiz) {
     return (
-      <div className="min-h-screen bg-[#F2EAE0] flex flex-col font-sans">
+      <div className="min-h-screen bg-background flex flex-col font-sans">
         <Header />
         <div className="flex-grow flex items-center justify-center px-4 text-center">
-          <p className="text-[#5A4A3A]">
+          <p className="text-foreground">
             {error ?? "Quiz-ul nu este disponibil."}
           </p>
         </div>
@@ -327,19 +293,19 @@ export default function QuizPlayerPage() {
   const timerLabel = `${minutes}:${seconds.toString().padStart(2, "0")}`;
 
   return (
-    <div className="min-h-screen bg-[#F2EAE0] flex flex-col font-sans">
+    <div className="min-h-screen bg-background flex flex-col font-sans">
       <Header />
 
       {phase === "start" && (
         <div className="flex flex-grow flex-col">
           {latestAttempt && (
-            <div className="mx-auto mt-6 w-full max-w-[512px] rounded-2xl border border-[#9B8EC7]/25 bg-white px-5 py-3 text-sm text-[#5A4A3A]">
+            <div className="mx-auto mt-6 w-full max-w-[512px] rounded-2xl border border-primary/25 bg-card px-5 py-3 text-sm text-foreground">
               Ultimul rezultat: <strong>{latestAttempt.score}%</strong>{" "}
               ({latestAttempt.passed ? "promovat" : "nepromovat"})
             </div>
           )}
           {error && (
-            <div className="mx-auto mt-6 w-full max-w-[512px] rounded-2xl border border-red-200 bg-white px-5 py-3 text-sm text-red-700">
+            <div className="mx-auto mt-6 w-full max-w-[512px] rounded-2xl border border-red-200 bg-card px-5 py-3 text-sm text-red-700">
               {error}
             </div>
           )}
@@ -351,7 +317,7 @@ export default function QuizPlayerPage() {
             passScore={passScore}
           />
           {starting && (
-            <p className="pb-8 text-center text-sm text-[#6A7282]">
+            <p className="pb-8 text-center text-sm text-muted-foreground">
               Pornesc quiz-ul...
             </p>
           )}
@@ -363,7 +329,7 @@ export default function QuizPlayerPage() {
           {timeLimitSeconds > 0 && (
             <div className="mx-auto mt-4 w-full max-w-[800px] px-4">
               <div
-                className="rounded-2xl border border-[#9B8EC7]/25 bg-white px-4 py-2 text-center text-sm font-semibold text-[#5A4A3A]"
+                className="rounded-2xl border border-primary/25 bg-card px-4 py-2 text-center text-sm font-semibold text-foreground"
                 aria-live="polite"
               >
                 Timp ramas:{" "}
@@ -382,8 +348,7 @@ export default function QuizPlayerPage() {
             frozen={freeze.frozen}
             secondsLeft={freeze.secondsLeft}
             onDismiss={() => {
-              /* Acknowledgement only — the freeze deadline is wall-clock and
-                 the overlay unmounts automatically when frozen flips false. */
+              /* Acknowledgement only */
             }}
           />
         </>
@@ -392,12 +357,12 @@ export default function QuizPlayerPage() {
       {phase === "result" && (
         <div className="flex flex-grow flex-col">
           {submitting && (
-            <div className="mx-auto mt-6 w-full max-w-[340px] rounded-2xl bg-white px-5 py-3 text-center text-sm text-[#5A4A3A]">
+            <div className="mx-auto mt-6 w-full max-w-[340px] rounded-2xl bg-card px-5 py-3 text-center text-sm text-foreground">
               Se salveaza rezultatul...
             </div>
           )}
           {error && (
-            <div className="mx-auto mt-6 w-full max-w-[512px] rounded-2xl border border-red-200 bg-white px-5 py-3 text-sm text-red-700">
+            <div className="mx-auto mt-6 w-full max-w-[512px] rounded-2xl border border-red-200 bg-card px-5 py-3 text-sm text-red-700">
               {error}
             </div>
           )}
@@ -407,12 +372,12 @@ export default function QuizPlayerPage() {
             onRetry={handleRetry}
           />
           {latestAttempt && (
-            <p className="pb-8 text-center text-sm text-[#6A7282]">
+            <p className="pb-8 text-center text-sm text-muted-foreground">
               Rezultat salvat: {latestAttempt.score}%.
             </p>
           )}
           {!latestAttempt && phase === "result" && !submitting && (
-            <p className="pb-8 text-center text-sm text-[#6A7282]">
+            <p className="pb-8 text-center text-sm text-muted-foreground">
               Scor local: {localScore}%.
             </p>
           )}

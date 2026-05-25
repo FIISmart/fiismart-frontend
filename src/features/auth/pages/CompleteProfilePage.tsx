@@ -35,7 +35,9 @@ export default function CompleteProfilePage() {
     try {
       const user = await assignRole(selected, firstName.trim(), lastName.trim());
       toast.success(`Bun venit pe FIISmart, ${user.firstName || user.email}!`);
-      const dest = user.role === "PROFESSOR" ? "/professor/dashboard" : "/student/dashboard";
+      let dest = "/student/dashboard";
+      if (user.role === "PROFESSOR") dest = "/professor/dashboard";
+      if (user.role === "ADMIN") dest = "/admin/dashboard";
       navigate(dest, { replace: true });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "A apărut o eroare. Încearcă din nou.";

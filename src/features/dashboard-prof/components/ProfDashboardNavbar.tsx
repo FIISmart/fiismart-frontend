@@ -23,11 +23,11 @@ export function ProfDashboardNavbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button className="md:hidden text-edu-foreground hover:text-edu-primary transition">
-            <Menu size={24} />
+            <Menu className="size-6" />
           </button>
           <Link to="/professor/dashboard">
             <h1 className="text-xl md:text-2xl font-bold font-poppins text-edu-primary">
-              FII<span className="text-edu-foreground">Smart</span>
+              FIISmart
             </h1>
           </Link>
         </div>
@@ -50,7 +50,7 @@ export function ProfDashboardNavbar() {
         <div className="flex items-center gap-2">
           <NotificationBell />
           <div className="flex items-center gap-3 border border-edu-border p-2 md:px-4 md:py-2 rounded-full cursor-default">
-            <UserCircle size={24} className="text-edu-muted-fg" />
+            <UserCircle className="size-6 text-edu-muted-fg" />
             <span className="hidden md:inline text-edu-foreground font-medium">{displayName}</span>
           </div>
           <button
@@ -59,7 +59,7 @@ export function ProfDashboardNavbar() {
             title="Deconectare"
             className="p-2 rounded-full hover:bg-edu-border text-edu-muted-fg hover:text-red-500 transition-colors"
           >
-            <LogOut size={20} />
+            <LogOut className="size-5" />
           </button>
         </div>
       </div>

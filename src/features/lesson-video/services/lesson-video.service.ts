@@ -1,6 +1,7 @@
 import { apiFetch } from "@/lib/api";
 import type {
   AddCommentPayload,
+  BackendReviewResponse,
   CourseComment,
   CourseHeader,
   LectureDetails,
@@ -8,8 +9,9 @@ import type {
   ModuleSummary,
   ReviewRequest,
   ReviewResponse,
-  StreakResponse
+  StreakResponse,
 } from "../types";
+import { mapReview } from "../types";
 
 /**
  * Student-facing endpoints for Lesson Video page
@@ -132,36 +134,36 @@ export const lessonVideoService = {
   getReviews(
       studentId: string,
       courseId: string,
-      lectureId: string
+      _lectureId: string
   ) {
-    return apiFetch<ReviewResponse[]>(
-        `/students/${studentId}/courses/${courseId}/lectures/${lectureId}/reviews`
-    );
+    return apiFetch<BackendReviewResponse[]>(
+        `/reviews/course/${courseId}`
+    ).then((list) => list.map(mapReview));
   },
 
   addReview(
       studentId: string,
       courseId: string,
-      lectureId: string,
+      _lectureId: string,
       payload: ReviewRequest
   ) {
-    return apiFetch<ReviewResponse>(
-        `/students/${studentId}/courses/${courseId}/lectures/${lectureId}/reviews`,
+    const body = {
+      courseId,
+      stars: payload.stars,
+      body: payload.body,
+    };
+    return apiFetch<BackendReviewResponse>(
+        `/reviews`,
         {
           method: "POST",
-          body: JSON.stringify(payload),
+          body: JSON.stringify(body),
         }
-    );
+    ).then(mapReview);
   },
   getStudentStreak(studentId: string) {
     return apiFetch<StreakResponse>(
         `/students/${studentId}/streak`
     );
-    // MOCK VERSION:
-    /*return Promise.resolve({
-       currentStreak: 12,
-       hasCompletedToday: true,
-      });*/
   },
 
 };

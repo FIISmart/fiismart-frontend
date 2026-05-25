@@ -127,7 +127,7 @@ export default function CoursesListPage() {
             <div className="flex items-center gap-3">
               <Button asChild variant="ghost" size="icon">
                 <Link to="/professor/dashboard">
-                  <ArrowLeft className="h-5 w-5" />
+                  <ArrowLeft className="size-5" />
                 </Link>
               </Button>
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -147,7 +147,7 @@ export default function CoursesListPage() {
                 variant="outline"
               >
                 <Link to="/professor/quizzes" className="gap-2 inline-flex items-center">
-                  <HelpCircle className="h-4 w-4" />
+                  <HelpCircle className="size-4" />
                   My Quizzes
                 </Link>
               </Button>
@@ -158,7 +158,7 @@ export default function CoursesListPage() {
                 disabled={isCreatingCourse || !teacherId}
                 aria-busy={isCreatingCourse}
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="size-4" />
                 {isCreatingCourse ? "Se creează..." : "Curs Nou"}
               </Button>
             </div>
@@ -235,7 +235,7 @@ export default function CoursesListPage() {
                     onClick={() => setDeletingCourseId(course.id)}
                     aria-label="Șterge cursul"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="size-4" />
                   </Button>
                 </div>
               </CardFooter>
@@ -251,7 +251,7 @@ export default function CoursesListPage() {
             className="border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center min-h-[320px] text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-3">
-              <Plus className="h-8 w-8" />
+              <Plus className="size-8" />
             </div>
             <span className="font-medium">
               {isCreatingCourse ? "Se creează..." : "Creează Curs Nou"}

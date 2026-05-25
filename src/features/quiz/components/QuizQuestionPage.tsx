@@ -1,5 +1,8 @@
 import { useState, useEffect, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
+import { Check, X, ArrowRight, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import type { QuizQuestion } from "../types";
 
 interface Props {
@@ -24,7 +27,6 @@ export default function QuizQuestionPage({
     const [writtenAnswer, setWrittenAnswer] = useState("");
     const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
 
-  // Reset on new question
   useEffect(() => {
     setSelectedIdx(null);
     setWrittenAnswer("");
@@ -56,45 +58,37 @@ export default function QuizQuestionPage({
   return (
     <div className="flex-grow flex flex-col justify-center items-center w-full max-w-[800px] mx-auto px-4 py-8">
       <div className="w-full">
-        {/* Top status bar */}
-        <div className="flex justify-between items-center text-[#6A7282] text-sm font-medium mb-4 px-2">
-          <button
-          onClick={() => navigate("/student/dashboard")}
-          className="flex items-center gap-1 hover:text-[#9B8EC7] transition-colors"
+        <div className="flex justify-between items-center text-muted-foreground text-sm font-medium mb-4 px-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/student/dashboard")}
+            className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors h-auto p-0"
           >
-            <span>&lt;</span> Exit
-          </button>
-          <span className="text-gray-800 font-bold">
+            <ArrowLeft className="size-4" />
+            Exit
+          </Button>
+          <span className="text-foreground font-bold">
             {index + 1} / {total}
           </span>
           <span>{index} answered</span>
         </div>
 
-        {/* Progress bar — slot-based to avoid inline styles */}
-        <div className="w-full h-2 bg-[#E5E7EB] rounded-full mb-6 overflow-hidden flex">
-          {Array.from({ length: total }).map((_, i) => (
-            <div
-              key={i}
-              className={
-                i < index
-                  ? "flex-1 h-full bg-gradient-to-r from-[#B4D3D9] to-[#9B8EC7] transition-all duration-500"
-                  : "flex-1 h-full transition-all duration-500"
-              }
-            />
-          ))}
-        </div>
+        <Progress
+          value={total > 0 ? (index / total) * 100 : 0}
+          className="mb-6"
+        />
 
-        {/* Card */}
-        <div className="bg-white w-full rounded-[24px] shadow-[0_20px_25px_-5px_rgba(0,0,0,0.05),0_8px_10px_-6px_rgba(0,0,0,0.05)] p-8 sm:p-10 relative">
+        <div className="bg-card w-full rounded-2xl shadow-lg p-8 sm:p-10 relative">
           <div className="flex gap-3 mb-6">
-            <div className="bg-[#9B8EC7] text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow-sm">
+            <div className="bg-primary text-primary-foreground text-xs font-semibold px-4 py-1.5 rounded-full shadow-sm">
               Question {index + 1}
             </div>
 
             {isSubmitted && (
               <div
                 className={`text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow-sm ${
-                  isCorrect ? "bg-[#84C5C4]" : "bg-[#E57373]"
+                  isCorrect ? "bg-accent" : "bg-destructive"
                 }`}
               >
                 {isCorrect ? "Correct!" : "Incorrect"}
@@ -102,7 +96,7 @@ export default function QuizQuestionPage({
             )}
           </div>
 
-          <h2 className="text-[20px] sm:text-[24px] font-bold text-gray-900 mb-8 leading-snug">
+          <h2 className="text-[20px] sm:text-[24px] font-bold text-foreground mb-8 leading-snug">
             {question.text}
           </h2>
 
@@ -112,12 +106,12 @@ export default function QuizQuestionPage({
                 value={writtenAnswer}
                 onChange={(event) => !isSubmitted && setWrittenAnswer(event.target.value)}
                 disabled={isSubmitted}
-                className="w-full min-h-[140px] rounded-[16px] border-2 border-[#E5E7EB] bg-white p-4 text-[16px] text-[#4B5563] outline-none focus:border-[#9B8EC7]"
+                className="w-full min-h-[140px] rounded-xl border-2 border-border bg-card p-4 text-[16px] text-foreground outline-none focus:border-primary"
                 placeholder="Scrie raspunsul aici..."
               />
               {isSubmitted && (
-                <div className={`mt-4 rounded-[16px] p-4 text-sm ${
-                  isCorrect ? "bg-[#F2F8F8] text-[#31706E]" : "bg-[#FDF6F6] text-[#C62828]"
+                <div className={`mt-4 rounded-xl p-4 text-sm ${
+                  isCorrect ? "bg-accent/20 text-primary" : "bg-destructive/10 text-destructive"
                 }`}>
                   {isCorrect
                     ? "Raspuns corect."
@@ -132,55 +126,29 @@ export default function QuizQuestionPage({
               const isThisCorrect = optIdx === question.correctIdx;
 
               let containerClasses =
-                "border-[#E5E7EB] bg-white hover:border-[#BDA6CE]";
-              let circleClasses = "bg-[#F2EAE0] text-[#6A7282]";
-              let textClasses = "text-[#4B5563]";
+                "border-border bg-card hover:border-secondary";
+              let circleClasses = "bg-background text-muted-foreground";
+              let textClasses = "text-foreground";
               let content: ReactNode = OPTION_LABELS[optIdx] ?? "";
 
               if (isSubmitted) {
                 if (isThisCorrect) {
-                  containerClasses = "border-[#84C5C4] bg-[#F2F8F8]";
-                  circleClasses = "bg-[#84C5C4] text-white";
-                  textClasses = "text-[#31706E] font-semibold";
-                  content = (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  );
+                  containerClasses = "border-accent bg-accent/10";
+                  circleClasses = "bg-accent text-accent-foreground";
+                  textClasses = "text-primary font-semibold";
+                  content = <Check className="size-5" />;
                 } else if (isSelected && !isThisCorrect) {
-                  containerClasses = "border-[#E57373] bg-[#FDF6F6]";
-                  circleClasses = "bg-[#E57373] text-white";
-                  textClasses = "text-[#C62828] font-semibold";
-                  content = (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  );
+                  containerClasses = "border-destructive bg-destructive/10";
+                  circleClasses = "bg-destructive text-destructive-foreground";
+                  textClasses = "text-destructive font-semibold";
+                  content = <X className="size-5" />;
                 } else {
-                  containerClasses = "border-[#E5E7EB] bg-white opacity-60";
+                  containerClasses = "border-border bg-card opacity-60";
                 }
               } else if (isSelected) {
-                containerClasses = "border-[#9B8EC7] bg-[#F9F7FA]";
-                circleClasses = "bg-[#9B8EC7] text-white";
-                textClasses = "text-[#333333]";
+                containerClasses = "border-primary bg-primary/5";
+                circleClasses = "bg-primary text-primary-foreground";
+                textClasses = "text-foreground";
               }
 
               return (
@@ -188,7 +156,7 @@ export default function QuizQuestionPage({
                   key={optIdx}
                   onClick={() => !isSubmitted && setSelectedIdx(optIdx)}
                   disabled={isSubmitted}
-                  className={`w-full flex items-center text-left p-4 rounded-[16px] border-2 transition-all duration-200 ${containerClasses}`}
+                  className={`w-full flex items-center text-left p-4 rounded-xl border-2 transition-all duration-200 ${containerClasses}`}
                 >
                   <div
                     className={`w-10 h-10 flex items-center justify-center rounded-full mr-4 font-bold text-sm transition-colors shrink-0 ${circleClasses}`}
@@ -202,57 +170,41 @@ export default function QuizQuestionPage({
             </div>
           )}
 
-          {/* Explanation */}
           {isSubmitted && question.explanation && (
-            <div className="bg-[#EBE3D8] rounded-[16px] p-6 mb-8 border border-[#E0D6C8]">
-              <p className="text-[#5A4A3A] text-[15px] leading-relaxed">
-                <span className="font-bold text-[#3E3228]">Explanation: </span>
+            <div className="bg-muted rounded-xl p-6 mb-8 border border-border">
+              <p className="text-foreground text-[15px] leading-relaxed">
+                <span className="font-bold text-foreground">Explanation: </span>
                 {question.explanation}
               </p>
             </div>
           )}
 
-          {/* Footer buttons */}
           <div className="flex justify-between items-center">
-            <button
+            <Button
+              variant="outline"
               onClick={onPrev}
-              className="px-6 py-3 border-2 border-[#E5E7EB] text-[#A0AABF] font-semibold rounded-[16px] hover:bg-gray-50 transition-colors flex items-center gap-2"
               disabled={isSubmitted || index === 0}
+              className="font-semibold flex items-center gap-2"
             >
-              <span>&lt;</span> Prev
-            </button>
+              <ArrowLeft className="size-4" />
+              Prev
+            </Button>
 
-            <button
+            <Button
+              variant="default"
               onClick={handleConfirm}
               disabled={!canConfirm}
-              className={`px-8 py-3 rounded-[16px] font-semibold text-white transition-all flex items-center justify-center
-                  ${
-                    canConfirm
-                      ? "bg-[#9B8EC7] hover:opacity-90 shadow-md"
-                      : "bg-[#D1D5DB] cursor-not-allowed"
-                  }
-                `}
+              className={!canConfirm ? "bg-muted text-muted-foreground cursor-not-allowed" : ""}
             >
               {isSubmitted ? (
                 <>
                   Next
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4 ml-2 mt-0.5"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
+                  <ArrowRight className="h-4 w-4 ml-1" />
                 </>
               ) : (
                 "Confirm Answer"
               )}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

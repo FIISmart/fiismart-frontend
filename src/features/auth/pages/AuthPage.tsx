@@ -78,6 +78,7 @@ function translateAuthError(raw: string): string {
 }
 
 function dashboardFor(role: UserRole): string {
+  if (role === UserRole.ADMIN) return "/admin/dashboard";
   return role === UserRole.PROFESSOR ? "/professor/dashboard" : "/student/dashboard";
 }
 
@@ -92,10 +93,8 @@ export default function AuthPage() {
   const [pendingPassword, setPendingPassword] = useState("");
 
   const goAfterAuth = (user: AuthUser) => {
-    const state = location.state as LocationState;
-    const fallback = dashboardFor(user.role);
-    const target = state?.from?.pathname ?? fallback;
-    navigate(target, { replace: true });
+    // Redirecționăm direct către dashboard-ul specific rolului (ignorăm ultima pagină)
+    navigate(dashboardFor(user.role), { replace: true });
   };
 
   const handleSignupSuccess = (email: string, password: string) => {

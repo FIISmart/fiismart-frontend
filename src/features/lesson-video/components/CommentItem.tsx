@@ -93,7 +93,7 @@ export default function CommentItem({
                 {/* Indicator grafic pentru a arăta cui îi este adresat răspunsul */}
                 {isReply && parentAuthorName && (
                     <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-md">
-                  <CornerDownRight size={12} />
+                  <CornerDownRight className="size-4" />
                       {parentAuthorName}
                 </span>
                 )}
@@ -114,7 +114,7 @@ export default function CommentItem({
                     onClick={() => onTimestampClick(comment.videoTimestamp!)}
                     className="mt-3 flex items-center gap-1 text-xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-md hover:bg-primary/20 transition-colors w-fit"
                 >
-                  <Clock size={12} /> {comment.videoTimestamp}s
+                  <Clock className="size-4" /> {comment.videoTimestamp}s
                 </button>
             )}
           </div>
@@ -127,8 +127,7 @@ export default function CommentItem({
                 }`}
             >
               <ThumbsUp
-                  size={14}
-                  className={comment.isLikedByMe ? "fill-primary" : ""}
+                  className={`size-4 ${comment.isLikedByMe ? "fill-primary" : ""}`}
               />{" "}
               {comment.likeCount}
             </button>

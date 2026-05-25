@@ -13,9 +13,9 @@ import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { Spinner } from "@/components/ui/spinner";
 import { ProfDashboardNavbar } from "../components/ProfDashboardNavbar";
-import { StatCard } from "../components/StatCard";
+import { StatCard } from "@/components/shared/StatCard";
 import { ActionCard } from "../components/ActionCard";
-import { CourseCard } from "../components/CourseCard";
+import { CourseCard } from "@/components/shared/CourseCard";
 import { QuizTable } from "../components/QuizTable";
 import { CommentList } from "../components/CommentList";
 import type { DashboardOverviewResponse } from "../types";
@@ -74,7 +74,7 @@ export function ProfessorDashboardPage() {
   if (!user) {
     return (
       <div className="min-h-screen bg-edu-bg text-edu-foreground flex items-center justify-center">
-        <Spinner className="size-8 text-edu-primary" />
+        <Spinner className="size-8 text-primary" />
       </div>
     );
   }
@@ -86,7 +86,7 @@ export function ProfessorDashboardPage() {
       {isLoading ? (
         <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex justify-center items-center">
           <div className="flex items-center gap-3 text-edu-muted-fg">
-            <Spinner className="size-6 text-edu-primary" />
+            <Spinner className="size-4 text-primary" />
             <p className="text-xl font-medium animate-pulse">Se încarcă dashboard-ul...</p>
           </div>
         </main>
@@ -98,13 +98,13 @@ export function ProfessorDashboardPage() {
               aria-live="polite"
               className="mb-6 flex items-center gap-2 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-2.5 text-sm text-amber-800"
             >
-              <WifiOff size={16} className="shrink-0" />
+              <WifiOff className="size-4 shrink-0" />
               <span>Backend offline — vei vedea o vizualizare goală.</span>
             </div>
           )}
 
           <div className="mb-10">
-            <h2 className="text-4xl font-bold font-poppins text-edu-foreground">
+            <h2 className="font-serif font-bold text-2xl text-foreground">
               Bine ai venit, Profesor!
             </h2>
             <p className="text-edu-muted-fg mt-2 text-lg">
@@ -117,33 +117,29 @@ export function ProfessorDashboardPage() {
               title="Studenți activi"
               value={data.stats.studentsEnrolled}
               subtitle="Înrolati în total"
-              icon={<Users size={24} />}
-              iconBgColor="bg-edu-secondary/20"
-              iconColor="text-edu-primary"
+              icon={<Users className="size-5" />}
+              variant="default"
             />
             <StatCard
               title="Cursuri active"
               value={data.stats.activeCourses}
               subtitle="Publicate pe platformă"
-              icon={<BookOpen size={24} />}
-              iconBgColor="bg-edu-accent/30"
-              iconColor="text-edu-foreground"
+              icon={<BookOpen className="size-5" />}
+              variant="default"
             />
             <StatCard
               title="Quiz-uri completate"
               value={data.stats.quizzesCompleted}
               subtitle="De către studenți"
-              icon={<Star size={24} />}
-              iconBgColor="bg-edu-secondary/30"
-              iconColor="text-edu-primary"
+              icon={<Star className="size-5" />}
+              variant="default"
             />
             <StatCard
               title="Rata de completare"
               value={`${data.stats.completionRatePct}%`}
               subtitle="Media per student"
-              icon={<TrendingUp size={24} />}
-              iconBgColor="bg-white"
-              iconColor="text-edu-foreground"
+              icon={<TrendingUp className="size-5" />}
+              variant="default"
             />
           </div>
 
@@ -151,14 +147,14 @@ export function ProfessorDashboardPage() {
             <ActionCard
               title="Creare Quiz Rapid"
               description="Adaugă un test scurt pentru evaluarea studenților."
-              icon={<PlusCircle size={28} />}
+              icon={<PlusCircle className="size-6" />}
               bgColorClass="bg-edu-secondary/50"
               to="/professor/quizzes"
             />
             <ActionCard
               title="Course Builder"
               description="Configurează și publică un curs nou pas cu pas."
-              icon={<LayoutDashboard size={28} />}
+              icon={<LayoutDashboard className="size-6" />}
               bgColorClass="bg-edu-accent/60"
               to="/professor/courses"
             />
@@ -166,7 +162,7 @@ export function ProfessorDashboardPage() {
 
           <div className="mb-12">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold font-poppins text-edu-foreground">
+              <h3 className="text-xl font-semibold text-foreground">
                 Cursurile Mele (Preview)
               </h3>
               <Link
@@ -196,6 +192,7 @@ export function ProfessorDashboardPage() {
                   return (
                     <CourseCard
                       key={course.courseId}
+                      variant="professor"
                       courseId={course.courseId}
                       title={course.title}
                       subtitle={course.description}

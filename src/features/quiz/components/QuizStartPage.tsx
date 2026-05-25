@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   onStart: () => void;
@@ -8,19 +10,11 @@ interface Props {
   passScore?: number;
 }
 
-/**
- * Detects iOS Safari specifically — NOT Chrome/Firefox/etc. on iOS.
- * On iOS, every browser is a WebKit wrapper, but their fullscreen + lifecycle
- * APIs differ slightly. We only show the warning for the case where it's
- * genuinely problematic (mobile Safari's Fullscreen API is unsupported on the
- * iPhone form factor; CriOS/FxiOS report different UA tokens).
- */
 function isIosSafari(): boolean {
   if (typeof window === "undefined") return false;
   const ua = window.navigator.userAgent;
   const isIos = /iPhone|iPad|iPod/i.test(ua);
   if (!isIos) return false;
-  // CriOS = Chrome on iOS, FxiOS = Firefox on iOS, EdgiOS = Edge on iOS.
   const isInAppOrOtherBrowser = /CriOS|FxiOS|EdgiOS|OPiOS|YaBrowser/i.test(ua);
   return !isInAppOrOtherBrowser;
 }
@@ -38,51 +32,40 @@ export default function QuizStartPage({
 
   return (
     <div className="flex-grow flex flex-col items-center justify-center p-4">
-      <div className="bg-[#9B8EC7] text-white text-sm font-medium px-6 h-[32px] flex items-center justify-center rounded-full mb-6 shadow-sm">
+      <div className="bg-primary text-primary-foreground text-sm font-medium px-6 h-[32px] flex items-center justify-center rounded-full mb-6 shadow-sm">
         FIISmart Learning
       </div>
 
-      <div className="bg-white w-full max-w-[512px] rounded-[24px] shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1),0_8px_10px_-6px_rgba(0,0,0,0.1)] relative overflow-hidden flex flex-col items-center">
-        <div className="h-[8px] w-full bg-gradient-to-r from-[#B4D3D9] via-[#BDA6CE] to-[#9B8EC7]"></div>
+      <div className="bg-card w-full max-w-[512px] rounded-2xl shadow-lg relative overflow-hidden flex flex-col items-center">
+        <div className="h-[8px] w-full bg-gradient-to-r from-accent via-secondary to-primary"></div>
 
         <div className="p-8 w-full flex flex-col items-center">
-          <div className="w-[80px] h-[80px] bg-[#F2EAE0] rounded-[16px] flex items-center justify-center mb-6">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-10 w-10 text-[#9B8EC7]"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fillRule="evenodd"
-                d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
-                clipRule="evenodd"
-              />
-            </svg>
+          <div className="w-[80px] h-[80px] bg-background rounded-xl flex items-center justify-center mb-6">
+            <FileText className="h-10 w-10 text-primary" />
           </div>
 
-          <h1 className="text-[24px] font-bold text-gray-900 mb-2 text-center">
+          <h1 className="text-[24px] font-bold text-foreground mb-2 text-center">
             {quizTitle}
           </h1>
 
-          <p className="text-[16px] text-[#6A7282] leading-[24px] text-center mb-8 max-w-[368px]">
+          <p className="text-[16px] text-muted-foreground leading-[24px] text-center mb-8 max-w-[368px]">
             Test your knowledge with this quick quiz.
           </p>
 
           <div className="flex w-full gap-4 mb-8">
-            <div className="flex-1 h-[78px] bg-[#B4D3D9]/20 rounded-[16px] flex flex-col items-center justify-center">
-              <span className="text-[18px] font-bold text-gray-900">{questionCount}</span>
-              <span className="text-[12px] text-[#6A7282]">Questions</span>
+            <div className="flex-1 h-[78px] bg-accent/20 rounded-xl flex flex-col items-center justify-center">
+              <span className="text-[18px] font-bold text-foreground">{questionCount}</span>
+              <span className="text-[12px] text-muted-foreground">Questions</span>
             </div>
 
-            <div className="flex-1 h-[78px] bg-[#B4D3D9]/20 rounded-[16px] flex flex-col items-center justify-center">
-              <span className="text-[18px] font-bold text-gray-900">{durationMinutes} min</span>
-              <span className="text-[12px] text-[#6A7282]">Duration</span>
+            <div className="flex-1 h-[78px] bg-accent/20 rounded-xl flex flex-col items-center justify-center">
+              <span className="text-[18px] font-bold text-foreground">{durationMinutes} min</span>
+              <span className="text-[12px] text-muted-foreground">Duration</span>
             </div>
 
-            <div className="flex-1 h-[78px] bg-[#B4D3D9]/20 rounded-[16px] flex flex-col items-center justify-center">
-              <span className="text-[18px] font-bold text-gray-900">{passScore}%</span>
-              <span className="text-[12px] text-[#6A7282]">Pass Score</span>
+            <div className="flex-1 h-[78px] bg-accent/20 rounded-xl flex flex-col items-center justify-center">
+              <span className="text-[18px] font-bold text-foreground">{passScore}%</span>
+              <span className="text-[12px] text-muted-foreground">Pass Score</span>
             </div>
           </div>
 
@@ -92,23 +75,26 @@ export default function QuizStartPage({
                 Quiz works best on desktop. Mobile Safari has limited fullscreen
                 support — anti-cheat may not engage reliably.
               </span>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 type="button"
                 onClick={() => setIosBannerDismissed(true)}
                 aria-label="Dismiss iOS Safari notice"
-                className="text-amber-900/70 hover:text-amber-900 font-bold"
+                className="text-amber-900/70 hover:text-amber-900 font-bold h-auto p-0"
               >
                 ×
-              </button>
+              </Button>
             </div>
           )}
 
-          <button
+          <Button
             onClick={onStart}
-            className="w-full h-[52px] rounded-[16px] bg-gradient-to-r from-[#BDA6CE] to-[#9B8EC7] text-white font-semibold text-[16px] hover:opacity-90 transition-opacity flex items-center justify-center"
+            size="lg"
+            className="w-full bg-gradient-to-r from-secondary to-primary font-semibold text-[16px]"
           >
             Start Quiz
-          </button>
+          </Button>
         </div>
       </div>
     </div>

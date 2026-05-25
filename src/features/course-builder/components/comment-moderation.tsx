@@ -189,7 +189,7 @@ export function CommentModeration({
       <Sheet>
         <SheetTrigger asChild>
           <Button variant="outline" size="sm" className="gap-1.5 sm:gap-2">
-            <MessageSquare className="h-4 w-4" />
+            <MessageSquare className="size-4" />
             <span className="hidden sm:inline">Comentarii</span>
             {pendingComments.length > 0 && (
               <Badge className="bg-amber-500 hover:bg-amber-500 text-white text-xs px-1.5">

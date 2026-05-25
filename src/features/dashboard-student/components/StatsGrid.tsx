@@ -1,36 +1,37 @@
 import { BarChart2, BookOpen, CheckSquare, Users } from "lucide-react";
 import type { StudentStats } from "../types";
-import { StatCard } from "./StatCard";
+import { StatCard } from "@/components/shared/StatCard";
 
 interface StatsGridProps {
   stats: StudentStats;
 }
 
-/**
- * Four-up grid summarising the student's enrolment and activity numbers.
- */
 export function StatsGrid({ stats }: StatsGridProps) {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
       <StatCard
-        val={stats.enrolledCourses}
-        label="ÎNROLATE"
-        icon={<Users className="text-[#9b8ec7] opacity-70" />}
+        title="ÎNROLATE"
+        value={stats.enrolledCourses}
+        icon={<Users className="size-5 text-primary opacity-70" />}
+        variant="compact"
       />
       <StatCard
-        val={stats.activeCourses}
-        label="ACTIVE"
-        icon={<BookOpen className="text-[#5EEAD4]" />}
+        title="ACTIVE"
+        value={stats.activeCourses}
+        icon={<BookOpen className="size-5 text-primary" />}
+        variant="compact"
       />
       <StatCard
-        val={stats.quizzesCompleted?.toLocaleString() ?? "0"}
-        label="QUIZ-URI"
-        icon={<CheckSquare className="text-pink-400" />}
+        title="QUIZ-URI"
+        value={stats.quizzesCompleted?.toLocaleString() ?? "0"}
+        icon={<CheckSquare className="size-5 text-primary" />}
+        variant="compact"
       />
       <StatCard
-        val={`${stats.streakDays} zile`}
-        label="STREAK"
-        icon={<BarChart2 className="text-green-500" />}
+        title="STREAK"
+        value={`${stats.streakDays} zile`}
+        icon={<BarChart2 className="size-5 text-primary" />}
+        variant="compact"
       />
     </div>
   );

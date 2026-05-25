@@ -335,7 +335,7 @@ export default function VideoPlayer({
                   }}
                   className="absolute top-4 right-4 z-30 bg-black/60 hover:bg-black/80 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-2 backdrop-blur-md transition-all duration-300 opacity-0 group-hover:opacity-100 border border-white/10 shadow-lg"
               >
-                {showMarkers ? <EyeOff size={16} /> : <Eye size={16} />}
+                {showMarkers ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 {showMarkers ? "Ascunde adnotările" : "Arată adnotările"}
               </button>
           )}
@@ -394,11 +394,11 @@ export default function VideoPlayer({
 
                               <div className="flex justify-between items-center border-b border-border/50 pb-1.5 mb-2 font-bold text-foreground">
                         <span className="flex items-center gap-1">
-                          <MessageSquare size={12} className="text-primary" />
+                          <MessageSquare className="size-4 text-primary" />
                           {m.count} {m.count === 1 ? "discuție" : "discuții"}
                         </span>
                                 <span className="text-primary bg-primary/10 px-1.5 py-0.5 rounded text-[10px] flex items-center gap-1">
-                          <Clock size={10} /> {formatTime(m.time)}
+                          <Clock className="size-2.5" /> {formatTime(m.time)}
                         </span>
                               </div>
 
@@ -450,9 +450,9 @@ export default function VideoPlayer({
                   className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shadow-sm"
               >
                 {isPlaying ? (
-                    <Pause size={20} fill="currentColor" />
+                    <Pause className="size-5" fill="currentColor" />
                 ) : (
-                    <Play size={20} fill="currentColor" className="ml-1" />
+                    <Play className="size-5" fill="currentColor" />
                 )}
               </button>
 

@@ -9,7 +9,7 @@ export function QuizTable({ quizzes }: QuizTableProps) {
   return (
     <div className="mb-12">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-2xl font-bold font-poppins text-edu-foreground">Quiz-urile Mele</h3>
+        <h3 className="text-xl font-semibold text-foreground">Quiz-urile Mele</h3>
         <a href="#" className="text-sm font-medium text-edu-primary hover:text-edu-secondary transition">
           Vezi toate
         </a>
@@ -63,7 +63,7 @@ export function QuizTable({ quizzes }: QuizTableProps) {
 
                   <td className="py-4 px-6 text-right">
                     <button className="text-edu-muted-fg hover:text-edu-primary transition p-1 rounded-md hover:bg-edu-bg">
-                      <MoreVertical size={18} />
+                      <MoreVertical className="size-4" />
                     </button>
                   </td>
                 </tr>

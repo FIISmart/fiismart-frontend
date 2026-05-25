@@ -25,9 +25,9 @@ interface LessonEditorProps {
 }
 
 const lessonTypeIcons: Record<LessonType, React.ReactNode> = {
-  video: <Video className="h-4 w-4" />,
-  pdf: <FileText className="h-4 w-4" />,
-  markdown: <Code className="h-4 w-4" />,
+  video: <Video className="size-4" />,
+  pdf: <FileText className="size-4" />,
+  markdown: <Code className="size-4" />,
 };
 
 const lessonTypeLabels: Record<LessonType, string> = {
@@ -155,7 +155,7 @@ export function LessonEditor({ lesson, onSave, onCancel, isOpen }: LessonEditorP
                     onClick={() => fileInputRef.current?.click()}
                     className="gap-2"
                   >
-                    {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    {isUploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
                     Încarcă fișier markdown
                   </Button>
                 </div>
@@ -182,7 +182,7 @@ export function LessonEditor({ lesson, onSave, onCancel, isOpen }: LessonEditorP
                     disabled={isUploading}
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    {isUploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
                   </Button>
                 </div>
               </div>
@@ -191,7 +191,7 @@ export function LessonEditor({ lesson, onSave, onCancel, isOpen }: LessonEditorP
 
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
-              <Clock className="h-4 w-4" /> Durată (minute)
+              <Clock className="size-4" /> Durată (minute)
             </Label>
             <Input
               type="number"
@@ -239,7 +239,7 @@ export function LessonItem({
         </p>
         {lesson.quiz && (
           <p className="text-xs text-primary mt-1 flex items-center gap-1">
-            <CircleHelp className="h-3 w-3" />
+            <CircleHelp className="size-4" />
             Quiz: {lesson.quiz.title} ({lesson.quiz.questions.length} intrebari)
           </p>
         )}
@@ -253,10 +253,10 @@ export function LessonItem({
             onClick={() => onEditQuiz(lesson)}
             title={lesson.quiz ? "Editeaza quiz-ul lectiei" : "Adauga quiz la lectie"}
           >
-            <CircleHelp className="h-4 w-4" />
+            <CircleHelp className="size-4" />
           </Button>
         )}
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(lesson)}><Pencil className="h-4 w-4" /></Button>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(lesson)}><Pencil className="size-4" /></Button>
         {lesson.quiz && onDeleteQuiz && (
           <Button
             variant="ghost"
@@ -265,10 +265,10 @@ export function LessonItem({
             onClick={() => onDeleteQuiz(lesson)}
             title="Sterge quiz-ul lectiei"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="size-4" />
           </Button>
         )}
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onDelete(lesson.id)}><Trash2 className="h-4 w-4" /></Button>
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onDelete(lesson.id)}><Trash2 className="size-4" /></Button>
       </div>
     </div>
   );

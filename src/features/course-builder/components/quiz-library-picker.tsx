@@ -93,7 +93,7 @@ export function QuizLibraryPicker({
                 className="gap-2"
                 onClick={onCreateNew}
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="size-4" />
                 Creează quiz nou
               </Button>
             )}

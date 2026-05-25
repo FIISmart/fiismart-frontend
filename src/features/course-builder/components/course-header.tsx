@@ -151,7 +151,7 @@ export function CourseHeader({
                 disabled={isSaving}
                 className="gap-1.5 sm:gap-2 flex-1 sm:flex-none text-sm"
               >
-                <Save className="h-4 w-4" />
+                <Save className="size-4" />
                 <span className="sm:inline">Salvează</span>
               </Button>
               <Button
@@ -159,7 +159,7 @@ export function CourseHeader({
                 disabled={isSaving}
                 className="gap-1.5 sm:gap-2 flex-1 sm:flex-none text-sm"
               >
-                <Send className="h-4 w-4" />
+                <Send className="size-4" />
                 <span className="sm:inline">Publică</span>
               </Button>
             </div>
@@ -252,7 +252,7 @@ export function CourseHeader({
                         disabled={isUploadingThumbnail}
                         onClick={() => thumbnailInputRef.current?.click()}
                       >
-                        <ImagePlus className="h-4 w-4" />
+                        <ImagePlus className="size-4" />
                         {isUploadingThumbnail ? "Se încarcă..." : "Schimbă"}
                       </Button>
                       <Button
@@ -260,7 +260,7 @@ export function CourseHeader({
                         size="sm"
                         onClick={() => onUpdate({ thumbnail: undefined })}
                       >
-                        <X className="h-4 w-4" />
+                        <X className="size-4" />
                       </Button>
                     </div>
                   </>
@@ -307,7 +307,7 @@ export function CourseHeader({
             {/* Tags */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
-                <Tag className="h-4 w-4" />
+                <Tag className="size-4" />
                 Tag-uri (separate prin virgulă)
               </Label>
               <Input

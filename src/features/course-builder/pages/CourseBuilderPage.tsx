@@ -185,9 +185,9 @@ export default function CourseBuilderPage() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <GraduationCap className="h-12 w-12 text-primary animate-pulse mx-auto mb-4" />
+          <GraduationCap className="size-8 text-primary animate-pulse mx-auto mb-4" />
           <div className="flex items-center justify-center gap-2 text-muted-foreground">
-            <Spinner className="size-4" />
+            <Spinner className="size-4 text-primary" />
             <p>Se încarcă structura cursului...</p>
           </div>
         </div>
@@ -220,7 +220,7 @@ export default function CourseBuilderPage() {
           </p>
           <Button asChild className="gap-2">
             <Link to="/professor/courses">
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="size-4" />
               Înapoi la cursurile mele
             </Link>
           </Button>
@@ -355,7 +355,7 @@ export default function CourseBuilderPage() {
           <div className="flex w-full sm:w-auto items-center justify-end gap-2">
             <Button asChild variant="outline" className="gap-2">
               <Link to={`/professor/quizzes?courseId=${course.id}`}>
-                <HelpCircle className="h-4 w-4" />
+                <HelpCircle className="size-4" />
                 My Quizzes
               </Link>
             </Button>
@@ -377,7 +377,7 @@ export default function CourseBuilderPage() {
               }}
             />
             <Button onClick={handleAddModule} className="gap-2">
-              <Plus className="h-4 w-4" />
+              <Plus className="size-4" />
               <span>Modul Nou</span>
             </Button>
           </div>
@@ -393,7 +393,7 @@ export default function CourseBuilderPage() {
                 Creează primul modul pentru a grupa lecțiile și quiz-urile pe tematici.
               </p>
               <Button onClick={handleAddModule} className="gap-2">
-                <Plus className="h-4 w-4" />
+                <Plus className="size-4" />
                 Creează Primul Modul
               </Button>
             </div>
@@ -416,7 +416,7 @@ export default function CourseBuilderPage() {
 
         {course.modules.length > 0 && (
           <Button variant="outline" onClick={handleAddModule} className="w-full mt-6 gap-2 border-dashed">
-            <Plus className="h-4 w-4" /> Adaugă Modul Nou
+            <Plus className="size-4" /> Adaugă Modul Nou
           </Button>
         )}
 

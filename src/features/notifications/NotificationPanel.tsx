@@ -12,11 +12,11 @@ function timeAgo(dateStr: string): string {
 }
 
 function NotifIcon({ type }: { type: string }) {
-  if (type === "ENROLLMENT") return <BookOpen size={16} className="text-emerald-500" />;
-  if (type === "NEW_COMMENT") return <MessageSquare size={16} className="text-blue-500" />;
-  if (type === "COMMENT_REPLY") return <MessageSquare size={16} className="text-[#9b8ec7]" />;
-  if (type === "COURSE_UPDATE") return <GraduationCap size={16} className="text-amber-500" />;
-  return <Bell size={16} className="text-gray-400" />;
+  if (type === "ENROLLMENT") return <BookOpen className="size-4 text-emerald-500" />;
+  if (type === "NEW_COMMENT") return <MessageSquare className="size-4 text-blue-500" />;
+  if (type === "COMMENT_REPLY") return <MessageSquare className="size-4 text-primary" />;
+  if (type === "COURSE_UPDATE") return <GraduationCap className="size-4 text-amber-500" />;
+  return <Bell className="size-4 text-muted-foreground" />;
 }
 
 interface NotificationPanelProps {
@@ -40,7 +40,7 @@ export default function NotificationPanel({
           <button
             type="button"
             onClick={() => void onMarkAllRead()}
-            className="text-xs text-[#9b8ec7] font-semibold hover:underline"
+            className="text-xs text-primary font-semibold hover:underline"
           >
             Marchează toate citite
           </button>
@@ -50,7 +50,7 @@ export default function NotificationPanel({
       <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
         {notifications.length === 0 ? (
           <div className="py-8 text-center">
-            <Bell size={24} className="mx-auto text-gray-200 mb-2" />
+            <Bell className="size-6 mx-auto text-muted-foreground mb-2" />
             <p className="text-sm text-gray-400">Nicio notificare</p>
           </div>
         ) : (
@@ -61,7 +61,7 @@ export default function NotificationPanel({
               className={`flex items-start gap-3 px-4 py-3 transition-colors ${
                 n.read
                   ? "opacity-60"
-                  : "bg-[#9b8ec7]/5 cursor-pointer hover:bg-[#9b8ec7]/10"
+                  : "bg-primary/5 cursor-pointer hover:bg-primary/10"
               }`}
             >
               <div className="mt-0.5 flex-shrink-0">
@@ -79,7 +79,7 @@ export default function NotificationPanel({
                 </p>
               </div>
               {!n.read && (
-                <div className="w-2 h-2 rounded-full bg-[#9b8ec7] flex-shrink-0 mt-1.5" />
+                <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-1.5" />
               )}
             </div>
           ))

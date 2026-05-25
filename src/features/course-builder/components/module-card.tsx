@@ -97,7 +97,7 @@ function QuizItem({
   return (
     <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl border border-border group hover:border-primary/30 transition-colors">
       <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary">
-        <CircleHelp className="h-4 w-4" />
+        <CircleHelp className="size-4" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="font-medium text-sm truncate">{quiz.title}</p>
@@ -112,7 +112,7 @@ function QuizItem({
           className="h-8 w-8"
           onClick={() => onEdit(quiz)}
         >
-          <Pencil className="h-4 w-4" />
+          <Pencil className="size-4" />
         </Button>
         <Button
           variant="ghost"
@@ -120,7 +120,7 @@ function QuizItem({
           className="h-8 w-8 text-destructive"
           onClick={() => onDelete(quiz.id)}
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="size-4" />
         </Button>
       </div>
     </div>
@@ -466,7 +466,7 @@ export function ModuleCard({
         <div className="p-3 sm:p-4 border-b border-border bg-muted/30">
           <div className="flex items-start gap-2 sm:gap-3">
             <button className="mt-1 cursor-grab text-muted-foreground hover:text-foreground hidden sm:block">
-              <GripVertical className="h-5 w-5" />
+              <GripVertical className="size-5" />
             </button>
 
             <Collapsible open={isExpanded} onOpenChange={onExpandedChange} className="flex-1">
@@ -487,7 +487,7 @@ export function ModuleCard({
                     </div>
                   ) : (
                     <CollapsibleTrigger className="flex items-center gap-1.5 sm:gap-2 text-left w-full group">
-                      {isExpanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                      {isExpanded ? <ChevronDown className="size-5" /> : <ChevronRight className="size-5" />}
                       <div className="min-w-0">
                         <h3 className="font-serif font-semibold text-base sm:text-lg truncate">
                           <span className="text-primary/60 mr-2">{moduleIndex + 1}.</span>
@@ -502,7 +502,7 @@ export function ModuleCard({
                   <div className="flex items-center gap-2">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon"><MoreHorizontal className="size-4" /></Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => setIsEditing(true)}><Pencil className="mr-2 h-4 w-4" /> Redenumire</DropdownMenuItem>

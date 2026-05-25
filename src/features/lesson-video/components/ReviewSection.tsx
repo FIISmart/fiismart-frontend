@@ -12,15 +12,15 @@ interface ReviewSectionProps {
 export function ReviewSection({ studentId, courseId, lectureId }: ReviewSectionProps) {
     const [reviews, setReviews] = useState<ReviewResponse[]>([]);
 
-    // Stări pentru formular
     const [rating, setRating] = useState<number>(5);
     const [hoveredRating, setHoveredRating] = useState<number>(0);
     const [comment, setComment] = useState<string>("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [loading, setLoading] = useState(true);
 
-    // 1. Preluare recenzii
     useEffect(() => {
+        if (!studentId || !courseId) return;
+
         let mounted = true;
         lessonVideoService.getReviews(studentId, courseId, lectureId)
             .then((data) => {
@@ -36,14 +36,13 @@ export function ReviewSection({ studentId, courseId, lectureId }: ReviewSectionP
         return () => { mounted = false; };
     }, [studentId, courseId, lectureId]);
 
-    // 2. Adăugare recenzie
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!comment.trim()) return;
+        if (!comment.trim() || !studentId || !courseId) return;
 
         setIsSubmitting(true);
         try {
-            const newReview = await lessonVideoService.addReview(studentId, courseId, lectureId, { rating, comment });
+            const newReview = await lessonVideoService.addReview(studentId, courseId, lectureId, { stars: rating, body: comment });
             setReviews((prev) => [newReview, ...prev]);
             setComment("");
             setRating(5);
@@ -63,7 +62,7 @@ export function ReviewSection({ studentId, courseId, lectureId }: ReviewSectionP
             {/* HEADER - Identic cu CommentsSection */}
             <div className="flex items-center justify-between border-b border-border pb-4">
                 <h3 className="font-bold text-xl flex items-center gap-2 text-foreground">
-                    <MessageSquareQuote size={24} className="text-primary" />
+                    <MessageSquareQuote className="size-5 text-primary" />
                     Recenzii
                 </h3>
                 <span className="px-3 py-1 bg-accent/30 text-foreground text-sm font-medium rounded-full">
@@ -89,8 +88,7 @@ export function ReviewSection({ studentId, courseId, lectureId }: ReviewSectionP
                                         className="focus:outline-none transition-transform hover:scale-110"
                                     >
                                         <Star
-                                            size={20}
-                                            className={isFilled ? "text-primary" : "text-muted-foreground/30"}
+                                            className={`size-5 ${isFilled ? "text-primary" : "text-muted-foreground/30"}`}
                                             fill={isFilled ? "currentColor" : "none"}
                                         />
                                     </button>
@@ -116,7 +114,7 @@ export function ReviewSection({ studentId, courseId, lectureId }: ReviewSectionP
                             disabled={isSubmitting || !comment.trim()}
                             className="flex items-center gap-2 bg-primary text-white px-5 py-2 rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
                         >
-                            <Send size={16} />
+                            <Send className="size-4" />
                             {isSubmitting ? "Se postează..." : "Postează recenzia"}
                         </button>
                     </div>
@@ -146,9 +144,7 @@ export function ReviewSection({ studentId, courseId, lectureId }: ReviewSectionP
                                 {[1, 2, 3, 4, 5].map((star) => (
                                     <Star
                                         key={star}
-                                        size={14}
-                                        fill={review.rating >= star ? "currentColor" : "none"}
-                                        className={review.rating >= star ? "text-primary" : "text-muted-foreground/30"}
+                                        className={`size-4 ${review.rating >= star ? "text-amber-400 fill-amber-400" : "text-muted-foreground/30"}`}
                                     />
                                 ))}
                             </div>

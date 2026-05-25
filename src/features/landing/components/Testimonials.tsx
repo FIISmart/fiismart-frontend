@@ -1,4 +1,7 @@
 import { Star, Quote } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { PageLayout } from "@/components/layout";
 
 interface Testimonial {
   id: number;
@@ -36,7 +39,7 @@ const testimonials: Testimonial[] = [
     name: "Victor Stanescu",
     role: "Antreprenor",
     content:
-      "Platforma este excelenta pentru business. Am urmat cursuri de marketing digital si management si am aplicat imediat ce am invatat in afacerea mea. ROI-ul a fost vizibil din prima luna.",
+      "Platforma este excelente pentru business. Am urmat cursuri de marketing digital si management si am aplicat imediat ce am invatat in afacerea mea. ROI-ul a fost vizibil din prima luna.",
     rating: 5,
     initials: "VS",
     color: "from-secondary/20 to-accent/30",
@@ -45,66 +48,60 @@ const testimonials: Testimonial[] = [
 
 export default function Testimonials() {
   return (
-    <section className="section-padding bg-muted/30">
-      <div className="fii-container">
-        {/* Header */}
+    <section className="py-16 lg:py-20 bg-muted/30">
+      <PageLayout as="div" maxWidth="7xl">
         <div className="text-center mb-16">
-          <span className="badge mb-4">💬 Testimoniale</span>
-          <h2 className="font-heading text-h2 font-bold text-foreground mb-4">
+          <Badge variant="outline" className="rounded-full px-4 py-1.5 text-sm font-medium gap-1.5 bg-accent/40 border-0 mb-4">
+            💬 Testimoniale
+          </Badge>
+          <h2 className="font-serif text-h2 font-bold text-foreground mb-4">
             Ce spun utilizatorii nostri
           </h2>
-          <p className="font-body text-body-lg text-muted-foreground max-w-xl mx-auto">
+          <p className="font-sans text-body-lg text-muted-foreground max-w-xl mx-auto">
             Sute de studenti si profesori ne-au acordat increderea lor. Iata ce spun ei.
           </p>
         </div>
 
-        {/* Testimonial Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {testimonials.map((testimonial) => (
-            <div key={testimonial.id} className="landing-card flex flex-col gap-4 relative overflow-hidden">
-              {/* Quote Icon */}
+            <Card key={testimonial.id} className="p-6 gap-4 relative overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300">
               <Quote
-                size={40}
-                className="absolute top-4 right-4 text-primary/10"
+                className="size-8 absolute top-4 right-4 text-primary/10"
                 fill="currentColor"
               />
 
-              {/* Stars */}
               <div className="flex gap-1">
                 {Array.from({ length: testimonial.rating }).map((_, i) => (
                   <Star
                     key={i}
-                    size={16}
-                    className="fill-amber-400 text-amber-400"
+                    className="size-4 fill-amber-400 text-amber-400"
                   />
                 ))}
               </div>
 
-              {/* Content */}
-              <p className="font-body text-body text-muted-foreground leading-relaxed relative z-10">
-                "{testimonial.content}"
+              <p className="font-sans text-body text-muted-foreground leading-relaxed relative z-10">
+                &ldquo;{testimonial.content}&rdquo;
               </p>
 
-              {/* Author */}
               <div className="flex items-center gap-3 pt-2 border-t border-border mt-auto">
                 <div
-                  className={`w-10 h-10 rounded-full bg-gradient-to-br ${testimonial.color} flex items-center justify-center font-heading font-semibold text-foreground text-body-sm flex-shrink-0`}
+                  className={`w-10 h-10 rounded-full bg-gradient-to-br ${testimonial.color} flex items-center justify-center font-serif font-semibold text-foreground text-body-sm flex-shrink-0`}
                 >
                   {testimonial.initials}
                 </div>
                 <div>
-                  <p className="font-heading font-semibold text-foreground text-body-sm">
+                  <p className="font-serif font-semibold text-foreground text-body-sm">
                     {testimonial.name}
                   </p>
-                  <p className="font-body text-caption text-muted-foreground">
+                  <p className="font-sans text-caption text-muted-foreground">
                     {testimonial.role}
                   </p>
                 </div>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
-      </div>
+      </PageLayout>
     </section>
   );
 }

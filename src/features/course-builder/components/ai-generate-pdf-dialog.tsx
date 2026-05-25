@@ -284,7 +284,7 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept, existingPdfs
                   onClick={() => fileInputRef.current?.click()}
                   className="gap-2 self-start sm:self-auto"
                 >
-                  <Upload className="h-4 w-4" />
+                  <Upload className="size-4" />
                   {file ? "Schimba PDF" : "Alege PDF"}
                 </Button>
                 {file && (
@@ -340,7 +340,7 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept, existingPdfs
                 disabled={!file || questionCount < 3 || questionCount > 10}
                 className="gap-2"
               >
-                <Sparkles className="h-4 w-4" />
+                <Sparkles className="size-4" />
                 Genereaza
               </Button>
             </DialogFooter>
@@ -349,7 +349,7 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept, existingPdfs
 
         {stage === "loading" && (
           <div className="flex flex-col items-center justify-center gap-4 py-16">
-            <Spinner className="h-8 w-8 text-primary" />
+            <Spinner className="size-8 text-primary" />
             <p className="text-sm text-muted-foreground text-center">
               Se genereaza... poate dura pana la 60 de secunde.
             </p>
@@ -451,7 +451,7 @@ export function AiGeneratePdfDialog({ open, onOpenChange, onAccept, existingPdfs
                 Anuleaza
               </Button>
               <Button onClick={handleAccept} className="gap-2">
-                <Sparkles className="h-4 w-4" />
+                <Sparkles className="size-4" />
                 Adauga in curs
               </Button>
             </DialogFooter>

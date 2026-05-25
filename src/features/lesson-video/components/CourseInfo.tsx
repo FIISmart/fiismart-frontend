@@ -15,7 +15,7 @@ export default function CourseInfo({ courseData }: CourseInfoProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">
+        <h1 className="font-serif font-bold text-2xl text-foreground">
           {courseData?.title || "Titlu curs indisponibil"}
         </h1>
       </div>
@@ -33,11 +33,11 @@ export default function CourseInfo({ courseData }: CourseInfoProps) {
 
         <div className="flex gap-6 mt-4 sm:mt-0">
           <div className="flex items-center gap-2">
-            <Users size={18} className="text-primary" />
+            <Users className="size-5 text-primary" />
             <span className="text-sm font-medium">Studenți înscriși</span>
           </div>
           <div className="flex items-center gap-2">
-            <Star size={18} className="text-primary fill-primary" />
+            <Star className="size-5 fill-amber-400 text-amber-400" />
             <span className="text-sm font-medium">Curs Nou</span>
           </div>
         </div>

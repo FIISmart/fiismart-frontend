@@ -68,25 +68,25 @@ export default function StudentCourseDetailPage() {
   const firstLecture = modules[0]?.lectures[0];
 
   return (
-    <div className="min-h-screen bg-[#F4EFE8]">
+    <div className="min-h-screen bg-background">
       <StudentNavbar studentName={firstName} initials={initials} />
 
       <main className="max-w-[900px] mx-auto px-4 md:px-8 pt-6 pb-20 flex flex-col gap-6">
         <Link
           to="/student/courses"
-          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#9b8ec7] transition-colors w-fit"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors w-fit"
         >
           <ArrowLeft className="size-4" /> Înapoi la cursuri
         </Link>
 
         {loading && (
-          <p className="text-center py-20 text-gray-400 text-sm">Se încarcă cursul...</p>
+          <p className="text-center py-20 text-muted-foreground text-sm">Se încarcă cursul...</p>
         )}
 
         {!loading && course && (
           <>
             {/* Header */}
-            <div className="bg-white rounded-2xl overflow-hidden border border-black/5 shadow-sm">
+            <div className="bg-card rounded-2xl overflow-hidden border border-black/5 shadow-sm">
               <div className="aspect-[21/7] overflow-hidden">
                 <img
                   src={course.thumbnailUrl ?? FALLBACK_THUMBNAIL}
@@ -98,17 +98,17 @@ export default function StudentCourseDetailPage() {
                 {(course.tags ?? []).length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {(course.tags ?? []).map((tag) => (
-                      <Badge key={tag} variant="secondary" className="bg-[#9b8ec7]/10 text-[#7b6eb0] border-0">
+                      <Badge key={tag} variant="secondary" className="bg-primary/10 text-primary border-0">
                         {tag}
                       </Badge>
                     ))}
                   </div>
                 )}
-                <h1 className="font-serif text-2xl md:text-3xl font-bold text-[#1a1a2e]">
+                <h1 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
                   {course.title}
                 </h1>
-                <p className="text-gray-500 text-sm leading-relaxed">{course.description}</p>
-                <div className="flex items-center gap-6 text-xs text-gray-400">
+                <p className="text-muted-foreground text-sm leading-relaxed">{course.description}</p>
+                <div className="flex items-center gap-6 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1.5"><BookOpen className="size-4" /> {modules.length} module</span>
                   <span className="flex items-center gap-1.5"><Play className="size-4" /> {totalLectures} lecții</span>
                   <span className="flex items-center gap-1.5"><Clock className="size-4" /> {duration}</span>
@@ -118,40 +118,40 @@ export default function StudentCourseDetailPage() {
 
             {/* Modules */}
             {modules.length === 0 ? (
-              <p className="text-center py-10 text-gray-400 text-sm">Cursul nu are conținut momentan.</p>
+              <p className="text-center py-10 text-muted-foreground text-sm">Cursul nu are conținut momentan.</p>
             ) : (
               <div className="flex flex-col gap-3">
-                <h2 className="font-serif font-semibold text-lg text-[#1a1a2e]">Conținutul cursului</h2>
+                <h2 className="font-serif font-semibold text-lg text-foreground">Conținutul cursului</h2>
 
                 {modules.map((mod, idx) => {
                   const isOpen = expanded.has(mod.id);
                   return (
-                    <div key={mod.id} className="bg-white rounded-xl border border-black/5 overflow-hidden">
+                    <div key={mod.id} className="bg-card rounded-xl border border-black/5 overflow-hidden">
                       <button
                         type="button"
                         onClick={() => toggle(mod.id)}
                         className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors"
                       >
                         <div className="flex items-center gap-3 text-left">
-                          <span className="size-7 rounded-lg bg-[#9b8ec7]/10 text-[#9b8ec7] text-xs font-bold flex items-center justify-center shrink-0">
+                          <span className="size-7 rounded-lg bg-primary/10 text-primary text-xs font-bold flex items-center justify-center shrink-0">
                             {idx + 1}
                           </span>
                           <div>
-                            <p className="font-semibold text-[#1a1a2e] text-sm">{mod.title}</p>
-                            <p className="text-xs text-gray-400 mt-0.5">
+                            <p className="font-semibold text-foreground text-sm">{mod.title}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
                               {mod.lectures.length} {mod.lectures.length === 1 ? "lecție" : "lecții"}
                             </p>
                           </div>
                         </div>
                         {isOpen
-                          ? <ChevronDown className="size-4 text-gray-400 shrink-0" />
-                          : <ChevronRight className="size-4 text-gray-400 shrink-0" />}
+                          ? <ChevronDown className="size-4 text-muted-foreground shrink-0" />
+                          : <ChevronRight className="size-4 text-muted-foreground shrink-0" />}
                       </button>
 
                       {isOpen && (
                         <div className="border-t border-black/5">
                           {mod.lectures.length === 0 ? (
-                            <p className="px-5 py-4 text-sm text-gray-400">Nicio lecție în acest modul.</p>
+                            <p className="px-5 py-4 text-sm text-muted-foreground">Nicio lecție în acest modul.</p>
                           ) : (
                             <div className="divide-y divide-black/5">
                               {mod.lectures.map((lecture, lIdx) => {
@@ -160,16 +160,16 @@ export default function StudentCourseDetailPage() {
                                   <Link
                                     key={lecture.id}
                                     to={`/student/courses/${courseId}/lectures/${lecture.id}`}
-                                    className="flex items-center gap-4 px-5 py-3.5 hover:bg-[#9b8ec7]/5 transition-colors group"
+                                    className="flex items-center gap-4 px-5 py-3.5 hover:bg-primary/5 transition-colors group"
                                   >
-                                    <span className="size-7 rounded-full border border-[#9b8ec7]/30 text-[#9b8ec7] text-xs flex items-center justify-center shrink-0 group-hover:bg-[#9b8ec7] group-hover:text-white group-hover:border-[#9b8ec7] transition-colors">
-                                      <Play className="size-3" />
+                                    <span className="size-7 rounded-full border border-primary/30 text-primary text-xs flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-colors">
+                                      <Play className="size-4" />
                                     </span>
-                                    <span className="flex-1 text-sm text-[#1a1a2e] line-clamp-1">
+                                    <span className="flex-1 text-sm text-foreground line-clamp-1">
                                       {lIdx + 1}. {lecture.title}
                                     </span>
                                     {mins > 0 && (
-                                      <span className="text-xs text-gray-400 shrink-0">{mins} min</span>
+                                      <span className="text-xs text-muted-foreground shrink-0">{mins} min</span>
                                     )}
                                   </Link>
                                 );
@@ -186,14 +186,14 @@ export default function StudentCourseDetailPage() {
                   <Button
                     onClick={handleEnroll}
                     disabled={enrolling}
-                    className="mt-2 bg-[#9b8ec7] hover:bg-[#7b6eb0] text-white rounded-xl h-12 text-base"
-                  >
-                    {enrolling ? "Se procesează..." : "Înscrie-te în curs"}
+className="mt-2 bg-primary hover:bg-primary/90 text-white rounded-xl h-12 text-base"
+                   >
+                     {enrolling ? "Se procesează..." : "Înscrie-te în curs"}
                   </Button>
                 ) : firstLecture ? (
                   <Button
                     asChild
-                    className="mt-2 bg-[#9b8ec7] hover:bg-[#7b6eb0] text-white rounded-xl h-12 text-base"
+                    className="mt-2 bg-primary hover:bg-primary/90 text-white rounded-xl h-12 text-base"
                   >
                     <Link to={`/student/courses/${courseId}/lectures/${firstLecture.id}`}>
                       Continuă cursul

@@ -24,7 +24,7 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-edu-bg">
-        <Spinner className="size-8 text-edu-purple" />
+        <Spinner className="size-8 text-primary" />
       </div>
     );
   }

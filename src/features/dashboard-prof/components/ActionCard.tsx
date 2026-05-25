@@ -19,7 +19,7 @@ export function ActionCard({ title, description, icon, bgColorClass, to }: Actio
       <div className="bg-white/30 p-3 rounded-xl text-edu-foreground flex-shrink-0">{icon}</div>
 
       <div>
-        <h3 className="text-xl font-bold font-poppins text-edu-foreground">{title}</h3>
+        <h3 className="text-xl font-semibold text-foreground">{title}</h3>
         <p className="text-sm font-medium text-edu-foreground/80 mt-1">{description}</p>
       </div>
     </div>

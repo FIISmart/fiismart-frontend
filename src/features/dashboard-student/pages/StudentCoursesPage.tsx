@@ -37,21 +37,21 @@ export default function StudentCoursesPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F4EFE8]">
+    <div className="min-h-screen bg-background">
       <StudentNavbar studentName={firstName} initials={initials} />
 
       <main className="max-w-[1280px] mx-auto px-4 md:px-12 pt-6 md:pt-10 pb-20 flex flex-col gap-8">
         <div>
-          <h1 className="font-serif text-[28px] md:text-[32px] font-bold text-[#1a1a2e]">
+          <h1 className="font-serif text-[28px] md:text-[32px] font-bold text-foreground">
             Explorează cursurile
           </h1>
-          <p className="text-[14.5px] text-gray-500 font-medium opacity-80 mt-1">
+          <p className="text-[14.5px] text-muted-foreground font-medium opacity-80 mt-1">
             {loading ? "Se încarcă cursurile..." : `${courses.length} cursuri disponibile`}
           </p>
         </div>
 
         <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
             placeholder="Caută după titlu, descriere sau tag..."
             value={query}
@@ -92,7 +92,7 @@ export default function StudentCoursesPage() {
                       <Badge
                         key={tag}
                         variant="secondary"
-                        className="bg-[#9b8ec7]/10 text-[#7b6eb0] text-xs border-0"
+                        className="bg-primary/10 text-primary text-xs border-0"
                       >
                         {tag}
                       </Badge>
@@ -100,24 +100,24 @@ export default function StudentCoursesPage() {
                   </div>
                 )}
                 <div className="flex-1">
-                  <h3 className="font-serif font-semibold text-lg text-[#1a1a2e] line-clamp-2 leading-snug">
+                  <h3 className="font-serif font-semibold text-lg text-foreground line-clamp-2 leading-snug">
                     {course.title}
                   </h3>
                   <p className="text-sm text-gray-500 mt-1 line-clamp-2">{course.description}</p>
                 </div>
                 <div className="flex items-center justify-between pt-2 border-t border-black/5">
-                  <div className="flex items-center gap-3 text-xs text-gray-400">
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
-                      <BookOpen className="size-3.5" />
+                      <BookOpen className="size-4" />
                       {(course.modules ?? []).length} module
                     </span>
                     <span className="flex items-center gap-1">
-                      <Clock className="size-3.5" />
+                      <Clock className="size-4" />
                       La cerere
                     </span>
                   </div>
-                  <span className="flex items-center gap-1 text-xs font-semibold text-[#9b8ec7] group-hover:gap-2 transition-all">
-                    Accesează <ArrowRight className="size-3.5" />
+                  <span className="flex items-center gap-1 text-xs font-semibold text-primary group-hover:gap-2 transition-all">
+                    Accesează <ArrowRight className="size-4" />
                   </span>
                 </div>
               </div>

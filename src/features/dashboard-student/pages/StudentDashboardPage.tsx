@@ -100,7 +100,7 @@ export default function StudentDashboardPage() {
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-edu-cream">
-        <Spinner className="size-8 text-[#9b8ec7]" />
+        <Spinner className="size-8 text-primary" />
       </div>
     );
   }
@@ -110,18 +110,18 @@ export default function StudentDashboardPage() {
   const initials = ((firstName[0] ?? "S") + (lastName[0] ?? "")).toUpperCase();
 
   return (
-    <div className="min-h-screen pb-20 select-none bg-[#F4EFE8]">
+    <div className="min-h-screen pb-20 select-none bg-background">
       <StudentNavbar studentName={firstName} initials={initials} />
 
       <main className="max-w-[1280px] mx-auto px-4 md:px-12 pt-6 md:pt-10 flex flex-col gap-8 md:gap-10">
         <div>
-          <h1 className="font-serif text-[28px] md:text-[32px] font-bold text-[#1a1a2e]">
+          <h1 className="font-serif font-bold text-2xl text-foreground">
             Salut, {firstName}! 👋
           </h1>
-          <p className="text-[14.5px] text-gray-500 font-medium opacity-80 mt-1">
+          <p className="text-[14.5px] text-muted-foreground font-medium opacity-80 mt-1">
             {loading
               ? "Se încarcă datele tale..."
-              : "Continuă-ți parcursul de învățare pe FiiSmart."}
+              : "Continuă-ți parcursul de învățare pe FIISmart."}
           </p>
         </div>
 

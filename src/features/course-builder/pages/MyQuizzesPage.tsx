@@ -207,7 +207,7 @@ export default function MyQuizzesPage() {
             <div className="flex flex-col sm:flex-row gap-2">
               <Button asChild variant="outline" className="gap-2">
                 <Link to="/professor/courses">
-                  <ArrowLeft className="h-4 w-4" />
+                  <ArrowLeft className="size-4" />
                   My Courses
                 </Link>
               </Button>
@@ -228,7 +228,7 @@ export default function MyQuizzesPage() {
                 </SelectContent>
               </Select>
               <Button onClick={openCreate} disabled={courses.length === 0} className="gap-2">
-                <Plus className="h-4 w-4" />
+                <Plus className="size-4" />
                 Quiz Nou
               </Button>
             </div>
@@ -237,7 +237,7 @@ export default function MyQuizzesPage() {
           <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                <ListChecks className="h-5 w-5" />
+                <ListChecks className="size-5" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Quiz-uri totale</p>
@@ -246,7 +246,7 @@ export default function MyQuizzesPage() {
             </div>
             <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                <CalendarClock className="h-5 w-5" />
+                <CalendarClock className="size-5" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Intrebari totale</p>
@@ -272,7 +272,7 @@ export default function MyQuizzesPage() {
               Creeaza un quiz central pentru unul dintre cursurile tale.
             </p>
             <Button onClick={openCreate} disabled={courses.length === 0} className="gap-2">
-              <Plus className="h-4 w-4" />
+              <Plus className="size-4" />
               Creeaza Quiz
             </Button>
           </div>
@@ -304,7 +304,7 @@ export default function MyQuizzesPage() {
                   onClick={() => setDeletingQuiz(quiz)}
                   aria-label="Sterge quiz"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="size-4" />
                 </Button>
               </CardFooter>
             </Card>

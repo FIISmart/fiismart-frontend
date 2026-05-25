@@ -18,8 +18,8 @@ export default function Header() {
     <header className="bg-card border-b border-border px-6 py-4 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <Link to="/student/dashboard" className="flex items-center gap-2 text-primary font-bold text-xl">
-          <GraduationCap size={28} />
-          <span>FiiSmart</span>
+          <GraduationCap className="size-6" />
+          <span>FIISmart</span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
@@ -38,7 +38,7 @@ export default function Header() {
             title={user?.email}
             className="w-8 h-8 bg-secondary/30 rounded-full flex items-center justify-center text-foreground"
           >
-            <User size={16} />
+            <User className="size-4" />
           </div>
 
           <button
@@ -47,7 +47,7 @@ export default function Header() {
             title="Deconectare"
             className="hover:text-red-500 transition-colors"
           >
-            <LogOut size={18} />
+            <LogOut className="size-4" />
           </button>
         </div>
       </div>

@@ -163,7 +163,7 @@ export default function LessonContent({ lecture, onMarkComplete, isSaving = fals
           {pdfUrl && (
             <Button asChild variant="outline" className="gap-2 shrink-0">
               <a href={pdfUrl} target="_blank" rel="noreferrer">
-                <ExternalLink className="h-4 w-4" />
+                <ExternalLink className="size-4" />
                 Deschide
               </a>
             </Button>
@@ -178,14 +178,14 @@ export default function LessonContent({ lecture, onMarkComplete, isSaving = fals
           />
         ) : (
           <div className="flex min-h-[360px] flex-col items-center justify-center gap-3 p-8 text-center text-muted-foreground">
-            <FileText className="h-10 w-10" />
+            <FileText className="size-8" />
             <p>PDF-ul nu este disponibil.</p>
           </div>
         )}
 
         <div className="border-t border-border p-5">
           <Button onClick={() => onMarkComplete()} disabled={lecture.completed || isSaving} className="gap-2">
-            {lecture.completed ? <CheckCircle2 className="h-4 w-4" /> : null}
+{lecture.completed ? <CheckCircle2 className="size-4" /> : null}
             {lecture.completed ? "Parcurs" : "Marcheaza ca parcursa"}
           </Button>
         </div>
@@ -202,7 +202,7 @@ export default function LessonContent({ lecture, onMarkComplete, isSaving = fals
 
       {loadingMarkdown ? (
         <div className="flex min-h-[220px] items-center justify-center text-muted-foreground">
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          <Loader2 className="mr-2 size-4 animate-spin" />
           Se incarca textul...
         </div>
       ) : markdownContent.trim() ? (
@@ -219,7 +219,7 @@ export default function LessonContent({ lecture, onMarkComplete, isSaving = fals
           disabled={lecture.completed || isSaving}
           className="gap-2"
         >
-          {lecture.completed ? <CheckCircle2 className="h-4 w-4" /> : null}
+          {lecture.completed ? <CheckCircle2 className="size-4" /> : null}
           {lecture.completed ? "Parcurs" : "Marcheaza ca parcursa"}
         </Button>
       </div>

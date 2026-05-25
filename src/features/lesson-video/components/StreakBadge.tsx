@@ -47,8 +47,7 @@ export function StreakBadge({ studentId }: StreakBadgeProps) {
             title={hasCompletedToday ? "Ai învățat azi! Streak menținut." : "Completează o lecție azi pentru a-ți menține streak-ul!"}
         >
             <Flame
-                size={18}
-                className={hasCompletedToday ? "text-orange-500 fill-orange-500" : "text-neutral-400"}
+                className={`size-4 ${hasCompletedToday ? "text-orange-500 fill-orange-500" : "text-neutral-400"}`}
             />
             <span>{currentStreak} {currentStreak === 1 ? 'zi' : 'zile'}</span>
         </div>

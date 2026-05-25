@@ -143,7 +143,7 @@ export default function CommentsSection({
       <div className="space-y-6">
         <div className="flex items-center justify-between border-b border-border pb-4">
           <h3 className="font-bold text-xl flex items-center gap-2 text-foreground">
-            <MessageSquare size={24} className="text-primary" />
+            <MessageSquare className="size-5 text-primary" />
             Discuții & Întrebări
           </h3>
 
@@ -159,7 +159,7 @@ export default function CommentsSection({
                 <option value="oldest">Cele mai noi</option>
                 <option value="popular">Cele mai apreciate</option>
               </select>
-              <ChevronDown size={14} />
+              <ChevronDown className="size-4" />
             </div>
 
             <span className="px-3 py-1 bg-accent/30 text-foreground text-sm font-medium rounded-full">
@@ -185,7 +185,7 @@ export default function CommentsSection({
                     : "text-muted-foreground hover:text-foreground bg-card border-border"
                 }`}
             >
-              <Clock size={14} />
+              <Clock className="size-4" />
               {selectedTimestamp !== null
                   ? `Timestamp: ${selectedTimestamp}s`
                   : `Adaugă timestamp (${Math.floor(currentTime)}s)`}
@@ -198,7 +198,7 @@ export default function CommentsSection({
                 }}
                 className="flex items-center gap-2 bg-primary text-white px-5 py-2 rounded-xl text-sm font-medium hover:opacity-90"
             >
-              <Send size={16} />
+              <Send className="size-4" />
               Postează
             </button>
           </div>

@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+
 interface Props {
   correct: number;
   total: number;
@@ -23,28 +25,27 @@ function CircularProgress({ score, correct, total }: CircularProps) {
         cy="55"
         r={radius}
         fill="none"
-        stroke="#E5DDD4"
         strokeWidth="9"
+        className="stroke-border"
       />
       <circle
         cx="55"
         cy="55"
         r={radius}
         fill="none"
-        stroke="#9B8EC7"
         strokeWidth="9"
         strokeDasharray={circumference}
         strokeDashoffset={offset}
         strokeLinecap="round"
         transform="rotate(-90 55 55)"
-        className="transition-all duration-700 ease-out"
+        className="stroke-primary transition-all duration-700 ease-out"
       />
       <text
         x="55"
         y="50"
         textAnchor="middle"
         dominantBaseline="middle"
-        className="text-[18px] font-bold fill-[#9B8EC7] font-sans"
+        className="text-[18px] font-bold fill-primary font-sans"
       >
         {correct}/{total}
       </text>
@@ -52,7 +53,7 @@ function CircularProgress({ score, correct, total }: CircularProps) {
         x="55"
         y="67"
         textAnchor="middle"
-        className="text-[11px] fill-[#9B8EC7] font-sans"
+        className="text-[11px] fill-primary font-sans"
       >
         {score}%
       </text>
@@ -84,7 +85,7 @@ export default function QuizResultPage({ correct, total, onRetry, onBack }: Prop
     if (score >= 60)
       return {
         title: "Bravo!",
-        sub: "Ai trecut testul. Continuă să exersezi pentru un scor și mai bun!",
+        sub: "Ai trecut testul. Continuă să exerstezi pentru un scor și mai bun!",
       };
     return {
       title: "Mai încearcă!",
@@ -96,37 +97,37 @@ export default function QuizResultPage({ correct, total, onRetry, onBack }: Prop
 
   return (
     <div className="flex-grow flex items-center justify-center p-4 py-8">
-      <div className="w-full max-w-[340px] bg-white rounded-[20px] overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.08)] flex flex-col">
-        <div className="bg-[#9B8EC7] pt-7 pb-5 px-6 flex flex-col items-center gap-2">
+      <div className="w-full max-w-[340px] bg-card rounded-2xl overflow-hidden shadow-lg flex flex-col">
+        <div className="bg-primary pt-7 pb-5 px-6 flex flex-col items-center gap-2">
           <div className="text-[22px] leading-none">⭐</div>
-          <h1 className="text-white text-[18px] font-bold text-center m-0">
+          <h1 className="text-primary-foreground text-[18px] font-bold text-center m-0">
             {title}
           </h1>
-          <p className="text-white/90 text-[12px] text-center leading-relaxed max-w-[260px] m-0">
+          <p className="text-primary-foreground/90 text-[12px] text-center leading-relaxed max-w-[260px] m-0">
             {sub}
           </p>
         </div>
 
-        <div className="bg-[#F2EAE0] w-full flex justify-center py-6 border-b border-white/50">
+        <div className="bg-background w-full flex justify-center py-6 border-b border-border">
           <CircularProgress score={score} correct={correct} total={total} />
         </div>
 
-        <div className="bg-white p-5 pt-6 flex flex-col items-center">
+        <div className="bg-card p-5 pt-6 flex flex-col items-center">
           <div className="flex gap-2.5 w-full mb-5">
-            <div className="flex-1 bg-[#B2D8D0] rounded-[12px] py-3 px-2 flex flex-col items-center gap-1">
-              <span className="text-[24px] font-bold text-[#1E5F56] leading-none">
+            <div className="flex-1 bg-accent/50 rounded-xl py-3 px-2 flex flex-col items-center gap-1">
+              <span className="text-[24px] font-bold text-primary leading-none">
                 {correct}
               </span>
-              <span className="text-[11px] font-medium text-[#2E6B62]">
+              <span className="text-[11px] font-medium text-primary">
                 Corect
               </span>
             </div>
 
-            <div className="flex-1 bg-[#DDD0E8] rounded-[12px] py-3 px-2 flex flex-col items-center gap-1">
-              <span className="text-[24px] font-bold text-[#5A2D82] leading-none">
+            <div className="flex-1 bg-secondary/50 rounded-xl py-3 px-2 flex flex-col items-center gap-1">
+              <span className="text-[24px] font-bold text-secondary leading-none">
                 {incorrect}
               </span>
-              <span className="text-[11px] font-medium text-[#6B3E8A]">
+              <span className="text-[11px] font-medium text-secondary">
                 Gresit
               </span>
             </div>
@@ -134,23 +135,23 @@ export default function QuizResultPage({ correct, total, onRetry, onBack }: Prop
 
           <div className="w-full flex flex-col gap-2">
             {onBack && (
-              <button
+              <Button
                 onClick={onBack}
-                className="w-full h-[44px] rounded-[14px] bg-[#84C5C4] border-none text-white text-[14px] font-semibold hover:opacity-90 transition-opacity"
+                className="w-full bg-accent text-accent-foreground"
               >
                 Inapoi la curs
-              </button>
+              </Button>
             )}
 
-            <button
+            <Button
               onClick={onRetry}
-              className="w-full h-[44px] rounded-[14px] bg-[#9B8EC7] border-none text-white text-[14px] font-semibold hover:opacity-90 transition-opacity"
+              className="w-full"
             >
               Reîncepe Quiz
-            </button>
+            </Button>
           </div>
 
-          <p className="mt-[14px] text-[11px] text-[#B0A8C2] text-center">
+          <p className="mt-[14px] text-[11px] text-muted-foreground text-center">
             Finalizat la data de {today}
           </p>
         </div>

@@ -124,8 +124,8 @@ export interface GroupedVideoMarker {
   count: number;
 }
 export interface ReviewRequest {
-  rating: number;
-  comment: string;
+  stars: number;
+  body: string;
 }
 
 export interface ReviewResponse {
@@ -134,6 +134,26 @@ export interface ReviewResponse {
   rating: number;
   comment: string;
   createdAt: string;
+}
+
+export interface BackendReviewResponse {
+  id: string;
+  studentId: string;
+  courseId: string;
+  stars: number;
+  body: string;
+  createdAt: string;
+  authorName: string;
+}
+
+export function mapReview(b: BackendReviewResponse): ReviewResponse {
+  return {
+    id: b.id,
+    authorName: b.authorName,
+    rating: b.stars,
+    comment: b.body,
+    createdAt: b.createdAt,
+  };
 }
 
 export interface StreakResponse {

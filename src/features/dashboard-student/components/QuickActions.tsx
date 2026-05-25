@@ -43,10 +43,10 @@ export function QuickActions({ continueStudy }: QuickActionsProps) {
       {continueStudy && (
         <div
           onClick={() => void handleContinueStudy()}
-          className="p-6 md:p-8 rounded-[20px] bg-gradient-to-r from-[#9b8ec7] to-[#bda6ce] flex items-center gap-6 border border-white/20 shadow-sm cursor-pointer hover:opacity-95 transition-all"
+          className="p-6 md:p-8 rounded-2xl bg-gradient-to-r from-primary to-secondary flex items-center gap-6 border border-white/20 shadow-sm cursor-pointer hover:opacity-95 transition-all"
         >
           <div className="w-12 h-12 bg-white/30 backdrop-blur-md rounded-xl flex items-center justify-center text-white shrink-0">
-            <Play fill="white" size={18} className="ml-1" />
+            <Play fill="white" className="size-4 ml-1" />
           </div>
           <div>
             <h3 className="font-bold text-white text-[16px] md:text-[17px]">
@@ -61,16 +61,16 @@ export function QuickActions({ continueStudy }: QuickActionsProps) {
 
       <div
         onClick={() => navigate("/student/courses")}
-        className="p-6 md:p-8 rounded-[20px] bg-gradient-to-r from-[#b4d3d9] to-[#2dd4bf] flex items-center gap-6 border border-white/20 shadow-sm cursor-pointer hover:opacity-95 transition-all"
+        className="p-6 md:p-8 rounded-2xl bg-gradient-to-r from-accent to-edu-mint flex items-center gap-6 border border-white/20 shadow-sm cursor-pointer hover:opacity-95 transition-all"
       >
-        <div className="w-12 h-12 bg-white/50 backdrop-blur-md rounded-xl flex items-center justify-center text-[#1a1a2e] shrink-0">
-          <BookOpen size={20} />
+        <div className="w-12 h-12 bg-white/50 backdrop-blur-md rounded-xl flex items-center justify-center text-foreground shrink-0">
+          <BookOpen className="size-5" />
         </div>
         <div>
-          <h3 className="font-bold text-[#1a1a2e] text-[16px] md:text-[17px]">
+          <h3 className="font-bold text-foreground text-[16px] md:text-[17px]">
             Găsește un Tutore
           </h3>
-          <p className="text-[#1a1a2e]/60 text-[12px] md:text-[13px] font-semibold">
+          <p className="text-foreground/60 text-[12px] md:text-[13px] font-semibold">
             Ai nevoie de ajutor suplimentar?
           </p>
         </div>

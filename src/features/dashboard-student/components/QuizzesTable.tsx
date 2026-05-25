@@ -17,16 +17,16 @@ export function QuizzesTable({ quizzes }: QuizzesTableProps) {
   return (
     <section>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="font-bold text-[19px] text-[#1a1a2e]">Quiz-urile Mele</h2>
+        <h2 className="text-xl font-semibold text-foreground">Quiz-urile Mele</h2>
         <button
           type="button"
           onClick={() => setIsExpanded((v) => !v)}
-          className="text-[13px] font-bold text-[#9b8ec7] hover:underline focus:outline-none"
+          className="text-[13px] font-bold text-primary hover:underline focus:outline-none"
         >
           {isExpanded ? "Restrânge" : "Vezi toate"}
         </button>
       </div>
-      <div className="bg-white rounded-[20px] shadow-sm border border-black/5 overflow-hidden">
+      <div className="bg-card rounded-2xl shadow-sm border border-black/5 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left min-w-[600px]">
             <thead className="bg-gray-50/60 border-b border-gray-100">
@@ -42,17 +42,17 @@ export function QuizzesTable({ quizzes }: QuizzesTableProps) {
             <tbody className="text-[13.5px] font-medium">
               {visibleQuizzes.map((quiz, i) => {
                 const passed = PASSED_STATUSES.has(quiz.status);
-                const scoreClass = quiz.scor < 70 ? "text-orange-500" : "text-[#22c55e]";
+                const scoreClass = quiz.scor < 70 ? "text-warning" : "text-success";
                 const statusClass = passed
-                  ? "bg-green-100 text-[#22c55e]"
-                  : "bg-yellow-100 text-yellow-700";
+                  ? "bg-success/10 text-success"
+                  : "bg-warning/10 text-warning";
 
                 return (
                   <tr
                     key={`${quiz.titluQuiz}-${i}`}
                     className="hover:bg-gray-50/50 transition-colors border-b border-gray-50 last:border-0"
                   >
-                    <td className="px-8 py-5 font-bold text-[#1a1a2e]">{quiz.titluQuiz}</td>
+                    <td className="px-8 py-5 font-bold text-foreground">{quiz.titluQuiz}</td>
                     <td className="px-8 py-5 text-gray-500 font-semibold">{quiz.numeCurs}</td>
                     <td className="px-8 py-5 text-center font-bold">{quiz.incercari}</td>
                     <td className={`px-8 py-5 text-center font-bold ${scoreClass}`}>
@@ -65,8 +65,7 @@ export function QuizzesTable({ quizzes }: QuizzesTableProps) {
                     </td>
                     <td className="px-8 py-5 text-right">
                       <MoreVertical
-                        size={16}
-                        className="text-gray-300 ml-auto cursor-pointer hover:text-gray-500"
+                        className="size-4 text-gray-300 ml-auto cursor-pointer hover:text-gray-500"
                         onClick={() => {
                           if (quiz.quizId) navigate(`/student/quizzes/${quiz.quizId}`);
                         }}

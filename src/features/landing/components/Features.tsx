@@ -9,6 +9,9 @@ import {
   Bot,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { PageLayout } from "@/components/layout";
 
 interface Feature {
   icon: React.ReactNode;
@@ -19,49 +22,49 @@ interface Feature {
 
 const features: Feature[] = [
   {
-    icon: <BookOpen size={24} />,
+    icon: <BookOpen className="size-6" />,
     title: "Management Cursuri",
     description: "Creaza si gestioneaza cursurile tale cu instrumente intuitive si profesionale.",
     color: "bg-primary/10 text-primary",
   },
   {
-    icon: <Video size={24} />,
+    icon: <Video className="size-6" />,
     title: "Incalzire Video",
     description: "Inregistreaza si editeaza lectii video de calitate direct din platforma.",
     color: "bg-accent/40 text-primary",
   },
   {
-    icon: <FileCheck size={24} />,
+    icon: <FileCheck className="size-6" />,
     title: "Quiz si Portofoliu",
     description: "Creeaza evaluari interactive si construieste un portofoliu profesional.",
     color: "bg-secondary/30 text-primary",
   },
   {
-    icon: <Users size={24} />,
+    icon: <Users className="size-6" />,
     title: "Marketplace Tutoring",
     description: "Conecteaza-te cu studenti si profesori din intreaga tara.",
     color: "bg-primary/10 text-primary",
   },
   {
-    icon: <Award size={24} />,
+    icon: <Award className="size-6" />,
     title: "Certificari Smart",
     description: "Obtine certificari recunoscute de angajatori din diverse industrii.",
     color: "bg-accent/40 text-primary",
   },
   {
-    icon: <Radio size={24} />,
+    icon: <Radio className="size-6" />,
     title: "Inregistrare Exclusiva",
     description: "Acces la sesiuni live exclusive cu experti din domeniu.",
     color: "bg-secondary/30 text-primary",
   },
   {
-    icon: <BarChart2 size={24} />,
+    icon: <BarChart2 className="size-6" />,
     title: "Progres & Comunitate",
     description: "Urmareste progresul tau si conecteaza-te cu alti studenti motivati.",
     color: "bg-primary/10 text-primary",
   },
   {
-    icon: <Bot size={24} />,
+    icon: <Bot className="size-6" />,
     title: "Chatbot & Recomandari",
     description: "Asistent AI care iti recomanda cursuri personalizate in functie de obiective.",
     color: "bg-accent/40 text-primary",
@@ -87,48 +90,46 @@ export default function Features() {
   }, []);
 
   return (
-    <section id="Functionalitati" ref={sectionRef} className="section-padding bg-muted/40">
-      <div className="fii-container">
-        {/* Header */}
+    <section id="Functionalitati" ref={sectionRef} className="py-16 lg:py-20 bg-muted/40">
+      <PageLayout as="div" maxWidth="7xl">
         <div className="text-center mb-16">
-          <span className="badge-purple mb-4">✨ Features</span>
-          <h2 className="font-heading text-h2 font-bold text-foreground mb-4">
+          <Badge variant="secondary" className="rounded-full px-4 py-1.5 text-sm font-medium gap-1.5 mb-4">
+            ✨ Features
+          </Badge>
+          <h2 className="font-serif text-h2 font-bold text-foreground mb-4">
             Tot ce ai nevoie pentru a invata si preda
           </h2>
-          <p className="font-body text-body-lg text-muted-foreground max-w-2xl mx-auto">
+          <p className="font-sans text-body-lg text-muted-foreground max-w-2xl mx-auto">
             O platforma moderna care reuneste toate functionalele esentiale pentru un
             ecosistem educational complet.
           </p>
         </div>
 
-        {/* Features Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {features.map((feature, index) => (
-            <div
+            <Card
               key={index}
-              className={`landing-card group cursor-pointer transition-all duration-300 ${
+              className={`p-6 gap-0 shadow-card hover:shadow-card-hover transition-all duration-300 group cursor-pointer ${
                 isVisible ? "animate-fadeInUp opacity-100" : "opacity-0"
               }`}
               style={{ animationDelay: `${index * 0.08}s` }}
             >
-              {/* Icon */}
               <div
                 className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110 ${feature.color}`}
               >
                 {feature.icon}
               </div>
 
-              {/* Content */}
-              <h3 className="font-heading text-h3 font-semibold text-foreground mb-2">
+              <h3 className="font-serif text-h3 font-semibold text-foreground mb-2">
                 {feature.title}
               </h3>
-              <p className="font-body text-body-sm text-muted-foreground leading-relaxed">
+              <p className="font-sans text-body-sm text-muted-foreground leading-relaxed">
                 {feature.description}
               </p>
-            </div>
+            </Card>
           ))}
         </div>
-      </div>
+      </PageLayout>
     </section>
   );
 }

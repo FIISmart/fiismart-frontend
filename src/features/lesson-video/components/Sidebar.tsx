@@ -171,9 +171,9 @@ export default function Sidebar({
                   </div>
                 </div>
                 {isExpanded ? (
-                  <ChevronUp size={20} className="text-muted-foreground" />
+                  <ChevronUp className="size-5 text-muted-foreground" />
                 ) : (
-                  <ChevronDown size={20} className="text-muted-foreground" />
+                  <ChevronDown className="size-5 text-muted-foreground" />
                 )}
               </button>
 
@@ -200,11 +200,11 @@ export default function Sidebar({
                       >
                         <div className="mt-0.5">
                           {lecture.completed ? (
-                            <CheckCircle2 size={18} className="text-emerald-500" />
-                          ) : isActive ? (
-                            <LectureIcon size={18} className="text-primary" />
-                          ) : (
-                            <Circle size={18} className="text-muted-foreground/50" />
+<CheckCircle2 className="size-5 text-emerald-500" />
+                           ) : isActive ? (
+                            <LectureIcon className="size-5 text-primary" />
+                           ) : (
+                            <Circle className="size-5 text-muted-foreground/50" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -239,7 +239,7 @@ export default function Sidebar({
                               }}
                               className="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-md border border-primary/20 bg-primary/5 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10"
                             >
-                              <HelpCircle size={13} className="shrink-0" />
+                              <HelpCircle className="size-4 shrink-0" />
                               <span className="shrink-0">Quiz lectie</span>
                               <span className="truncate text-muted-foreground">
                                 {statusLabel(lecture.quiz)}
@@ -257,7 +257,7 @@ export default function Sidebar({
                       onClick={() => openQuiz(moduleItem.quiz)}
                       className="flex w-full items-center gap-3 p-3 mt-2 rounded-lg bg-accent/20 border border-accent/40 cursor-pointer hover:bg-accent/30 transition-colors text-left"
                     >
-                      <HelpCircle size={18} className="text-foreground shrink-0" />
+                      <HelpCircle className="size-5 text-foreground shrink-0" />
                       <div className="min-w-0">
                         <h5 className="text-sm font-medium text-foreground">
                           Quiz Modul {moduleItem.order}
@@ -280,7 +280,7 @@ export default function Sidebar({
             onClick={() => openQuiz(finalQuiz)}
             className="flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4 text-left hover:bg-primary/10"
           >
-            <Trophy size={18} className="text-primary shrink-0" />
+            <Trophy className="size-5 text-primary shrink-0" />
             <div className="min-w-0">
               <h4 className="text-sm font-bold text-foreground">Quiz final curs</h4>
               <p className="text-xs text-muted-foreground">{statusLabel(finalQuiz)}</p>

@@ -47,7 +47,9 @@ export default function AuthCallbackPage() {
           return;
         }
         toast.success(`Bine ai revenit, ${user.firstName || user.email}!`);
-        const dest = user.role === "PROFESSOR" ? "/professor/dashboard" : "/student/dashboard";
+        let dest = "/student/dashboard";
+        if (user.role === "PROFESSOR") dest = "/professor/dashboard";
+        if (user.role === "ADMIN") dest = "/admin/dashboard";
         navigate(dest, { replace: true });
       })
       .catch((err: unknown) => {
@@ -60,7 +62,7 @@ export default function AuthCallbackPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-edu-bg">
       <div className="grid place-items-center size-14 rounded-2xl bg-edu-purple text-white">
-        <GraduationCap className="size-7" />
+        <GraduationCap className="size-6" />
       </div>
       <div className="flex items-center gap-2 text-edu-muted-fg">
         <Loader2 className="size-5 animate-spin" />

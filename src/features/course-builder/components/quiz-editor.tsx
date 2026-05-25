@@ -163,7 +163,7 @@ export function QuizEditor({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <Label className="text-base font-semibold">Întrebări ({questions.length})</Label>
               <Button variant="outline" size="sm" onClick={addQuestion} className="gap-2">
-                <Plus className="h-4 w-4" /> Adaugă Întrebare
+                <Plus className="size-4" /> Adaugă Întrebare
               </Button>
             </div>
 

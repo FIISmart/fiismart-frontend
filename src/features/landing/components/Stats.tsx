@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { TrendingUp } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { PageLayout } from "@/components/layout";
 
 interface StatItem {
   value: number;
@@ -80,42 +83,41 @@ export default function Stats() {
   }, []);
 
   return (
-    <section ref={sectionRef} className="section-padding bg-background border-y border-border">
-      <div className="fii-container">
-        {/* Header */}
+    <section ref={sectionRef} className="py-16 lg:py-20 bg-background border-y border-border">
+      <PageLayout as="div" maxWidth="7xl">
         <div className="text-center mb-16">
-          <span className="badge mb-4">📊 Statistici</span>
-          <h2 className="font-heading text-h2 font-bold text-foreground mb-4">
+          <Badge variant="outline" className="rounded-full px-4 py-1.5 text-sm font-medium gap-1.5 bg-accent/40 border-0 mb-4">
+            📊 Statistici
+          </Badge>
+          <h2 className="font-serif text-h2 font-bold text-foreground mb-4">
             Impactul nostru in educatie
           </h2>
-          <p className="font-body text-body-lg text-muted-foreground max-w-2xl mx-auto">
+          <p className="font-sans text-body-lg text-muted-foreground max-w-2xl mx-auto">
             Transformam educatia prin tehnologie. Cifrele vorbesc de la sine despre
             calitatea si impactul platformei noastre.
           </p>
         </div>
 
-        {/* Stats Row 1 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
           {stats.map((stat, index) => (
-            <div
+            <Card
               key={index}
-              className="landing-card text-center group"
+              className="p-6 gap-0 text-center shadow-card hover:shadow-card-hover transition-all duration-300 group"
               style={{ animationDelay: `${index * 0.1}s` }}
             >
-              <div className="font-heading text-3xl lg:text-4xl font-bold text-primary mb-1">
+              <div className="font-serif text-3xl lg:text-4xl font-bold text-primary mb-1">
                 {isVisible ? (
                   <Counter value={stat.value} suffix={stat.suffix} isVisible={isVisible} />
                 ) : (
                   `0${stat.suffix}`
                 )}
               </div>
-              <p className="font-body font-medium text-foreground text-body-sm mb-1">{stat.label}</p>
-              <p className="font-body text-caption text-muted-foreground">{stat.sublabel}</p>
-            </div>
+              <p className="font-sans font-medium text-foreground text-body-sm mb-1">{stat.label}</p>
+              <p className="font-sans text-caption text-muted-foreground">{stat.sublabel}</p>
+            </Card>
           ))}
         </div>
 
-        {/* Stats Row 2 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           {statsRow2.map((stat, index) => (
             <div
@@ -123,29 +125,28 @@ export default function Stats() {
               className="bg-muted rounded-lg p-5 flex items-center gap-4 border border-border"
             >
               <div className="w-12 h-12 bg-secondary/30 rounded-lg flex items-center justify-center flex-shrink-0">
-                <TrendingUp size={22} className="text-primary" />
+                <TrendingUp className="size-5 text-primary" />
               </div>
               <div>
-                <div className="font-heading text-2xl font-bold text-primary">
+                <div className="font-serif text-2xl font-bold text-primary">
                   {isVisible ? (
                     <Counter value={stat.value} suffix={stat.suffix} isVisible={isVisible} />
                   ) : (
                     `0${stat.suffix}`
                   )}
                 </div>
-                <p className="font-body text-body-sm text-muted-foreground">{stat.label}</p>
+                <p className="font-sans text-body-sm text-muted-foreground">{stat.label}</p>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Highlight Banner */}
         <div className="bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/20 rounded-xl p-6 flex flex-wrap items-center justify-center gap-4 border border-primary/20">
-          <span className="text-foreground font-body font-medium">
+          <span className="text-foreground font-sans font-medium">
             ✅ Top 100% platforma &nbsp;·&nbsp; 🏆 Studenti campioni &nbsp;·&nbsp; 🔒 Verificate de experti
           </span>
         </div>
-      </div>
+      </PageLayout>
     </section>
   );
 }

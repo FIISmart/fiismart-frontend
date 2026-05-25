@@ -9,6 +9,9 @@ export default function RoleDashboardRedirect() {
     return <Navigate to="/auth" replace />;
   }
 
-  const target = user.role === UserRole.PROFESSOR ? "/professor/dashboard" : "/student/dashboard";
+  let target = "/student/dashboard";
+  if (user.role === UserRole.PROFESSOR) target = "/professor/dashboard";
+  if (user.role === UserRole.ADMIN) target = "/admin/dashboard";
+
   return <Navigate to={target} replace />;
 }
