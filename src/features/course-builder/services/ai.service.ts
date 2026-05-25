@@ -1,4 +1,4 @@
-import { postMultipartForm } from "@/lib/api";
+import { postMultipartForm, ssePost } from "@/lib/api";
 
 export type AiQuizQuestionDraft = {
   text: string;
@@ -49,4 +49,46 @@ export function generateFromPdf(
     formData,
     opts?.signal,
   );
+}
+
+/**
+ * SSE event envelope produced by the streaming PDF endpoint.
+ * `token` arrives N times; `done` arrives exactly once on success with
+ * the same shape as the non-streaming `generateFromPdf` response.
+ * `error` is fatal — caller should stop iterating after it.
+ * `ping` is a heartbeat to defeat proxies; safe to ignore.
+ */
+export type AiPdfStreamEvent =
+  | { event: "token"; data: { text: string } }
+  | { event: "done"; data: AiPdfGenerateResponse }
+  | { event: "error"; data: { message: string } }
+  | { event: "ping"; data: unknown };
+
+/**
+ * Streaming variant of `generateFromPdf`. Yields SSE events as Gemini
+ * emits tokens, then a final `done` event with the structured summary +
+ * quiz. The original `generateFromPdf` remains for backward compat.
+ *
+ * Pass `opts.signal` to cancel mid-stream; the underlying fetch reader
+ * is cancelled and an AbortError propagates to the caller.
+ */
+export async function* generateFromPdfStream(
+  file: File,
+  opts?: GenerateFromPdfOptions,
+): AsyncIterable<AiPdfStreamEvent> {
+  const questionCount = opts?.questionCount ?? 5;
+  const language = opts?.language ?? "ro";
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("questionCount", String(questionCount));
+  formData.append("language", language);
+
+  // Browser sets the multipart boundary automatically when body is FormData
+  // — do NOT pass a Content-Type header here.
+  for await (const ev of ssePost("/ai/pdf/generate/stream", formData, {
+    signal: opts?.signal,
+  })) {
+    yield ev as AiPdfStreamEvent;
+  }
 }
