@@ -31,16 +31,22 @@ export default function QuizQuestionPage({
     setIsSubmitted(false);
   }, [question]);
 
+  const isWritten = question.type === "written";
+  const isFreeText = question.type === "free_text";
+  const isTextAnswer = isWritten || isFreeText;
+
   const handleConfirm = () => {
-    const isWritten = question.type === "written";
-    const hasAnswer = isWritten ? writtenAnswer.trim() !== "" : selectedIdx !== null;
+    const hasAnswer = isTextAnswer ? writtenAnswer.trim() !== "" : selectedIdx !== null;
 
     if (!isSubmitted && hasAnswer) {
       setIsSubmitted(true);
     } else if (isSubmitted) {
       onNext({
         selectedIdx: selectedIdx ?? -1,
-        writtenAnswer: isWritten ? writtenAnswer : undefined,
+        // Both 'written' and 'free_text' use the writtenAnswer payload field.
+        // The BE differentiates by question.type — free_text triggers async
+        // AI grading, written uses exact-match.
+        writtenAnswer: isTextAnswer ? writtenAnswer : undefined,
         isCorrect,
       });
     }
@@ -48,10 +54,15 @@ export default function QuizQuestionPage({
 
   const normalizedWrittenAnswer = writtenAnswer.trim().toLowerCase();
   const normalizedCorrectText = (question.correctText ?? "").trim().toLowerCase();
-  const isCorrect = question.type === "written"
-    ? Boolean(normalizedCorrectText) && normalizedWrittenAnswer === normalizedCorrectText
-    : selectedIdx === question.correctIdx;
-  const canConfirm = question.type === "written" ? writtenAnswer.trim() !== "" : selectedIdx !== null;
+  // For free_text we cannot determine correctness locally — grading happens
+  // server-side and asynchronously. Report `false` optimistically; the result
+  // page reads the authoritative score off the BE response.
+  const isCorrect = isFreeText
+    ? false
+    : isWritten
+      ? Boolean(normalizedCorrectText) && normalizedWrittenAnswer === normalizedCorrectText
+      : selectedIdx === question.correctIdx;
+  const canConfirm = isTextAnswer ? writtenAnswer.trim() !== "" : selectedIdx !== null;
 
   return (
     <div className="flex-grow flex flex-col justify-center items-center w-full max-w-[800px] mx-auto px-4 py-8">
@@ -91,7 +102,12 @@ export default function QuizQuestionPage({
               Question {index + 1}
             </div>
 
-            {isSubmitted && (
+            {isSubmitted && isFreeText && (
+              <div className="bg-[#9B8EC7] text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow-sm">
+                Evaluat de AI
+              </div>
+            )}
+            {isSubmitted && !isFreeText && (
               <div
                 className={`text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow-sm ${
                   isCorrect ? "bg-[#84C5C4]" : "bg-[#E57373]"
@@ -106,16 +122,35 @@ export default function QuizQuestionPage({
             {question.text}
           </h2>
 
-          {question.type === "written" ? (
+          {isTextAnswer ? (
             <div className="mb-8">
               <textarea
                 value={writtenAnswer}
                 onChange={(event) => !isSubmitted && setWrittenAnswer(event.target.value)}
                 disabled={isSubmitted}
-                className="w-full min-h-[140px] rounded-[16px] border-2 border-[#E5E7EB] bg-white p-4 text-[16px] text-[#4B5563] outline-none focus:border-[#9B8EC7]"
-                placeholder="Scrie raspunsul aici..."
+                rows={isFreeText ? 8 : undefined}
+                className={`w-full rounded-[16px] border-2 border-[#E5E7EB] bg-white p-4 text-[16px] text-[#4B5563] outline-none focus:border-[#9B8EC7] ${
+                  isFreeText ? "min-h-[160px]" : "min-h-[140px]"
+                }`}
+                placeholder={
+                  isFreeText
+                    ? "Scrie un raspuns detaliat aici..."
+                    : "Scrie raspunsul aici..."
+                }
               />
-              {isSubmitted && (
+              {isFreeText && !isSubmitted && (
+                <p className="mt-3 text-xs text-[#6A7282]">
+                  Răspunsul tău va fi evaluat de AI după trimitere. Această
+                  evaluare poate dura câteva secunde.
+                </p>
+              )}
+              {isFreeText && isSubmitted && (
+                <div className="mt-4 rounded-[16px] bg-[#F4F1F8] p-4 text-sm text-[#5A4A7A]">
+                  Răspunsul tău a fost trimis pentru evaluare AI. Scorul și
+                  feedback-ul vor apărea pe pagina de rezultate.
+                </div>
+              )}
+              {isWritten && isSubmitted && (
                 <div className={`mt-4 rounded-[16px] p-4 text-sm ${
                   isCorrect ? "bg-[#F2F8F8] text-[#31706E]" : "bg-[#FDF6F6] text-[#C62828]"
                 }`}>
