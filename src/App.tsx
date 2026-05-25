@@ -19,10 +19,31 @@ import CoursesListPage from "@/features/courses/pages/CoursesListPage";
 import StudentCoursesPage from "@/features/dashboard-student/pages/StudentCoursesPage";
 import StudentCourseDetailPage from "@/features/dashboard-student/pages/StudentCourseDetailPage";
 import { Toaster } from "sonner";
+import { ChatProvider } from "@/features/chat/context/ChatContext";
+import { FloatingChatButton } from "@/features/chat/components/FloatingChatButton";
+import { ChatPanel } from "@/features/chat/components/ChatPanel";
+import { useAuth } from "@/features/auth/context/AuthContext";
+
+/**
+ * Chatbot global: provider-ul rămâne montat permanent (cost minim), iar
+ * butonul + panoul sunt vizibile doar pentru utilizatorii autentificați.
+ * Astfel paginile publice (landing, auth, terms) nu afișează chat-ul,
+ * dar state-ul provider-ului există de îndată ce user-ul se loghează.
+ */
+function ChatMount() {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) return null;
+  return (
+    <>
+      <FloatingChatButton />
+      <ChatPanel />
+    </>
+  );
+}
 
 export default function App() {
   return (
-    <>
+    <ChatProvider>
     <Routes>
       {/* Public */}
       <Route path="/" element={<LandingPage />} />
@@ -62,7 +83,8 @@ export default function App() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    <ChatMount />
     <Toaster richColors position="top-right" />
-    </>
+    </ChatProvider>
   );
 }
