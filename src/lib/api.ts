@@ -684,11 +684,30 @@ export interface SubmitAttemptPayload {
   answers: SubmitQuizAttemptAnswer[];
 }
 
+/**
+ * Per-answer detail returned by the submit endpoint. Includes the
+ * BE-graded correctness for every question and (for free_text questions)
+ * the AI grading payload: aiScore (0-100 or null on failure), aiConfidence
+ * (0-1), aiReasoning (plain text), aiMissingConcepts (string list).
+ */
+export interface SubmitQuizAttemptAnswerResult {
+  questionId: string;
+  selectedIdx?: number;
+  writtenAnswer?: string;
+  correct: boolean;
+  aiScore?: number | null;
+  aiConfidence?: number;
+  aiReasoning?: string;
+  aiMissingConcepts?: string[];
+}
+
 export interface SubmitQuizAttemptResponse {
   id: string;
   score: number;
   passed: boolean;
   timeTakenSecs?: number;
+  /** Per-question results — optional for back-compat with older BE responses. */
+  answers?: SubmitQuizAttemptAnswerResult[];
 }
 
 export function submitQuizAttempt(

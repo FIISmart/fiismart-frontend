@@ -144,6 +144,25 @@ export default function QuizPlayerPage() {
           answers: payloadAnswers,
         });
         // Synthesize a QuizAttempt for the result banner from the BE response.
+        // Prefer per-answer details from the BE (which carry AI scores for
+        // free_text questions) when available; otherwise fall back to the
+        // local optimistic record.
+        const beAnswers = result.answers;
+        const synthesizedAnswers = finalAnswers.map((a) => {
+          const beAnswer = beAnswers?.find((b) => b.questionId === a.questionId);
+          return {
+            questionId: a.questionId,
+            selectedIdx: a.selectedIdx,
+            writtenAnswer: a.writtenAnswer,
+            // Trust the BE's `correct` over the local guess — it's the only
+            // way free_text correctness can be known.
+            correct: beAnswer?.correct ?? a.isCorrect,
+            aiScore: beAnswer?.aiScore,
+            aiConfidence: beAnswer?.aiConfidence,
+            aiReasoning: beAnswer?.aiReasoning,
+            aiMissingConcepts: beAnswer?.aiMissingConcepts,
+          };
+        });
         setLatestAttempt({
           id: result.id,
           quizId: quiz?.id ?? "",
@@ -155,12 +174,7 @@ export default function QuizPlayerPage() {
           timeTakenSecs:
             result.timeTakenSecs ??
             Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000)),
-          answers: finalAnswers.map((a) => ({
-            questionId: a.questionId,
-            selectedIdx: a.selectedIdx,
-            writtenAnswer: a.writtenAnswer,
-            correct: a.isCorrect,
-          })),
+          answers: synthesizedAnswers,
         });
       } catch (err) {
         console.error("Eroare la trimiterea raspunsurilor:", err);
@@ -405,6 +419,8 @@ export default function QuizPlayerPage() {
             correct={correctAnswers}
             total={total}
             onRetry={handleRetry}
+            questions={quiz.questions}
+            answers={latestAttempt?.answers}
           />
           {latestAttempt && (
             <p className="pb-8 text-center text-sm text-[#6A7282]">
