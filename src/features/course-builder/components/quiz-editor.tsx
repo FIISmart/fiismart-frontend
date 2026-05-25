@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
@@ -24,10 +26,13 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Plus, Trash2, HelpCircle } from "lucide-react";
+import { Plus, Trash2, HelpCircle, X } from "lucide-react";
 import type { Quiz, QuizQuestion } from "@/lib/course-types";
 import { generateId } from "@/lib/course-types";
 import { toast } from "sonner";
+
+/** Default pass threshold (%) for newly-created free_text questions. */
+const DEFAULT_PASS_THRESHOLD = 70;
 
 interface QuizEditorProps {
   quiz?: Quiz;
@@ -74,31 +79,55 @@ export function QuizEditor({
     }
 
     let validationMessageShown = false;
-    const validQuestions = questions.filter((q) => {
-      if (!q.question.trim()) {
-        if (!validationMessageShown) {
-          toast.error("Adauga textul intrebarii.");
+    const validQuestions = questions
+      .filter((q) => {
+        if (!q.question.trim()) {
+          if (!validationMessageShown) {
+            toast.error("Adauga textul intrebarii.");
+            validationMessageShown = true;
+          }
+          return false;
+        }
+        if (q.type === "multiple_choice") {
+          const filledOptions = (q.options ?? []).filter((o) => o.trim());
+          if (filledOptions.length < 2 && !validationMessageShown) {
+            toast.error("Adauga cel putin doua optiuni pentru intrebarea grila.");
+            validationMessageShown = true;
+          }
+          return filledOptions.length >= 2;
+        }
+        if (q.type === "free_text") {
+          // For AI-graded questions we require a non-empty model answer AND
+          // at least one key concept. Without these the BE has nothing to
+          // grade against and the AI will reject the request.
+          const hasSample = (q.sampleAnswer ?? "").trim() !== "";
+          const hasConcepts = (q.keyConcepts ?? []).length >= 1;
+          if (!hasSample && !validationMessageShown) {
+            toast.error("Adauga un raspuns model pentru intrebarea AI.");
+            validationMessageShown = true;
+          } else if (!hasConcepts && !validationMessageShown) {
+            toast.error("Adauga cel putin un concept cheie pentru intrebarea AI.");
+            validationMessageShown = true;
+          }
+          return hasSample && hasConcepts;
+        }
+        // For legacy 'written', ensure there is a non-empty string answer
+        const hasAnswer = typeof q.correctAnswer === "string" && q.correctAnswer.trim() !== "";
+        if (!hasAnswer && !validationMessageShown) {
+          toast.error("Adauga raspunsul corect pentru intrebarea scrisa.");
           validationMessageShown = true;
         }
-        return false;
-      }
-      if (q.type === "multiple_choice") {
-        const filledOptions = (q.options ?? []).filter((o) => o.trim());
-        if (filledOptions.length < 2 && !validationMessageShown) {
-          toast.error("Adauga cel putin doua optiuni pentru intrebarea grila.");
-          validationMessageShown = true;
-        }
-        return filledOptions.length >= 2;
-      }
-      // For written, ensure there is a non-empty string answer
-      const hasAnswer = typeof q.correctAnswer === "string" && q.correctAnswer.trim() !== "";
-      if (!hasAnswer && !validationMessageShown) {
-        toast.error("Adauga raspunsul corect pentru intrebarea scrisa.");
-        validationMessageShown = true;
-      }
-      return hasAnswer;
-    });
-    
+        return hasAnswer;
+      })
+      // Default passThreshold for any free_text question that was created
+      // without ever touching the slider. We do this on save (not as part of
+      // updateQuestion) so the user can see the default reflected in the UI.
+      .map((q) =>
+        q.type === "free_text"
+          ? { ...q, passThreshold: q.passThreshold ?? DEFAULT_PASS_THRESHOLD }
+          : q,
+      );
+
     if (validQuestions.length === 0) return;
 
     setIsSaving(true);
@@ -198,10 +227,27 @@ export function QuizEditor({
                         <Label>Tip Răspuns</Label>
                         <Select
                           value={q.type}
-                          onValueChange={(v) => updateQuestion(qIndex, {
-                            type: v as QuizQuestion["type"],
-                            correctAnswer: v === "written" ? "" : 0,
-                          })}
+                          onValueChange={(v) => {
+                            const nextType = v as QuizQuestion["type"];
+                            // Reset correctAnswer to a shape matching the new type.
+                            // For free_text we leave correctAnswer alone (it's
+                            // unused) and seed the free_text-specific fields if
+                            // they have never been touched. We intentionally do
+                            // NOT clear free_text fields when switching away so
+                            // toggling back preserves the user's work.
+                            const patch: Partial<QuizQuestion> = {
+                              type: nextType,
+                              correctAnswer:
+                                nextType === "multiple_choice" ? 0 : "",
+                            };
+                            if (nextType === "free_text") {
+                              if (q.sampleAnswer === undefined) patch.sampleAnswer = "";
+                              if (q.keyConcepts === undefined) patch.keyConcepts = [];
+                              if (q.passThreshold === undefined)
+                                patch.passThreshold = DEFAULT_PASS_THRESHOLD;
+                            }
+                            updateQuestion(qIndex, patch);
+                          }}
                         >
                           <SelectTrigger className="bg-card w-full">
                             <SelectValue />
@@ -211,12 +257,13 @@ export function QuizEditor({
                             {supportsWritten && (
                               <SelectItem value="written">Răspuns Scris</SelectItem>
                             )}
+                            <SelectItem value="free_text">Răspuns Liber (AI)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
 
-                    {q.type === "multiple_choice" ? (
+                    {q.type === "multiple_choice" && (
                       <div className="space-y-3">
                         <Label>Opțiuni (selectează răspunsul corect)</Label>
                         <RadioGroup
@@ -236,7 +283,9 @@ export function QuizEditor({
                           ))}
                         </RadioGroup>
                       </div>
-                    ) : (
+                    )}
+
+                    {q.type === "written" && (
                       <div className="space-y-2">
                         <Label>Răspuns Corect (Cuvânt Cheie)</Label>
                         <Input
@@ -249,6 +298,13 @@ export function QuizEditor({
                           Studentul trebuie să introducă exact acest text (case-insensitive, fără spații la capete).
                         </p>
                       </div>
+                    )}
+
+                    {q.type === "free_text" && (
+                      <FreeTextFields
+                        question={q}
+                        onChange={(updates) => updateQuestion(qIndex, updates)}
+                      />
                     )}
 
                     <div className="flex justify-end pt-2">
@@ -292,5 +348,125 @@ export function QuizEditor({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+interface FreeTextFieldsProps {
+  question: QuizQuestion;
+  onChange: (updates: Partial<QuizQuestion>) => void;
+}
+
+/**
+ * Editor block for a free_text (AI-graded) question. Owns its own draft state
+ * for the in-progress concept chip so a half-typed concept doesn't propagate
+ * into the saved question on every keystroke. Commits on Enter / comma / blur.
+ */
+function FreeTextFields({ question, onChange }: FreeTextFieldsProps) {
+  const [conceptDraft, setConceptDraft] = useState("");
+  const concepts = question.keyConcepts ?? [];
+  const threshold = question.passThreshold ?? DEFAULT_PASS_THRESHOLD;
+
+  const commitConcept = () => {
+    const trimmed = conceptDraft.trim();
+    if (!trimmed) {
+      setConceptDraft("");
+      return;
+    }
+    // De-dupe case-insensitively but preserve the user's casing for new items.
+    const existsAlready = concepts.some(
+      (c) => c.toLowerCase() === trimmed.toLowerCase(),
+    );
+    if (!existsAlready) {
+      onChange({ keyConcepts: [...concepts, trimmed] });
+    }
+    setConceptDraft("");
+  };
+
+  const removeConcept = (index: number) => {
+    onChange({ keyConcepts: concepts.filter((_, i) => i !== index) });
+  };
+
+  const handleConceptKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter" || event.key === ",") {
+      event.preventDefault();
+      commitConcept();
+    } else if (event.key === "Backspace" && conceptDraft === "" && concepts.length > 0) {
+      // Quality-of-life: backspace on an empty input removes the last chip.
+      removeConcept(concepts.length - 1);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor={`sample-${question.id}`}>Răspuns model (Sample)</Label>
+        <Textarea
+          id={`sample-${question.id}`}
+          value={question.sampleAnswer ?? ""}
+          onChange={(e) => onChange({ sampleAnswer: e.target.value })}
+          className="bg-card min-h-[100px]"
+          placeholder="Scrie un răspuns model complet și corect."
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor={`concepts-${question.id}`}>Concepte cheie</Label>
+        <Input
+          id={`concepts-${question.id}`}
+          value={conceptDraft}
+          onChange={(e) => setConceptDraft(e.target.value)}
+          onKeyDown={handleConceptKeyDown}
+          onBlur={commitConcept}
+          placeholder="Tastează un concept și apasă Enter sau virgulă"
+          className="bg-card"
+        />
+        {concepts.length > 0 && (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {concepts.map((concept, index) => (
+              <Badge
+                key={`${concept}-${index}`}
+                variant="secondary"
+                className="gap-1 pl-2 pr-1 py-1"
+              >
+                <span>{concept}</span>
+                <button
+                  type="button"
+                  onClick={() => removeConcept(index)}
+                  className="ml-0.5 rounded-full hover:bg-foreground/10 p-0.5"
+                  aria-label={`Șterge conceptul ${concept}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label htmlFor={`threshold-${question.id}`}>Prag de trecere</Label>
+          <span className="text-sm font-medium text-muted-foreground">
+            Prag: {threshold}%
+          </span>
+        </div>
+        <Slider
+          id={`threshold-${question.id}`}
+          value={[threshold]}
+          min={50}
+          max={100}
+          step={5}
+          onValueChange={(values) => {
+            const v = values[0];
+            if (typeof v === "number") onChange({ passThreshold: v });
+          }}
+        />
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        AI va evalua răspunsurile studenților comparând cu răspunsul model și
+        conceptele cheie.
+      </p>
+    </div>
   );
 }
