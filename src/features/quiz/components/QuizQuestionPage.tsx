@@ -80,12 +80,12 @@ export default function QuizQuestionPage({
           onClick={() => navigate("/student/dashboard")}
           className="flex items-center gap-1 hover:text-[#9B8EC7] transition-colors"
           >
-            <span>&lt;</span> Exit
+            <span>&lt;</span> Ieșire
           </button>
           <span className="text-gray-800 font-bold">
             {index + 1} / {total}
           </span>
-          <span>{index} answered</span>
+          <span>{index} răspunsuri</span>
         </div>
 
         {/* Progress bar — slot-based to avoid inline styles */}
@@ -106,7 +106,7 @@ export default function QuizQuestionPage({
         <div className="bg-white w-full rounded-[24px] shadow-[0_20px_25px_-5px_rgba(0,0,0,0.05),0_8px_10px_-6px_rgba(0,0,0,0.05)] p-8 sm:p-10 relative">
           <div className="flex gap-3 mb-6">
             <div className="bg-[#9B8EC7] text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow-sm">
-              Question {index + 1}
+              Întrebare {index + 1}
             </div>
 
             {isSubmitted && isFreeText && (
@@ -120,7 +120,7 @@ export default function QuizQuestionPage({
                   isCorrect ? "bg-[#84C5C4]" : "bg-[#E57373]"
                 }`}
               >
-                {isCorrect ? "Correct!" : "Incorrect"}
+                {isCorrect ? "Corect!" : "Greșit"}
               </div>
             )}
           </div>
@@ -256,7 +256,7 @@ export default function QuizQuestionPage({
           {isSubmitted && question.explanation && (
             <div className="bg-[#EBE3D8] rounded-[16px] p-6 mb-8 border border-[#E0D6C8]">
               <p className="text-[#5A4A3A] text-[15px] leading-relaxed">
-                <span className="font-bold text-[#3E3228]">Explanation: </span>
+                <span className="font-bold text-[#3E3228]">Explicație: </span>
                 {question.explanation}
               </p>
             </div>
@@ -269,7 +269,7 @@ export default function QuizQuestionPage({
               className="px-6 py-3 border-2 border-[#E5E7EB] text-[#A0AABF] font-semibold rounded-[16px] hover:bg-gray-50 transition-colors flex items-center gap-2"
               disabled={isSubmitted || index === 0}
             >
-              <span>&lt;</span> Prev
+              <span>&lt;</span> Anterioara
             </button>
 
             <button
@@ -285,7 +285,7 @@ export default function QuizQuestionPage({
             >
               {isSubmitted ? (
                 <>
-                  Next
+                  Următoarea
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     className="h-4 w-4 ml-2 mt-0.5"
@@ -300,7 +300,7 @@ export default function QuizQuestionPage({
                   </svg>
                 </>
               ) : (
-                "Confirm Answer"
+                "Confirmă răspunsul"
               )}
             </button>
           </div>
