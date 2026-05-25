@@ -19,6 +19,10 @@ export function ChatInput() {
   const { send, isStreaming } = useChat();
   const [value, setValue] = useState("");
   const taRef = useRef<HTMLTextAreaElement>(null);
+  // Mutex against double-Enter: two rapid presses within a single React
+  // batch both see `isStreaming === false` (state hasn't propagated yet) and
+  // both fire `send()`. A ref flips synchronously and blocks the second call.
+  const submittingRef = useRef(false);
 
   // Recalculează înălțimea când conținutul se schimbă.
   useEffect(() => {
@@ -31,9 +35,14 @@ export function ChatInput() {
 
   const submit = async () => {
     const trimmed = value.trim();
-    if (!trimmed || isStreaming) return;
-    setValue("");
-    await send(trimmed);
+    if (submittingRef.current || !trimmed || isStreaming) return;
+    submittingRef.current = true;
+    try {
+      setValue("");
+      await send(trimmed);
+    } finally {
+      submittingRef.current = false;
+    }
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
