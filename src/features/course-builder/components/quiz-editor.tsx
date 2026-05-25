@@ -34,6 +34,11 @@ import { toast } from "sonner";
 /** Default pass threshold (%) for newly-created free_text questions. */
 const DEFAULT_PASS_THRESHOLD = 70;
 
+/** Maximum number of key-concept chips per free_text question. */
+const MAX_KEY_CONCEPTS = 15;
+/** Maximum length of a single key-concept chip (characters). */
+const MAX_CONCEPT_LENGTH = 80;
+
 interface QuizEditorProps {
   quiz?: Quiz;
   onSave: (quiz: Quiz) => void | Promise<void>;
@@ -367,17 +372,32 @@ function FreeTextFields({ question, onChange }: FreeTextFieldsProps) {
   const threshold = question.passThreshold ?? DEFAULT_PASS_THRESHOLD;
 
   const commitConcept = () => {
-    const trimmed = conceptDraft.trim();
-    if (!trimmed) {
+    // Split on newline or comma so a paste like "alpha\nbeta, gamma" commits
+    // as three chips, not one giant string.
+    const tokens = conceptDraft
+      .split(/[\n,]/)
+      .map((t) => t.trim())
+      .filter(Boolean);
+    if (tokens.length === 0) {
       setConceptDraft("");
       return;
     }
     // De-dupe case-insensitively but preserve the user's casing for new items.
-    const existsAlready = concepts.some(
-      (c) => c.toLowerCase() === trimmed.toLowerCase(),
-    );
-    if (!existsAlready) {
-      onChange({ keyConcepts: [...concepts, trimmed] });
+    const seen = new Set(concepts.map((c) => c.toLowerCase()));
+    const additions: string[] = [];
+    for (const token of tokens) {
+      const lower = token.toLowerCase();
+      if (seen.has(lower)) continue;
+      seen.add(lower);
+      additions.push(token);
+    }
+    if (additions.length > 0) {
+      // Cap total chips at MAX_KEY_CONCEPTS and per-chip length to keep the
+      // payload bounded for the BE/AI grader.
+      const next = [...concepts, ...additions]
+        .slice(0, MAX_KEY_CONCEPTS)
+        .map((t) => t.slice(0, MAX_CONCEPT_LENGTH));
+      onChange({ keyConcepts: next });
     }
     setConceptDraft("");
   };
