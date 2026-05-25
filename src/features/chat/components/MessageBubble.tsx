@@ -42,7 +42,17 @@ export function MessageBubble({ message, live = false }: Props) {
       >
         {isAssistant ? (
           <div className="prose prose-sm dark:prose-invert max-w-none break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                // Open links in a new tab so the user doesn't lose chat state
+                // when following an external reference. `noopener noreferrer`
+                // hardens against `window.opener` tampering and referer leaks.
+                a: ({ node: _node, ...props }) => (
+                  <a {...props} target="_blank" rel="noopener noreferrer" />
+                ),
+              }}
+            >
               {message.content || (live ? "" : " ")}
             </ReactMarkdown>
             {live && (
