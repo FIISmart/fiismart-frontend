@@ -47,3 +47,19 @@ export const aiCourseDraftSchema = z.object({
 
 export type AiQuizDraftPayload = z.infer<typeof aiQuizDraftSchema>;
 export type AiCourseDraftPayload = z.infer<typeof aiCourseDraftSchema>;
+
+/**
+ * Result payload pentru tool-ul `buildFullCourse` (Phase 6). BE-ul
+ * persistă cursul + modulele + lecțiile + quiz-urile direct în DB și
+ * returnează doar identificatorii + numere de sumar — FE-ul folosește
+ * `courseId` pentru CTA-ul "Vezi cursul".
+ */
+export const buildFullCourseResultSchema = z.object({
+  courseId: z.string(),
+  title: z.string(),
+  moduleCount: z.number().int(),
+  lectureCount: z.number().int(),
+  quizCount: z.number().int(),
+});
+
+export type BuildFullCourseResult = z.infer<typeof buildFullCourseResultSchema>;
