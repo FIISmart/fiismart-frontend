@@ -6,9 +6,9 @@ import {
   useCallback,
 } from "react";
 import { Play, Pause, Eye, EyeOff, MessageSquare, Clock } from "lucide-react";
-import { loadYouTubeAPI } from "../types/loadYouTubeAPI.ts";
-import { getYouTubeId } from "../types/videoUtils.ts";
-import { lessonVideoService } from "../services/lesson-video.service.ts";
+import { loadYouTubeAPI } from "../types/loadYouTubeAPI";
+import { getYouTubeId } from "../types/videoUtils";
+import { lessonVideoService } from "../services/lesson-video.service";
 import type { CourseComment, GroupedVideoMarker } from "../types";
 
 interface YouTubePlayerType {
@@ -31,7 +31,7 @@ type Props = {
   onTimeUpdate?: (time: number) => void;
   markers?: GroupedVideoMarker[];
   onMarkerClick?: (time: number, id: string) => void;
-  onProgressSaved?: () => void; // Passed from parent to trigger UI refresh
+  onProgressSaved?: () => void;
   onDurationDetected?: (durationSecs: number) => void;
 };
 
@@ -73,10 +73,8 @@ export default function VideoPlayer({
   const [duration, setDuration] = useState(0);
   const [showMarkers, setShowMarkers] = useState(true);
 
-  // --- STATE NOU: Markerul peste care se află mouse-ul în prezent ---
+  // Starea pentru marker-ul curent (hovered)
   const [hoveredMarker, setHoveredMarker] = useState<GroupedVideoMarker | null>(null);
-  const [hoveredMarkerComments, setHoveredMarkerComments] = useState<Record<number, CourseComment[]>>({});
-  const hoveredMarkerCommentsRef = useRef<Record<number, CourseComment[]>>({});
 
   const timeRef = useRef(0);
   const durationRef = useRef(0);
@@ -109,7 +107,6 @@ export default function VideoPlayer({
             durationSecs: Math.round(dur),
           });
 
-          // Tell the parent component to refresh the sidebar
           if (onProgressSaved) {
             onProgressSaved();
           }
@@ -206,7 +203,7 @@ export default function VideoPlayer({
 
     if (!isYouTube && videoRef.current) {
       videoRef.current.currentTime = targetTime.time;
-      videoRef.current.play().catch(() => { });
+      videoRef.current.play().catch(() => {});
     }
 
     if (isYouTube && ytPlayerRef.current) {
@@ -235,41 +232,12 @@ export default function VideoPlayer({
     }
   }, [markers, duration]);
 
-  const loadBackendMarkerComments = useCallback(
-      async (time: number) => {
-        if (!studentId || !courseId || !lectureId) return;
-        if (hoveredMarkerCommentsRef.current[time]) return;
-
-        try {
-          const comments = await lessonVideoService.getComments(
-              studentId,
-              courseId,
-              lectureId,
-              "recent",
-              { skipDevMock: true }
-          );
-          const filtered = comments.filter((comment) => {
-            const commentTime = comment.videoTimestamp ?? comment.timestampSecs ?? 0;
-            return commentTime === time;
-          });
-          hoveredMarkerCommentsRef.current = {
-            ...hoveredMarkerCommentsRef.current,
-            [time]: filtered,
-          };
-          setHoveredMarkerComments(hoveredMarkerCommentsRef.current);
-        } catch (error) {
-          console.error("Eroare la încărcarea comentariilor pentru marker:", error);
-        }
-      },
-      [studentId, courseId, lectureId]
-  );
-
   const togglePlay = (): void => {
     if (!isYouTube) {
       const video = videoRef.current;
       if (!video) return;
       if (video.paused) {
-        video.play().catch(() => { });
+        video.play().catch(() => {});
         setIsPlaying(true);
       } else {
         video.pause();
@@ -435,6 +403,7 @@ export default function VideoPlayer({
                 })}
           </div>
 
+          {/* CONTROLS */}
           <div className="flex items-center justify-between mt-4">
             <div className="flex items-center gap-5 text-foreground">
               <button
