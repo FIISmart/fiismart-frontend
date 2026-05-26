@@ -43,6 +43,20 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
   return res.json();
 }
 
+export function resolveFileUrl(url: string | null | undefined): string {
+  if (!url) return "";
+  if (/^(https?:|blob:|data:)/i.test(url)) return url;
+  if (url.startsWith("/api/")) {
+    try {
+      const base = new URL(API_BASE, window.location.origin);
+      return base.origin + url;
+    } catch {
+      return url;
+    }
+  }
+  return url;
+}
+
 const request = apiFetch;
 
 // ── Interfaces ──────────────────────────────────────────
