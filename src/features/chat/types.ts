@@ -10,13 +10,48 @@
  * JSON deja parsat de `ssePost` (vezi src/lib/api.ts).
  */
 
-export type ToolName = "createQuizDraft" | "createCourseDraft";
+/**
+ * Tool-urile pe care chat-ul le poate invoca. `buildFullCourse` + cele de
+ * modificare sunt noi (Phase 6-7); `createQuizDraft` / `createCourseDraft`
+ * sunt păstrate temporar pentru tranziție (Gemini poate emite încă numele
+ * vechi în timpul rollout-ului).
+ */
+export type ToolName =
+  | "buildFullCourse"
+  | "addModule"
+  | "updateModule"
+  | "deleteModule"
+  | "reorderModules"
+  | "addLecture"
+  | "updateLecture"
+  | "deleteLecture"
+  | "reorderLectures"
+  | "addModuleQuiz"
+  | "updateModuleQuiz"
+  | "deleteModuleQuiz"
+  // Legacy (kept for graceful transition):
+  | "createQuizDraft"
+  | "createCourseDraft";
+
+/**
+ * Un eveniment de progres emis de BE în timpul rulării unui tool (de ex.
+ * `buildFullCourse` raportează pas-cu-pas la persistarea cursului).
+ */
+export interface ToolProgress {
+  step: number;
+  total: number;
+  message: string;
+  /** ISO timestamp; setat de FE când evenimentul e primit. */
+  ts?: string;
+}
 
 export interface ToolCall {
   name: ToolName;
   args: Record<string, any>;
   /** Populat după ce BE-ul rulează handler-ul. Lipsește în timpul `tool_call`. */
   result?: any;
+  /** Progres incremental emis de BE prin `tool_progress` (cap 100 entries). */
+  progress?: ToolProgress[];
 }
 
 export interface ChatMessage {
@@ -59,6 +94,10 @@ export interface RouteContext {
 export type ChatStreamEvent =
   | { event: "token"; data: { text: string } }
   | { event: "tool_call"; data: { name: ToolName; args: Record<string, any> } }
+  | {
+      event: "tool_progress";
+      data: { name: ToolName; step: number; total: number; message: string };
+    }
   | { event: "tool_result"; data: { name: ToolName; result: any } }
   | { event: "done"; data: { messageId: string; sessionId: string; title: string } }
   | { event: "error"; data: { message: string } }
