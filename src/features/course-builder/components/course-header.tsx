@@ -240,7 +240,7 @@ export function CourseHeader({
                 {course.thumbnail ? (
                   <>
                     <img
-                      src={course.thumbnail}
+                      src={api.resolveFileUrl(course.thumbnail)}
                       alt="Course thumbnail"
                       className="w-full h-full object-cover"
                     />
