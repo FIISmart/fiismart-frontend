@@ -34,7 +34,7 @@ export default function CommentsSection({
   const [text, setText] = useState("");
   const [sortBy, setSortBy] = useState<string>("recent");
   const [selectedTimestamp, setSelectedTimestamp] = useState<number | null>(null);
-
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   function parseTimestamp(val: unknown): number {
     if (val == null) return 0;
     if (typeof val === "number") return val;
@@ -148,18 +148,40 @@ export default function CommentsSection({
           </h3>
 
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-lg border border-border">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-lg border border-border relative">
               <span>Sortează:</span>
-              <select
-                  className="appearance-none bg-transparent focus:outline-none cursor-pointer text-foreground font-bold pr-2"
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
+              <span className="text-foreground font-bold">
+                {sortBy === 'recent' ? 'Cele mai vechi' : sortBy === 'oldest' ? 'Cele mai noi' : 'Cele mai apreciate'}
+              </span>
+
+              <button
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="focus:outline-none p-1 hover:bg-muted rounded cursor-pointer"
               >
-                <option value="recent">Cele mai vechi</option>
-                <option value="oldest">Cele mai noi</option>
-                <option value="popular">Cele mai apreciate</option>
-              </select>
-              <ChevronDown size={14} />
+                <ChevronDown size={14} />
+              </button>
+              {isDropdownOpen && (
+                  <div className="absolute top-full right-0 mt-1 bg-white border border-border rounded-lg shadow-lg overflow-hidden z-50 w-48">
+                    <div
+                        className="px-4 py-2 hover:bg-muted cursor-pointer text-foreground"
+                        onClick={() => { setSortBy('recent'); setIsDropdownOpen(false); }}
+                    >
+                      Cele mai vechi
+                    </div>
+                    <div
+                        className="px-4 py-2 hover:bg-muted cursor-pointer text-foreground bg-blue-600 text-white"
+                        onClick={() => { setSortBy('oldest'); setIsDropdownOpen(false); }}
+                    >
+                      Cele mai noi
+                    </div>
+                    <div
+                        className="px-4 py-2 hover:bg-muted cursor-pointer text-foreground"
+                        onClick={() => { setSortBy('popular'); setIsDropdownOpen(false); }}
+                    >
+                      Cele mai apreciate
+                    </div>
+                  </div>
+              )}
             </div>
 
             <span className="px-3 py-1 bg-accent/30 text-foreground text-sm font-medium rounded-full">
