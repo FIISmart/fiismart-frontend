@@ -21,6 +21,7 @@ import * as api from "@/lib/api";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { toast } from "sonner";
 import { Link, useParams, useSearchParams } from "react-router-dom";
+import { courseRefreshBus } from "@/features/chat/context/CourseRefreshBus";
 
 const pendingNewCourseCreations = new Map<string, Promise<api.CourseAPI>>();
 
@@ -168,6 +169,19 @@ export default function CourseBuilderPage() {
       cancelledRef.current = true;
     };
   }, [reloadCourse]);
+
+  // Subscriere la `courseRefreshBus`: când chat-ul AI modifică cursul curent
+  // (addModule, updateLecture, buildFullCourse etc), reîncărcăm silențios ca
+  // schimbarea să apară imediat în UI fără spinner full-page.
+  const activeCourseId = course?.id ?? routeCourseId;
+  useEffect(() => {
+    if (!activeCourseId) return;
+    return courseRefreshBus.subscribe((updatedCourseId) => {
+      if (updatedCourseId === activeCourseId) {
+        void reloadCourse({ silent: true });
+      }
+    });
+  }, [activeCourseId, reloadCourse]);
 
   useEffect(() => {
     if (!course) return;

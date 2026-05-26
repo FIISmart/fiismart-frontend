@@ -1,18 +1,41 @@
+import { useMemo, useState } from "react";
+
 interface Props {
   onStart: () => void;
   quizTitle: string;
-   questionCount?: number;    // ← adaugă
-    durationMinutes?: number;  // ← adaugă
-    passScore?: number;        // ← adaugă
+  questionCount?: number;
+  durationMinutes?: number;
+  passScore?: number;
+}
+
+/**
+ * Detects iOS Safari specifically — NOT Chrome/Firefox/etc. on iOS.
+ * On iOS, every browser is a WebKit wrapper, but their fullscreen + lifecycle
+ * APIs differ slightly. We only show the warning for the case where it's
+ * genuinely problematic (mobile Safari's Fullscreen API is unsupported on the
+ * iPhone form factor; CriOS/FxiOS report different UA tokens).
+ */
+function isIosSafari(): boolean {
+  if (typeof window === "undefined") return false;
+  const ua = window.navigator.userAgent;
+  const isIos = /iPhone|iPad|iPod/i.test(ua);
+  if (!isIos) return false;
+  // CriOS = Chrome on iOS, FxiOS = Firefox on iOS, EdgiOS = Edge on iOS.
+  const isInAppOrOtherBrowser = /CriOS|FxiOS|EdgiOS|OPiOS|YaBrowser/i.test(ua);
+  return !isInAppOrOtherBrowser;
 }
 
 export default function QuizStartPage({
-    onStart,
-    quizTitle,
-    questionCount = 10,        // ← default 10 dacă nu vine din backend
-      durationMinutes = 10,      // ← default 10 min
-      passScore = 60,
-    }: Props) {
+  onStart,
+  quizTitle,
+  questionCount = 10,
+  durationMinutes = 10,
+  passScore = 60,
+}: Props) {
+  const shouldShowIosBanner = useMemo(() => isIosSafari(), []);
+  const [iosBannerDismissed, setIosBannerDismissed] = useState(false);
+  const showIosBanner = shouldShowIosBanner && !iosBannerDismissed;
+
   return (
     <div className="flex-grow flex flex-col items-center justify-center p-4">
       <div className="bg-[#9B8EC7] text-white text-sm font-medium px-6 h-[32px] flex items-center justify-center rounded-full mb-6 shadow-sm">
@@ -62,6 +85,23 @@ export default function QuizStartPage({
               <span className="text-[12px] text-[#6A7282]">Pass Score</span>
             </div>
           </div>
+
+          {showIosBanner && (
+            <div className="w-full mb-4 rounded-xl border border-amber-500/40 bg-amber-50 px-4 py-3 text-xs text-amber-900 flex items-start gap-2">
+              <span className="flex-1">
+                Quiz works best on desktop. Mobile Safari has limited fullscreen
+                support — anti-cheat may not engage reliably.
+              </span>
+              <button
+                type="button"
+                onClick={() => setIosBannerDismissed(true)}
+                aria-label="Dismiss iOS Safari notice"
+                className="text-amber-900/70 hover:text-amber-900 font-bold"
+              >
+                ×
+              </button>
+            </div>
+          )}
 
           <button
             onClick={onStart}

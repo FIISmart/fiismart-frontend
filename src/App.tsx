@@ -23,11 +23,34 @@ import AdminDashboardPage from "@/features/admin/pages/AdminDashboardPage";
 import AdminUsersPage from "@/features/admin/pages/AdminUsersPage";
 import AdminCoursesPage from "@/features/admin/pages/AdminCoursesPage";
 import AdminEnrollmentsPage from "@/features/admin/pages/AdminEnrollmentsPage";
+import ProfessorPreviewRedirectPage from "@/features/lesson-video/pages/ProfessorPreviewRedirectPage";
 import { Toaster } from "sonner";
+import { ChatProvider } from "@/features/chat/context/ChatContext";
+import { FloatingChatButton } from "@/features/chat/components/FloatingChatButton";
+import { ChatPanel } from "@/features/chat/components/ChatPanel";
+import { useAuth } from "@/features/auth/context/AuthContext";
+
+
+/**
+ * Chatbot global: provider-ul rămâne montat permanent (cost minim), iar
+ * butonul + panoul sunt vizibile doar pentru utilizatorii autentificați.
+ * Astfel paginile publice (landing, auth, terms) nu afișează chat-ul,
+ * dar state-ul provider-ului există de îndată ce user-ul se loghează.
+ */
+function ChatMount() {
+  const { isAuthenticated, user } = useAuth();
+  if (!isAuthenticated || user?.role !== "PROFESSOR") return null;
+  return (
+    <>
+      <FloatingChatButton />
+      <ChatPanel />
+    </>
+  );
+}
 
 export default function App() {
   return (
-    <>
+    <ChatProvider>
     <Routes>
       {/* Public */}
       <Route path="/" element={<LandingPage />} />
@@ -54,6 +77,8 @@ export default function App() {
         <Route path="/professor/courses" element={<CoursesListPage />} />
         <Route path="/professor/quizzes" element={<MyQuizzesPage />} />
         <Route path="/professor/courses/:courseId" element={<CourseBuilderPage />} />
+        <Route path="/professor/preview/:courseId" element={<ProfessorPreviewRedirectPage />} />
+        <Route path="/professor/preview/:courseId/lectures/:lectureId" element={<LessonVideoPage />} />
       </Route>
 
       {/* Admin-only */}
@@ -76,7 +101,8 @@ export default function App() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    <ChatMount />
     <Toaster richColors position="top-right" />
-    </>
+    </ChatProvider>
   );
 }

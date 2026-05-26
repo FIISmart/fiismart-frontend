@@ -157,12 +157,18 @@
   /* FIISmart aliases used across feature branches */
   --color-edu-bg: var(--background);
   --color-edu-foreground: var(--foreground);
+  --color-edu-card: var(--card);
+  --color-edu-border: var(--border);
+  --color-edu-primary: var(--primary);
+  --color-edu-secondary: var(--secondary);
+  --color-edu-accent: var(--accent);
+  --color-edu-muted: var(--muted);
+  --color-edu-muted-fg: var(--muted-foreground);
   --color-edu-purple: var(--primary);
   --color-edu-lavender: var(--secondary);
   --color-edu-teal: var(--accent);
   --color-edu-mint: #2DD4BF;
   --color-edu-cream: #F4EFE8;
-  --color-edu-muted: var(--muted-foreground);
 
   /* Custom font-size tokens from landing-page-front tailwind.config.js */
   --text-h1: 3.75rem;

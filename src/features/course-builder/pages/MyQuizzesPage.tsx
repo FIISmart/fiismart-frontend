@@ -19,12 +19,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ArrowLeft, CalendarClock, HelpCircle, ListChecks, Pencil, Plus, Trash2 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { QuizEditor } from "@/features/course-builder/components/quiz-editor";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import * as api from "@/lib/api";
-import type { Quiz } from "@/lib/course-types";
+import { generateId, type Quiz, type QuizQuestion } from "@/lib/course-types";
 import {
   deleteCourseFinalQuiz,
   deleteLectureQuiz,
@@ -35,10 +35,56 @@ import {
   upsertLectureQuiz,
   upsertModuleQuiz,
 } from "@/features/course-builder/services/my-quizzes.service";
+import {
+  aiQuizDraftSchema,
+  type AiQuizDraftPayload,
+} from "@/features/chat/services/aiDraft.schema";
+
+/**
+ * Map an AI quiz draft payload (chatbot tool-call result) into the FE
+ * `Quiz` shape that `QuizEditor` consumes. Supports both `multiple_choice`
+ * and `free_text` questions because the chatbot may emit either. We do not
+ * use the shared `aiDraftToFeQuiz` mapper because it is hard-coded to
+ * `multiple_choice` only.
+ */
+function aiDraftPayloadToQuiz(draft: AiQuizDraftPayload): Quiz {
+  const questions: QuizQuestion[] = draft.questions.map((q): QuizQuestion => {
+    if (q.type === "free_text") {
+      return {
+        id: generateId(),
+        question: q.text,
+        type: "free_text",
+        correctAnswer: "",
+        sampleAnswer: q.sampleAnswer ?? "",
+        keyConcepts: q.keyConcepts ?? [],
+        passThreshold: q.passThreshold,
+        explanation: q.explanation,
+      };
+    }
+    return {
+      id: generateId(),
+      question: q.text,
+      type: "multiple_choice",
+      options: q.options ?? ["", "", "", ""],
+      correctAnswer: typeof q.correctIdx === "number" ? q.correctIdx : 0,
+      explanation: q.explanation,
+    };
+  });
+  return {
+    id: generateId(),
+    title: draft.title,
+    passingScore: draft.passingScore ?? 70,
+    timeLimit: draft.timeLimit ?? 30,
+    shuffleQuestions: false,
+    questions: questions.length > 0 ? questions : [],
+  };
+}
 
 export default function MyQuizzesPage() {
   const { user } = useAuth();
   const teacherId = user?.id;
+  const navigate = useNavigate();
+  const location = useLocation();
   const [courses, setCourses] = useState<api.CourseAPI[]>([]);
   const [quizzes, setQuizzes] = useState<MyQuiz[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
@@ -81,6 +127,42 @@ export default function MyQuizzesPage() {
       cancelledRef.current = true;
     };
   }, [load]);
+
+  // AI draft pickup: the chatbot navigates here with
+  // `location.state.aiDraft = { type: "quiz", payload }`. Validate with zod,
+  // map to the FE Quiz shape, and open QuizEditor pre-populated. We wait for
+  // courses to load so the user has a course to attach the quiz to.
+  const aiDraftHandledRef = useRef(false);
+  useEffect(() => {
+    if (aiDraftHandledRef.current) return;
+    const aiDraft = (location.state as { aiDraft?: { type?: string; payload?: unknown } } | null)
+      ?.aiDraft;
+    if (!aiDraft || aiDraft.type !== "quiz") return;
+    aiDraftHandledRef.current = true;
+
+    const parsed = aiQuizDraftSchema.safeParse(aiDraft.payload);
+    // Always clear the location state so a refresh doesn't re-trigger.
+    navigate(location.pathname, { replace: true, state: {} });
+    if (!parsed.success) {
+      toast.error("Draft AI invalid — încercați din nou.");
+      return;
+    }
+
+    if (courses.length === 0) {
+      toast.error("Creează mai întâi un curs pentru a salva quiz-ul.");
+      return;
+    }
+    const courseId = selectedCourseId ?? courses[0]?.id;
+    if (!courseId) return;
+
+    setActiveCourseId(courseId);
+    setActiveModuleId(null);
+    setActiveLectureId(null);
+    setActiveQuizScope("course_final");
+    setActiveQuizId(null);
+    setActiveQuiz(aiDraftPayloadToQuiz(parsed.data));
+    setEditorOpen(true);
+  }, [location, navigate, courses, selectedCourseId]);
 
   const openCreate = () => {
     const courseId = selectedCourseId ?? courses[0]?.id;

@@ -10,6 +10,10 @@ type QuizApiQuestion = {
   correctIdx?: number | null;
   correctText?: string | null;
   explanation?: string | null;
+  // Free-text (AI-graded) fields. Optional — only present when type === 'free_text'.
+  sampleAnswer?: string | null;
+  keyConcepts?: string[] | null;
+  passThreshold?: number | null;
 };
 
 type QuizApiResponse = {
@@ -36,16 +40,28 @@ function mapQuiz(data: QuizApiResponse): Quiz {
     passingScore: data.passingScore,
     timeLimit: data.timeLimit,
     shuffleQuestions: data.shuffleQuestions,
-    questions: (data.questions ?? []).map((question, index) => ({
-      id: question.id ?? `question-${index}`,
-      text: question.text ?? "",
-      type: question.type === "written" ? "written" : "multiple_choice",
-      options: question.options ?? [],
-      correctIdx: question.correctIdx ?? undefined,
-      correctText: question.correctText,
-      points: question.points,
-      explanation: question.explanation ?? undefined,
-    })),
+    questions: (data.questions ?? []).map((question, index) => {
+      const normalizedType: "multiple_choice" | "written" | "free_text" =
+        question.type === "free_text"
+          ? "free_text"
+          : question.type === "written"
+            ? "written"
+            : "multiple_choice";
+      return {
+        id: question.id ?? `question-${index}`,
+        text: question.text ?? "",
+        type: normalizedType,
+        options: question.options ?? [],
+        correctIdx: question.correctIdx ?? undefined,
+        correctText: question.correctText,
+        points: question.points,
+        explanation: question.explanation ?? undefined,
+        sampleAnswer: question.sampleAnswer ?? undefined,
+        keyConcepts: Array.isArray(question.keyConcepts) ? question.keyConcepts : undefined,
+        passThreshold:
+          typeof question.passThreshold === "number" ? question.passThreshold : undefined,
+      };
+    }),
   };
 }
 
@@ -78,8 +94,13 @@ export function getLatestQuizAttempt(studentId: string, quizId: string): Promise
  * Offline / dev mock derived from the original `quizData.ts`. The shape was
  * normalized to match the unified `QuizQuestion` interface (string id, the
  * answer key as `correctIdx`, options as a flat string array).
+ *
+ * REVIEW #7: gated behind `import.meta.env.DEV`. In a production build the
+ * `MOCK_QUESTIONS` export resolves to an empty array, so any code path that
+ * accidentally falls back to the mock will surface immediately ("quiz has no
+ * questions") instead of silently serving fake data to real students.
  */
-export const MOCK_QUESTIONS: QuizQuestion[] = [
+const _MOCK_QUESTIONS_DEV: QuizQuestion[] = [
   {
     id: "1",
     text: "What does HTML stand for?",
@@ -174,3 +195,7 @@ export const MOCK_QUESTIONS: QuizQuestion[] = [
       "The 'const' keyword is used to declare variables whose values cannot be reassigned.",
   },
 ];
+
+export const MOCK_QUESTIONS: QuizQuestion[] = import.meta.env.DEV
+  ? _MOCK_QUESTIONS_DEV
+  : [];
