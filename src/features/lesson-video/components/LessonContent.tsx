@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { CheckCircle2, ExternalLink, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { resolveFileUrl } from "@/lib/api";
 import type { LectureDetails } from "../types";
 
 type Props = {
@@ -162,7 +163,7 @@ export default function LessonContent({ lecture, onMarkComplete, isSaving = fals
           </div>
           {pdfUrl && (
             <Button asChild variant="outline" className="gap-2 shrink-0">
-              <a href={pdfUrl} target="_blank" rel="noreferrer">
+              <a href={resolveFileUrl(pdfUrl)} target="_blank" rel="noreferrer">
                 <ExternalLink className="h-4 w-4" />
                 Deschide
               </a>
@@ -173,7 +174,7 @@ export default function LessonContent({ lecture, onMarkComplete, isSaving = fals
         {pdfUrl ? (
           <iframe
             title={lecture.title}
-            src={pdfUrl}
+            src={resolveFileUrl(pdfUrl)}
             className="h-[70vh] min-h-[520px] w-full bg-muted"
           />
         ) : (
