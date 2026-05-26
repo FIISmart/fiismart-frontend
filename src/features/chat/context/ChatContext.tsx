@@ -38,8 +38,30 @@ import type {
   ChatSessionSummary,
   RouteContext,
   ToolCall,
+  ToolName,
 } from "../types";
 import { useRouteContext } from "../hooks/useRouteContext";
+import { courseRefreshBus } from "./CourseRefreshBus";
+
+/**
+ * Lista tool-urilor care modifică starea unui curs. După un `tool_result`
+ * pentru unul din acestea, emitem pe `courseRefreshBus` ca paginile
+ * (CourseBuilderPage etc) să facă un reload silențios.
+ */
+const COURSE_MODIFIER_TOOLS: ReadonlySet<ToolName> = new Set<ToolName>([
+  "buildFullCourse",
+  "addModule",
+  "updateModule",
+  "deleteModule",
+  "reorderModules",
+  "addLecture",
+  "updateLecture",
+  "deleteLecture",
+  "reorderLectures",
+  "addModuleQuiz",
+  "updateModuleQuiz",
+  "deleteModuleQuiz",
+]);
 
 interface ChatContextValue {
   isOpen: boolean;
@@ -273,6 +295,22 @@ export function ChatProvider({ children }: { children: ReactNode }) {
                 : tc,
             );
             setPendingToolCalls(accumulatedToolCalls);
+
+            // Pentru tool-urile care modifică un curs, notificăm prin
+            // courseRefreshBus ca pagina de course-builder să re-fetch-uiască.
+            // `buildFullCourse` aduce courseId în result; restul țintesc cursul
+            // activ din routeContext (BE-ul folosește aceeași sursă).
+            if (COURSE_MODIFIER_TOOLS.has(ev.data.name)) {
+              let courseId: string | undefined;
+              if (ev.data.name === "buildFullCourse") {
+                courseId = ev.data.result?.courseId as string | undefined;
+              } else {
+                courseId = routeContextRef.current.courseId;
+              }
+              if (courseId) {
+                courseRefreshBus.emit(courseId);
+              }
+            }
           } else if (ev.event === "done") {
             const finalMsg: ChatMessage = {
               id: ev.data.messageId,
