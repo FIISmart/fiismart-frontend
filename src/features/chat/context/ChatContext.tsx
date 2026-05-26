@@ -38,8 +38,30 @@ import type {
   ChatSessionSummary,
   RouteContext,
   ToolCall,
+  ToolName,
 } from "../types";
 import { useRouteContext } from "../hooks/useRouteContext";
+import { courseRefreshBus } from "./CourseRefreshBus";
+
+/**
+ * Lista tool-urilor care modifică starea unui curs. După un `tool_result`
+ * pentru unul din acestea, emitem pe `courseRefreshBus` ca paginile
+ * (CourseBuilderPage etc) să facă un reload silențios.
+ */
+const COURSE_MODIFIER_TOOLS: ReadonlySet<ToolName> = new Set<ToolName>([
+  "buildFullCourse",
+  "addModule",
+  "updateModule",
+  "deleteModule",
+  "reorderModules",
+  "addLecture",
+  "updateLecture",
+  "deleteLecture",
+  "reorderLectures",
+  "addModuleQuiz",
+  "updateModuleQuiz",
+  "deleteModuleQuiz",
+]);
 
 interface ChatContextValue {
   isOpen: boolean;
@@ -227,6 +249,45 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             const call: ToolCall = { name: ev.data.name, args: ev.data.args };
             accumulatedToolCalls = [...accumulatedToolCalls, call];
             setPendingToolCalls(accumulatedToolCalls);
+          } else if (ev.event === "tool_progress") {
+            // Atașăm evenimentul de progres pe ultimul tool call în desfășurare
+            // (cel cu același `name` și fără `result` încă). Iterăm din coadă
+            // ca să găsim cel mai recent match și recompunem array-ul fără
+            // mutare in-place (ca să re-renderează React).
+            let attached = false;
+            const next: ToolCall[] = new Array(accumulatedToolCalls.length);
+            for (let i = accumulatedToolCalls.length - 1; i >= 0; i--) {
+              const tc = accumulatedToolCalls[i];
+              if (!attached && tc.name === ev.data.name && tc.result === undefined) {
+                const entry = {
+                  step: ev.data.step,
+                  total: ev.data.total,
+                  message: ev.data.message,
+                  ts: now(),
+                };
+                const updatedProgress = [...(tc.progress ?? []), entry];
+                // Cap la 100 entries ca să evităm growth nemărginit pe un
+                // tool care emite în buclă.
+                const capped =
+                  updatedProgress.length > 100
+                    ? updatedProgress.slice(-100)
+                    : updatedProgress;
+                next[i] = { ...tc, progress: capped };
+                attached = true;
+              } else {
+                next[i] = tc;
+              }
+            }
+            if (attached) {
+              accumulatedToolCalls = next;
+              setPendingToolCalls(accumulatedToolCalls);
+            } else if (import.meta.env.DEV) {
+              // eslint-disable-next-line no-console
+              console.warn(
+                "[chat] tool_progress without a pending tool call:",
+                ev.data,
+              );
+            }
           } else if (ev.event === "tool_result") {
             accumulatedToolCalls = accumulatedToolCalls.map((tc) =>
               tc.name === ev.data.name && tc.result === undefined
@@ -234,6 +295,22 @@ export function ChatProvider({ children }: { children: ReactNode }) {
                 : tc,
             );
             setPendingToolCalls(accumulatedToolCalls);
+
+            // Pentru tool-urile care modifică un curs, notificăm prin
+            // courseRefreshBus ca pagina de course-builder să re-fetch-uiască.
+            // `buildFullCourse` aduce courseId în result; restul țintesc cursul
+            // activ din routeContext (BE-ul folosește aceeași sursă).
+            if (COURSE_MODIFIER_TOOLS.has(ev.data.name)) {
+              let courseId: string | undefined;
+              if (ev.data.name === "buildFullCourse") {
+                courseId = ev.data.result?.courseId as string | undefined;
+              } else {
+                courseId = routeContextRef.current.courseId;
+              }
+              if (courseId) {
+                courseRefreshBus.emit(courseId);
+              }
+            }
           } else if (ev.event === "done") {
             const finalMsg: ChatMessage = {
               id: ev.data.messageId,

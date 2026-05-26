@@ -48,6 +48,7 @@ function narrowChatStreamEvent(ev: {
   switch (ev.event) {
     case "token":
     case "tool_call":
+    case "tool_progress":
     case "tool_result":
     case "done":
     case "error":
