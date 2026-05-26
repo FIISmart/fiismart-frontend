@@ -1,6 +1,8 @@
-import { cognitoConfig } from "@/lib/cognito-config";
+import { cognitoConfig, getCognitoRedirectUri } from "@/lib/cognito-config";
+import { API_BASE } from "@/lib/api";
 
-const clientSecret = import.meta.env.VITE_COGNITO_CLIENT_SECRET ?? "";
+// Cognito client_secret no longer needed on the FE — the BE proxies the
+// OAuth code exchange (see POST /api/v1/auth/oauth/exchange).
 
 const PKCE_VERIFIER_KEY = "cognito_pkce_verifier";
 const PKCE_STATE_KEY = "cognito_pkce_state";
@@ -46,7 +48,7 @@ export async function buildLoginUrl(identityProvider?: string): Promise<string> 
   const params = new URLSearchParams({
     response_type: "code",
     client_id: cognitoConfig.clientId,
-    redirect_uri: cognitoConfig.redirectUri,
+    redirect_uri: getCognitoRedirectUri(),
     scope: "openid email profile",
     code_challenge_method: "S256",
     code_challenge: challenge,
@@ -86,32 +88,31 @@ export async function exchangeCode(
     throw new Error("State mismatch — possible CSRF. Restart the login flow.");
   }
 
-  const body = new URLSearchParams({
-    grant_type: "authorization_code",
-    client_id: cognitoConfig.clientId,
-    redirect_uri: cognitoConfig.redirectUri,
-    code,
-    code_verifier: verifier,
-    ...(clientSecret ? { client_secret: clientSecret } : {}),
-  });
-
-  const res = await fetch(`https://${cognitoConfig.domain}/oauth2/token`, {
+  // Exchange the code through our BE — it owns the client_secret so we
+  // never have to bake a Cognito secret into the public JS bundle.
+  const res = await fetch(`${API_BASE}/auth/oauth/exchange`, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      code,
+      codeVerifier: verifier,
+      redirectUri: getCognitoRedirectUri(),
+    }),
   });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error_description ?? `Token exchange failed: ${res.status}`);
+    throw new Error(
+      err.error_description ?? err.error ?? `Token exchange failed: ${res.status}`,
+    );
   }
 
   const data = await res.json();
   return {
-    accessToken: data.access_token,
-    idToken: data.id_token,
-    refreshToken: data.refresh_token,
-    expiresIn: data.expires_in ?? 3600,
+    accessToken: data.accessToken,
+    idToken: data.idToken,
+    refreshToken: data.refreshToken,
+    expiresIn: data.expiresIn ?? 3600,
   };
 }
 
