@@ -1,4 +1,4 @@
-import { Users, Star } from "lucide-react";
+import { Users, Star, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface CourseCardProps {
@@ -51,8 +51,15 @@ export function CourseCard({
                     </div>
                 </div>
 
-                {/* Secțiunea butoanelor - Acum conține doar butonul de Editează */}
-                <div className="grid grid-cols-1 pt-4 border-t border-edu-border/50">
+                {/* Secțiunea butoanelor - Actualizată pentru a include Preview */}
+                <div className="grid grid-cols-2 gap-3 pt-4 border-t border-edu-border/50">
+                    <button
+                        onClick={() => navigate(`/professor/preview/${courseId}`)}
+                        className="py-2 px-4 rounded-xl border border-edu-border text-edu-muted-fg font-medium text-sm hover:bg-edu-bg transition flex items-center justify-center gap-1.5 w-full"
+                    >
+                        <Eye size={16} />
+                        Preview
+                    </button>
                     <button
                         onClick={() => navigate(`/professor/courses/${courseId}`)}
                         className="py-2 px-4 rounded-xl bg-edu-bg/50 text-edu-muted-fg font-medium text-sm hover:bg-edu-bg transition text-center w-full"
