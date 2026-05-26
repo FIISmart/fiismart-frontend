@@ -526,7 +526,9 @@ export interface AdminCourseAPI {
 export interface AdminEnrollmentAPI {
   id: string;
   studentId: string;
+  studentName: string;
   courseId: string;
+  courseTitle: string;
   status: string;
   overallProgress: number;
   enrolledAt: string | null;

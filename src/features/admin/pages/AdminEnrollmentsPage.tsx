@@ -32,7 +32,12 @@ export default function AdminEnrollmentsPage() {
 
   const filtered = enrollments.filter((e) => {
     const q = search.toLowerCase();
-    return e.studentId?.toLowerCase().includes(q) || e.courseId?.toLowerCase().includes(q);
+    return (
+      e.studentName?.toLowerCase().includes(q) ||
+      e.courseTitle?.toLowerCase().includes(q) ||
+      e.studentId?.toLowerCase().includes(q) ||
+      e.courseId?.toLowerCase().includes(q)
+    );
   });
 
   const handleDelete = async () => {
@@ -56,7 +61,7 @@ export default function AdminEnrollmentsPage() {
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Caută după ID student sau curs..."
+            placeholder="Caută după nume student sau titlu curs..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -71,8 +76,8 @@ export default function AdminEnrollmentsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
-                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Student ID</th>
-                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Curs ID</th>
+                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Student</th>
+                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Curs</th>
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">Status</th>
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">Progres</th>
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden lg:table-cell">Data înrolării</th>
@@ -88,11 +93,11 @@ export default function AdminEnrollmentsPage() {
                     </tr>
                   ) : filtered.map((e) => (
                     <tr key={e.id} className="border-b border-border/50 hover:bg-muted/10 transition-colors">
-                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                        {e.studentId?.slice(0, 12)}…
+                      <td className="px-4 py-3 font-medium text-sm">
+                        {e.studentName || e.studentId}
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                        {e.courseId?.slice(0, 12)}…
+                      <td className="px-4 py-3 text-sm">
+                        {e.courseTitle || e.courseId}
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
                         <Badge variant={e.status === "completed" ? "default" : "outline"} className="text-xs">

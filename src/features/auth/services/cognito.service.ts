@@ -1,7 +1,5 @@
 import { cognitoConfig } from "@/lib/cognito-config";
 
-const clientSecret = import.meta.env.VITE_COGNITO_CLIENT_SECRET ?? "";
-
 const PKCE_VERIFIER_KEY = "cognito_pkce_verifier";
 const PKCE_STATE_KEY = "cognito_pkce_state";
 
@@ -92,7 +90,6 @@ export async function exchangeCode(
     redirect_uri: cognitoConfig.redirectUri,
     code,
     code_verifier: verifier,
-    ...(clientSecret ? { client_secret: clientSecret } : {}),
   });
 
   const res = await fetch(`https://${cognitoConfig.domain}/oauth2/token`, {
