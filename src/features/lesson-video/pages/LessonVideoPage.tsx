@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState, useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext.tsx";
 import { Spinner } from "@/components/ui/spinner.tsx";
 import { Button } from "@/components/ui/button.tsx";
+import { apiFetch } from "@/lib/api";
 
 import Header from "../components/Header.tsx";
 import VideoPlayer from "../components/VideoPlayer.tsx";
@@ -28,7 +29,10 @@ export default function LessonVideoPage() {
     lectureId: string;
   }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+
+  const isPreview = location.pathname.startsWith("/professor/preview/");
 
   const [courseData, setCourseData] = useState<CourseHeader | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,13 +66,17 @@ export default function LessonVideoPage() {
   }, [lectureId]);
 
   const fetchCourseData = useCallback(async () => {
-    if (!studentId || !courseId) return;
+    if (!courseId) return;
 
     try {
-      const data = await lessonVideoService.getCourseInfo(
-          studentId,
-          courseId
-      );
+      let data;
+      if (isPreview) {
+        data = await apiFetch<CourseHeader>(`/preview/courses/${courseId}`);
+      } else {
+        // Endpoint normal (studenți)
+        if (!studentId) return;
+        data = await lessonVideoService.getCourseInfo(studentId, courseId);
+      }
 
       setCourseData(data);
 
@@ -81,18 +89,22 @@ export default function LessonVideoPage() {
     } finally {
       setLoading(false);
     }
-  }, [studentId, courseId, activeLectureId]);
+  }, [studentId, courseId, activeLectureId, isPreview]); // <-- NOU: Am adăugat isPreview la dependențe
 
   useEffect(() => {
     void fetchCourseData();
   }, [fetchCourseData, refreshTrigger]);
 
   const fetchLectureDetails = useCallback(async () => {
-    if (!studentId || !courseId || !activeLectureId) return;
+    if (!courseId || !activeLectureId) return;
+
+    // <-- NOU: Fallback inteligent pentru ID-ul utilizatorului
+    const currentId = studentId ?? user?.id;
+    if (!currentId) return;
 
     try {
       const data = await lessonVideoService.getLectureDetails(
-          studentId,
+          currentId,
           courseId,
           activeLectureId
       );
@@ -101,7 +113,7 @@ export default function LessonVideoPage() {
     } catch (err) {
       console.error("Eroare la preluarea lecției:", err);
     }
-  }, [studentId, courseId, activeLectureId]);
+  }, [studentId, user?.id, courseId, activeLectureId]);
 
   useEffect(() => {
     void fetchLectureDetails();
@@ -167,11 +179,16 @@ export default function LessonVideoPage() {
   const handleSelectLecture = useCallback((nextLectureId: string) => {
     setActiveLectureId(nextLectureId);
     if (courseId) {
-      navigate(`/student/courses/${courseId}/lectures/${nextLectureId}`);
+      if (isPreview) {
+        navigate(`/professor/preview/${courseId}/lectures/${nextLectureId}`);
+      } else {
+        navigate(`/student/courses/${courseId}/lectures/${nextLectureId}`);
+      }
     }
-  }, [courseId, navigate]);
+  }, [courseId, navigate, isPreview]);
 
   const handleMarkComplete = useCallback(async (durationSecs?: number) => {
+    if (isPreview) return;
     if (!studentId || !courseId || !activeLectureId) return;
     const nextDuration = durationSecs ?? lectureDetails?.durationSecs;
     try {
@@ -192,9 +209,10 @@ export default function LessonVideoPage() {
     } catch (err) {
       console.error("Eroare la marcarea lectiei ca parcursa:", err);
     }
-  }, [activeLectureId, courseId, handleProgressSaved, lectureDetails?.durationSecs, studentId]);
+  }, [activeLectureId, courseId, handleProgressSaved, lectureDetails?.durationSecs, studentId, isPreview]);
 
   const handleDurationDetected = useCallback(async (durationSecs: number) => {
+    if (isPreview) return;
     if (!studentId || !courseId || !activeLectureId || durationSecs <= 0) return;
     const currentDuration = lectureDetails?.durationSecs ?? 0;
     if (currentDuration > 0 && Math.abs(currentDuration - durationSecs) <= 1) return;
@@ -220,6 +238,7 @@ export default function LessonVideoPage() {
     lectureDetails?.positionSecs,
     lectureDetails?.watchedPercent,
     studentId,
+    isPreview,
   ]);
 
   if (!user) {
@@ -251,14 +270,14 @@ export default function LessonVideoPage() {
 
   return (
       <div className="min-h-screen bg-edu-bg">
-          <Header />
+        <Header />
 
         <main className="max-w-[1200px] mx-auto p-4 sm:p-6 lg:p-8">
           <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6 lg:gap-8">
 
             <div className="lg:col-span-2 flex flex-col gap-6 order-1">
               <div className="flex justify-end">
-                {studentId && <StreakBadge studentId={studentId} />}
+                {!isPreview && studentId && <StreakBadge studentId={studentId} />}
               </div>
 
               {lessonType === "video" ? (
@@ -296,7 +315,7 @@ export default function LessonVideoPage() {
 
               {currentModuleQuizId && (
                   <button
-                      onClick={() => navigate(`/student/quizzes/${currentModuleQuizId}`)}
+                      onClick={() => navigate(isPreview ? `/professor/quizzes` : `/student/quizzes/${currentModuleQuizId}`)}
                       className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-4 rounded-xl transition-colors duration-200 shadow-md"
                   >
                     Mergi la Quiz
@@ -323,7 +342,7 @@ export default function LessonVideoPage() {
 
               <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm">
                 <CommentsSection
-                    studentId={studentId ?? ""}
+                    studentId={isPreview ? (user?.id ?? "") : (studentId ?? "")}
                     courseId={courseId ?? ""}
                     lectureId={activeLectureId || ""}
                     currentTime={currentTime}
@@ -331,6 +350,7 @@ export default function LessonVideoPage() {
                     activeCommentId={activeCommentId}
                     onCommentsLoaded={setLectureComments}
                     onRefreshComments={fetchLectureDetails}
+                    isPreview={isPreview}
                 />
               </div>
 
@@ -339,6 +359,7 @@ export default function LessonVideoPage() {
                     studentId={studentId ?? ""}
                     courseId={courseId ?? ""}
                     lectureId={activeLectureId || ""}
+                    isPreview={isPreview}
                 />
               </div>
             </div>
