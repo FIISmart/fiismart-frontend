@@ -36,6 +36,8 @@ const lessonTypeLabels: Record<LessonType, string> = {
   markdown: "Markdown/Text",
 };
 
+const MAX_MARKDOWN_FILE_BYTES = 2 * 1024 * 1024;
+
 export function LessonEditor({ lesson, onSave, onCancel, isOpen }: LessonEditorProps) {
   const [title, setTitle] = useState(lesson?.title || "");
   const [type, setType] = useState<LessonType>(lesson?.type || "video");
@@ -58,6 +60,28 @@ export function LessonEditor({ lesson, onSave, onCancel, isOpen }: LessonEditorP
 
     setIsUploading(true);
     try {
+      if (type === "markdown") {
+        const filename = file.name.toLowerCase();
+        const isMarkdownFile =
+          filename.endsWith(".md") ||
+          filename.endsWith(".markdown") ||
+          filename.endsWith(".txt") ||
+          file.type === "text/markdown" ||
+          file.type === "text/plain";
+
+        if (!isMarkdownFile) {
+          throw new Error("Incarca un fisier .md, .markdown sau .txt.");
+        }
+        if (file.size > MAX_MARKDOWN_FILE_BYTES) {
+          throw new Error("Fisierul markdown este prea mare. Limita este 2MB.");
+        }
+
+        const text = await file.text();
+        setContent(text);
+        toast.success("Fisier markdown incarcat in editor.");
+        return;
+      }
+
       const result = await api.uploadLectureFile(file);
       setContent(result.url);
       toast.success("Fișier încărcat cu succes!");

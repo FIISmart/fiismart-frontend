@@ -77,8 +77,8 @@ export default function TimetablePage() {
             const mapped = teacherCourses.map(c => ({
               title: c.title,
               overallProgress: 0,
-              enrollmentCount: c.enrollmentCount,
-              avgRating: c.avgRating
+              enrollmentCount: c.enrollmentCount ?? 0,
+              avgRating: c.avgRating ?? 0
             }));
             setCourses(mapped);
           })
