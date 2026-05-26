@@ -1,4 +1,4 @@
-import { apiFetch } from "@/lib/api";
+import { apiFetch } from "@/lib/api.ts";
 import type {
   AddCommentPayload,
   CourseComment,
@@ -132,27 +132,28 @@ export const lessonVideoService = {
   getReviews(
       studentId: string,
       courseId: string,
-      lectureId: string
+      _lectureId: string   // păstrat în semnătură pentru compatibilitate
   ) {
-    return apiFetch<ReviewResponse[]>(
-        `/students/${studentId}/courses/${courseId}/lectures/${lectureId}/reviews`
-    );
+    return apiFetch<ReviewResponse[]>(`/reviews/course/${courseId}`);
   },
 
   addReview(
       studentId: string,
       courseId: string,
-      lectureId: string,
+      _lectureId: string,
       payload: ReviewRequest
   ) {
-    return apiFetch<ReviewResponse>(
-        `/students/${studentId}/courses/${courseId}/lectures/${lectureId}/reviews`,
-        {
-          method: "POST",
-          body: JSON.stringify(payload),
-        }
-    );
+    return apiFetch<ReviewResponse>(`/reviews`, {
+      method: "POST",
+      body: JSON.stringify({
+        studentId,
+        courseId,
+        stars: payload.rating,
+        body: payload.comment,
+      }),
+    });
   },
+
   getStudentStreak(studentId: string) {
     return apiFetch<StreakResponse>(
         `/students/${studentId}/streak`
@@ -162,6 +163,17 @@ export const lessonVideoService = {
        currentStreak: 12,
        hasCompletedToday: true,
       });*/
+  },
+
+  checkReviewExists(studentId: string, courseId: string) {
+    return apiFetch<{ reviewed: boolean }>(`/reviews/exists/student/${studentId}/course/${courseId}`);
+  },
+
+  updateReview(reviewId: string, payload: { stars: number; body: string }) {
+    return apiFetch(`/reviews/${reviewId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
   },
 
 };

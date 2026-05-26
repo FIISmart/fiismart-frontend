@@ -130,10 +130,13 @@ export interface ReviewRequest {
 
 export interface ReviewResponse {
   id: string;
+  studentId: string;
   authorName: string;
-  rating: number;
-  comment: string;
+  courseId: string;
+  stars: number;
+  body: string;
   createdAt: string;
+  deleted?: boolean;
 }
 
 export interface StreakResponse {

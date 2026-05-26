@@ -6,8 +6,8 @@ import {
   ChevronDown,
 } from "lucide-react";
 import type { CourseComment } from "../types";
-import { lessonVideoService } from "../services/lesson-video.service";
-import CommentItem from "./CommentItem";
+import { lessonVideoService } from "../services/lesson-video.service.ts";
+import CommentItem from "./CommentItem.tsx";
 
 interface Props {
   studentId: string;
@@ -151,7 +151,7 @@ export default function CommentsSection({
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-lg border border-border">
               <span>Sortează:</span>
               <select
-                  className="bg-transparent focus:outline-none cursor-pointer text-foreground font-bold"
+                  className="appearance-none bg-transparent focus:outline-none cursor-pointer text-foreground font-bold pr-2"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
               >

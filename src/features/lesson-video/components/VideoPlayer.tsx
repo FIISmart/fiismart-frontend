@@ -6,9 +6,9 @@ import {
   useCallback,
 } from "react";
 import { Play, Pause, Eye, EyeOff, MessageSquare, Clock } from "lucide-react";
-import { loadYouTubeAPI } from "../types/loadYouTubeAPI";
-import { getYouTubeId } from "../types/videoUtils";
-import { lessonVideoService } from "../services/lesson-video.service";
+import { loadYouTubeAPI } from "../types/loadYouTubeAPI.ts";
+import { getYouTubeId } from "../types/videoUtils.ts";
+import { lessonVideoService } from "../services/lesson-video.service.ts";
 import type { CourseComment, GroupedVideoMarker } from "../types";
 
 interface YouTubePlayerType {
@@ -362,10 +362,7 @@ export default function VideoPlayer({
                           ref={(el) => {
                             markerRefs.current[m.time] = el;
                           }}
-                          onMouseEnter={() => {
-                            setHoveredMarker(m);
-                            void loadBackendMarkerComments(m.time);
-                          }}
+                          onMouseEnter={() => setHoveredMarker(m)}
                           onMouseLeave={() => setHoveredMarker(null)}
                           className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-20 group/marker"
                           onClick={(e) => {
@@ -376,24 +373,27 @@ export default function VideoPlayer({
                             }
                           }}
                       >
+                        {/* Punctul vizual de pe timeline */}
                         <div
-                            className={`rounded-full cursor-pointer transition-all duration-150 border-2 border-white shadow-md hover:scale-150 ${hasProfessor
-                                ? "bg-primary w-4 h-4 animate-pulse relative z-30"
-                                : m.count > 2
-                                    ? "bg-secondary w-3.5 h-3.5"
-                                    : "bg-neutral-400 w-3 h-3"
+                            className={`rounded-full cursor-pointer transition-all duration-150 border-2 border-white shadow-md hover:scale-150 ${
+                                hasProfessor
+                                    ? "bg-primary w-4 h-4 animate-pulse relative z-30"
+                                    : m.count > 2
+                                        ? "bg-secondary w-3.5 h-3.5"
+                                        : "bg-neutral-400 w-3 h-3"
                             }`}
                         />
 
+                        {/* Tooltip-ul care apare la hover */}
                         {hoveredMarker?.time === m.time && (
                             <div
-                                className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 bg-card/95 backdrop-blur-md border border-border p-3 rounded-2xl shadow-xl w-64 text-xs text-muted-foreground pointer-events-auto animate-in fade-in slide-in-from-bottom-1 duration-150 z-50"
+                                className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 bg-card/95 backdrop-blur-md border border-border p-3 rounded-2xl shadow-xl w-64 pointer-events-auto animate-in fade-in slide-in-from-bottom-1 duration-150 z-50"
                                 onMouseEnter={() => setHoveredMarker(m)}
                                 onMouseLeave={() => setHoveredMarker(null)}
                             >
-
-                              <div className="flex justify-between items-center border-b border-border/50 pb-1.5 mb-2 font-bold text-foreground">
-                        <span className="flex items-center gap-1">
+                              {/* HEADER TOOLTIP */}
+                              <div className="flex justify-between items-center border-b border-border/50 pb-2 mb-2 font-bold text-foreground">
+                        <span className="flex items-center gap-1 text-xs">
                           <MessageSquare size={12} className="text-primary" />
                           {m.count} {m.count === 1 ? "discuție" : "discuții"}
                         </span>
@@ -402,17 +402,16 @@ export default function VideoPlayer({
                         </span>
                               </div>
 
-                              <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
-                                {(hoveredMarkerComments[m.time] ?? m.comments).slice(0, 3).map((comment, cIndex) => (
-                                    <div
-                                        key={comment.commentId || cIndex}
-                                        className="space-y-0.5 border-b border-border/30 last:border-none pb-1.5 last:pb-0"
-                                    >
+                              {/* ZONA DE SCROLL CU COMENTARII */}
+                              <div className="space-y-3 max-h-40 overflow-y-auto pr-1">
+                                {m.comments.map((comment, cIndex) => (
+                                    <div key={comment.commentId || cIndex} className="space-y-1">
                                       <div className="flex items-center gap-1.5">
                               <span
-                                  className={`font-bold text-[11px] truncate max-w-[140px] ${comment.authorRole === "Profesor"
-                                      ? "text-primary"
-                                      : "text-foreground"
+                                  className={`font-bold text-[11px] truncate max-w-[140px] ${
+                                      comment.authorRole === "Profesor"
+                                          ? "text-primary"
+                                          : "text-foreground"
                                   }`}
                               >
                                 {comment.authorName}
@@ -423,17 +422,11 @@ export default function VideoPlayer({
                                 </span>
                                         )}
                                       </div>
-                                      <p className="line-clamp-1 text-muted-foreground text-[11px] leading-tight">
+                                      <p className="line-clamp-2 text-muted-foreground text-[11px] leading-relaxed">
                                         {comment.body}
                                       </p>
                                     </div>
                                 ))}
-
-                                {m.count > 3 && (
-                                    <div className="text-[10px] text-center text-primary font-bold pt-1">
-                                      + încă {m.count - 3} întrebări aici
-                                    </div>
-                                )}
                               </div>
                             </div>
                         )}
