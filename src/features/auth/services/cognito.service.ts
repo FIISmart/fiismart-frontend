@@ -57,6 +57,12 @@ export async function buildLoginUrl(identityProvider?: string): Promise<string> 
 
   if (identityProvider) {
     params.set("identity_provider", identityProvider);
+    // Force the upstream IdP to show its account picker instead of silently
+    // re-using the last signed-in session. Cognito forwards `prompt` to the
+    // upstream IdP, so this gives Google's "Choose an account" screen.
+    if (identityProvider === "Google") {
+      params.set("prompt", "select_account");
+    }
   }
 
   return `https://${cognitoConfig.domain}/oauth2/authorize?${params}`;
