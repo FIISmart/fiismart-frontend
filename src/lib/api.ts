@@ -43,6 +43,20 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
   return res.json();
 }
 
+export function resolveFileUrl(url: string | null | undefined): string {
+  if (!url) return "";
+  if (/^(https?:|blob:|data:)/i.test(url)) return url;
+  if (url.startsWith("/api/")) {
+    try {
+      const base = new URL(API_BASE, window.location.origin);
+      return base.origin + url;
+    } catch {
+      return url;
+    }
+  }
+  return url;
+}
+
 const request = apiFetch;
 
 // ── Interfaces ──────────────────────────────────────────
@@ -395,11 +409,26 @@ export interface UploadResponse {
 async function postMultipart(path: string, file: File): Promise<UploadResponse> {
   const formData = new FormData();
   formData.append("file", file);
+  return postMultipartForm<UploadResponse>(path, formData);
+}
 
+/**
+ * POST a pre-built FormData to `path`. The browser sets the multipart
+ * boundary automatically (do NOT set Content-Type). Bearer auth is attached.
+ * Pass `signal` to support cancellation (e.g. user closing the dialog
+ * mid-upload). On abort, fetch throws an AbortError that callers can
+ * detect via `err.name === "AbortError"`.
+ */
+export async function postMultipartForm<T>(
+  path: string,
+  formData: FormData,
+  signal?: AbortSignal,
+): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
     headers: { ...authHeader() },
     body: formData,
+    signal,
   });
 
   if (!res.ok) {
@@ -411,12 +440,189 @@ async function postMultipart(path: string, file: File): Promise<UploadResponse> 
     }
     throw new ApiError(errMessage, res.status, err.code);
   }
+  if (res.status === 204) return undefined as T;
   return res.json();
 }
 
 /** Upload a cover image for a course (JPG/PNG/WebP/GIF, max 5MB). */
 export function uploadThumbnail(file: File) {
   return postMultipart("/files/thumbnail", file);
+}
+
+/**
+ * Streaming POST helper for Server-Sent Events (SSE).
+ *
+ * `EventSource` can't POST natively, so we use `fetch` with
+ * `Accept: text/event-stream` and parse the body via a ReadableStream
+ * reader. Yields one `{event, data}` object per complete SSE event block
+ * (delimited by `\n\n`). `data:` is JSON-parsed when possible; otherwise
+ * the raw string is yielded.
+ *
+ * - Bearer auth attached automatically (mirrors `apiFetch`).
+ * - Caller-provided headers merge in (and override `Accept` if they wish).
+ * - On non-2xx the body is read as text and an `ApiError` is thrown,
+ *   matching `apiFetch`'s error shape.
+ * - Pass `init.signal` to cancel. AbortError propagates after reader
+ *   cleanup; downstream callers can match on `err.name === "AbortError"`.
+ */
+export async function* ssePost(
+  path: string,
+  body: BodyInit,
+  init?: { signal?: AbortSignal; headers?: HeadersInit; method?: string },
+): AsyncIterable<{ event: string; data: any }> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: init?.method ?? "POST",
+    headers: {
+      Accept: "text/event-stream",
+      ...authHeader(),
+      ...init?.headers,
+    },
+    body,
+    signal: init?.signal,
+  });
+
+  if (!res.ok) {
+    // Try JSON first (matches apiFetch error shape); fall back to text.
+    const raw = await res.text().catch(() => "");
+    let errMessage = `Request failed: ${res.status}`;
+    let errCode: string | undefined;
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as {
+          message?: string;
+          code?: string;
+          errors?: Record<string, string[]>;
+        };
+        errMessage = parsed.message || errMessage;
+        errCode = parsed.code;
+        if (errMessage === "Validation failed" && parsed.errors) {
+          const firstMessages = Object.values(parsed.errors).flat();
+          if (firstMessages.length > 0) errMessage = firstMessages[0];
+        }
+      } catch {
+        errMessage = raw || res.statusText || errMessage;
+      }
+    } else {
+      errMessage = res.statusText || errMessage;
+    }
+    throw new ApiError(errMessage, res.status, errCode);
+  }
+
+  if (!res.body) {
+    // Server returned no body — nothing to stream.
+    return;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder("utf-8");
+  let buffer = "";
+
+  // Wire up abort: cancel the reader so the underlying fetch stops too.
+  const onAbort = () => {
+    reader.cancel().catch(() => {
+      /* already closed */
+    });
+  };
+  init?.signal?.addEventListener("abort", onAbort);
+
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) {
+        // Flush any trailing event in the buffer (no terminating \n\n).
+        const trailing = buffer.trim();
+        if (trailing.length > 0) {
+          const ev = parseSseBlock(trailing);
+          if (ev) yield ev;
+        }
+        break;
+      }
+      buffer += decoder.decode(value, { stream: true });
+
+      let sepIdx: number;
+      // SSE events are separated by a blank line: "\n\n" (or "\r\n\r\n").
+      // We normalize CRLF to LF first to keep parsing simple.
+      buffer = buffer.replace(/\r\n/g, "\n");
+      while ((sepIdx = buffer.indexOf("\n\n")) !== -1) {
+        const rawBlock = buffer.slice(0, sepIdx);
+        buffer = buffer.slice(sepIdx + 2);
+        const ev = parseSseBlock(rawBlock);
+        if (ev) yield ev;
+      }
+    }
+  } finally {
+    init?.signal?.removeEventListener("abort", onAbort);
+    try {
+      reader.releaseLock();
+    } catch {
+      /* reader may already be released */
+    }
+  }
+}
+
+/**
+ * Parse a single SSE event block (without trailing \n\n). Supports
+ * multi-line `data:` per the SSE spec — multiple data lines are joined
+ * with `\n`. Returns null if the block has no usable content.
+ */
+function parseSseBlock(block: string): { event: string; data: any } | null {
+  let eventName = "message"; // SSE default per spec
+  const dataLines: string[] = [];
+
+  for (const line of block.split("\n")) {
+    if (!line || line.startsWith(":")) continue; // skip empty + comments
+    const colon = line.indexOf(":");
+    const field = colon === -1 ? line : line.slice(0, colon);
+    // Spec: optional single space after colon is stripped.
+    let value = colon === -1 ? "" : line.slice(colon + 1);
+    if (value.startsWith(" ")) value = value.slice(1);
+
+    if (field === "event") {
+      eventName = value;
+    } else if (field === "data") {
+      dataLines.push(value);
+    }
+    // Other fields (id, retry) are ignored for our use case.
+  }
+
+  if (dataLines.length === 0) {
+    // Heartbeat/ping events sometimes carry no data; still surface them
+    // so callers can observe the event name.
+    return { event: eventName, data: null };
+  }
+
+  const rawData = dataLines.join("\n");
+  try {
+    return { event: eventName, data: JSON.parse(rawData) };
+  } catch {
+    return { event: eventName, data: rawData };
+  }
+}
+
+/**
+ * Fetches a previously uploaded file (from /api/v1/files/{id} or similar)
+ * and wraps it as a browser `File` so it can be replayed through any
+ * multipart-upload code path. `urlOrPath` may be a path-only URL (the form
+ * the BE stores: "/api/v1/files/abc..."); we forward it untouched and
+ * attach the bearer token. Throws an ApiError on non-2xx.
+ */
+export async function fetchAsFile(
+  urlOrPath: string,
+  filename: string,
+  signal?: AbortSignal,
+): Promise<File> {
+  const res = await fetch(urlOrPath, {
+    method: "GET",
+    headers: { ...authHeader() },
+    signal,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => res.statusText);
+    throw new ApiError(text || `Fetch failed: ${res.status}`, res.status);
+  }
+  const blob = await res.blob();
+  const type = blob.type || "application/pdf";
+  return new File([blob], filename, { type });
 }
 
 /** Upload a lecture file (PDF/DOC/DOCX/ZIP/TXT/MD, max 50MB). */
@@ -457,16 +663,82 @@ export function markAllNotificationsRead() {
   return request<void>("/notifications/read-all", { method: "PATCH" });
 }
 
-export interface QuizAttemptRequest {
-  quizId: string;
-  courseId: string;
+// ── Quiz attempt lifecycle (timer + anti-cheat flow) ───────────────────────
+//
+// IMPORTANT: the FE never sends score/passed/correct. Grading is server-side.
+// The previous shape (score + passed in the request) was a security hole and
+// the review explicitly called it out — we removed it here.
+//
+// Also: BE returns `timeLimitSeconds` (seconds, NOT minutes). Schiporash's
+// branch quietly conflated minutes/seconds in spots; we lock it down to
+// seconds at the boundary so callers can't get it wrong.
+
+export interface StartQuizAttemptResponse {
+  attemptId: string;
+  startedAt: string;
+  /** Total time allowed for the attempt, in seconds (NOT minutes). */
+  timeLimitSeconds: number;
+  status: string;
+}
+
+export function startQuizAttempt(quizId: string): Promise<StartQuizAttemptResponse> {
+  return request<StartQuizAttemptResponse>("/quiz-attempts/start", {
+    method: "POST",
+    body: JSON.stringify({ quizId }),
+  });
+}
+
+export interface SubmitQuizAttemptAnswer {
+  questionId: string;
+  selectedIdx: number;
+  writtenAnswer?: string;
+}
+
+export interface SubmitAttemptPayload {
+  answers: SubmitQuizAttemptAnswer[];
+}
+
+/**
+ * Per-answer detail returned by the submit endpoint. Includes the
+ * BE-graded correctness for every question and (for free_text questions)
+ * the AI grading payload: aiScore (0-100 or null on failure), aiConfidence
+ * (0-1), aiReasoning (plain text), aiMissingConcepts (string list).
+ */
+export interface SubmitQuizAttemptAnswerResult {
+  questionId: string;
+  selectedIdx?: number;
+  writtenAnswer?: string;
+  correct: boolean;
+  aiScore?: number | null;
+  aiConfidence?: number;
+  aiReasoning?: string;
+  aiMissingConcepts?: string[];
+}
+
+export interface SubmitQuizAttemptResponse {
+  id: string;
   score: number;
   passed: boolean;
   timeTakenSecs?: number;
+  /** Per-question results — optional for back-compat with older BE responses. */
+  answers?: SubmitQuizAttemptAnswerResult[];
 }
 
-export function submitQuizAttempt(req: QuizAttemptRequest) {
-  return request<{ id: string }>("/quiz-attempts", { method: "POST", body: JSON.stringify(req) });
+export function submitQuizAttempt(
+  attemptId: string,
+  payload: SubmitAttemptPayload,
+): Promise<SubmitQuizAttemptResponse> {
+  return request<SubmitQuizAttemptResponse>(
+    `/quiz-attempts/${attemptId}/submit`,
+    { method: "POST", body: JSON.stringify(payload) },
+  );
+}
+
+export function abandonQuizAttempt(attemptId: string): Promise<void> {
+  return request<void>(`/quiz-attempts/${attemptId}/abandon`, {
+    method: "POST",
+    body: "{}",
+  });
 }
 
 // ── Enrollment ──────────────────────────────────────────
@@ -477,4 +749,95 @@ export function checkMyEnrollment(courseId: string) {
 
 export function enrollMe(courseId: string) {
   return request<{ id: string }>(`/enrollments/me/${courseId}`, { method: "POST" });
+}
+
+// ── Admin ───────────────────────────────────────────────
+
+export interface AdminStatsAPI {
+  totalUsers: number;
+  totalStudents: number;
+  totalProfessors: number;
+  totalAdmins: number;
+  totalCourses: number;
+  publishedCourses: number;
+  totalEnrollments: number;
+  totalComments: number;
+}
+
+export interface AdminUserAPI {
+  id: string;
+  email: string;
+  displayName: string | null;
+  role: string;
+  isAdmin: boolean;
+  banned: boolean;
+  banReason: string | null;
+  bannedAt: string | null;
+  needsRoleSelection: boolean;
+  createdAt: string | null;
+  lastLoginAt: string | null;
+  ownedCoursesCount: number;
+  enrolledCoursesCount: number;
+}
+
+export interface AdminCourseAPI {
+  id: string;
+  title: string;
+  description: string;
+  teacherId: string;
+  status: string;
+  hidden: boolean;
+  tags: string[];
+  thumbnailUrl: string | null;
+  enrollmentCount: number;
+  moduleCount: number;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface AdminEnrollmentAPI {
+  id: string;
+  studentId: string;
+  studentName: string;
+  courseId: string;
+  courseTitle: string;
+  status: string;
+  overallProgress: number;
+  enrolledAt: string | null;
+}
+
+export function adminGetStats() {
+  return request<AdminStatsAPI>("/admin/stats");
+}
+
+export function adminGetUsers() {
+  return request<AdminUserAPI[]>("/admin/users");
+}
+
+export function adminUpdateUser(userId: string, data: { displayName?: string; isAdmin?: boolean; banned?: boolean; banReason?: string }) {
+  return request<AdminUserAPI>(`/admin/users/${userId}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export function adminDeleteUser(userId: string) {
+  return request<void>(`/admin/users/${userId}`, { method: "DELETE" });
+}
+
+export function adminGetCourses() {
+  return request<AdminCourseAPI[]>("/admin/courses");
+}
+
+export function adminUpdateCourse(courseId: string, data: { title?: string; description?: string; status?: string; hidden?: boolean; tags?: string[] }) {
+  return request<AdminCourseAPI>(`/admin/courses/${courseId}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export function adminDeleteCourse(courseId: string) {
+  return request<void>(`/admin/courses/${courseId}`, { method: "DELETE" });
+}
+
+export function adminGetEnrollments() {
+  return request<AdminEnrollmentAPI[]>("/admin/enrollments");
+}
+
+export function adminDeleteEnrollment(enrollmentId: string) {
+  return request<void>(`/admin/enrollments/${enrollmentId}`, { method: "DELETE" });
 }

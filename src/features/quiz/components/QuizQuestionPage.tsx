@@ -1,17 +1,23 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import type { QuizQuestion } from "../types";
 
 interface Props {
   question: QuizQuestion;
-  onNext: (answer: { selectedIdx: number; writtenAnswer?: string }) => void;
+  onNext: (answer: { selectedIdx: number; writtenAnswer?: string; isCorrect: boolean }) => void;
   onPrev: () => void;
   index: number;
   total: number;
-  isSubmitting?: boolean;
 }
 
 const OPTION_LABELS = ["A", "B", "C", "D", "E", "F"];
+
+/**
+ * Maximum length of a free-text answer. The student is shown a counter and the
+ * underlying textarea enforces the limit so a paste of an entire document
+ * doesn't reach the AI grader as a 100k+ char request.
+ */
+const FREE_TEXT_MAX_LENGTH = 5000;
 
 export default function QuizQuestionPage({
   question,
@@ -19,29 +25,51 @@ export default function QuizQuestionPage({
   onPrev,
   index,
   total,
-  isSubmitting = false,
 }: Props) {
-  const navigate = useNavigate();
-  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
-  const [writtenAnswer, setWrittenAnswer] = useState("");
+    const navigate = useNavigate();
+    const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+    const [writtenAnswer, setWrittenAnswer] = useState("");
+    const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
 
-  // Reset on new question — also clears any stale selection when navigating Prev.
+  // Reset on new question
   useEffect(() => {
     setSelectedIdx(null);
     setWrittenAnswer("");
+    setIsSubmitted(false);
   }, [question]);
 
   const isWritten = question.type === "written";
-  const hasAnswer = isWritten ? writtenAnswer.trim() !== "" : selectedIdx !== null;
-  const isLast = index + 1 === total;
+  const isFreeText = question.type === "free_text";
+  const isTextAnswer = isWritten || isFreeText;
 
-  const handleNext = () => {
-    if (!hasAnswer || isSubmitting) return;
-    onNext({
-      selectedIdx: selectedIdx ?? -1,
-      writtenAnswer: isWritten ? writtenAnswer : undefined,
-    });
+  const handleConfirm = () => {
+    const hasAnswer = isTextAnswer ? writtenAnswer.trim() !== "" : selectedIdx !== null;
+
+    if (!isSubmitted && hasAnswer) {
+      setIsSubmitted(true);
+    } else if (isSubmitted) {
+      onNext({
+        selectedIdx: selectedIdx ?? -1,
+        // Both 'written' and 'free_text' use the writtenAnswer payload field.
+        // The BE differentiates by question.type — free_text triggers async
+        // AI grading, written uses exact-match.
+        writtenAnswer: isTextAnswer ? writtenAnswer : undefined,
+        isCorrect,
+      });
+    }
   };
+
+  const normalizedWrittenAnswer = writtenAnswer.trim().toLowerCase();
+  const normalizedCorrectText = (question.correctText ?? "").trim().toLowerCase();
+  // For free_text we cannot determine correctness locally — grading happens
+  // server-side and asynchronously. Report `false` optimistically; the result
+  // page reads the authoritative score off the BE response.
+  const isCorrect = isFreeText
+    ? false
+    : isWritten
+      ? Boolean(normalizedCorrectText) && normalizedWrittenAnswer === normalizedCorrectText
+      : selectedIdx === question.correctIdx;
+  const canConfirm = isTextAnswer ? writtenAnswer.trim() !== "" : selectedIdx !== null;
 
   return (
     <div className="flex-grow flex flex-col justify-center items-center w-full max-w-[800px] mx-auto px-4 py-8">
@@ -49,18 +77,18 @@ export default function QuizQuestionPage({
         {/* Top status bar */}
         <div className="flex justify-between items-center text-[#6A7282] text-sm font-medium mb-4 px-2">
           <button
-            onClick={() => navigate("/student/dashboard")}
-            className="flex items-center gap-1 hover:text-[#9B8EC7] transition-colors"
+          onClick={() => navigate("/student/dashboard")}
+          className="flex items-center gap-1 hover:text-[#9B8EC7] transition-colors"
           >
-            <span>&lt;</span> Exit
+            <span>&lt;</span> Ieșire
           </button>
           <span className="text-gray-800 font-bold">
             {index + 1} / {total}
           </span>
-          <span>&nbsp;</span>
+          <span>{index} răspunsuri</span>
         </div>
 
-        {/* Progress bar */}
+        {/* Progress bar — slot-based to avoid inline styles */}
         <div className="w-full h-2 bg-[#E5E7EB] rounded-full mb-6 overflow-hidden flex">
           {Array.from({ length: total }).map((_, i) => (
             <div
@@ -78,50 +106,159 @@ export default function QuizQuestionPage({
         <div className="bg-white w-full rounded-[24px] shadow-[0_20px_25px_-5px_rgba(0,0,0,0.05),0_8px_10px_-6px_rgba(0,0,0,0.05)] p-8 sm:p-10 relative">
           <div className="flex gap-3 mb-6">
             <div className="bg-[#9B8EC7] text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow-sm">
-              Question {index + 1}
+              Întrebare {index + 1}
             </div>
+
+            {isSubmitted && isFreeText && (
+              <div className="bg-[#9B8EC7] text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow-sm">
+                Evaluat de AI
+              </div>
+            )}
+            {isSubmitted && !isFreeText && (
+              <div
+                className={`text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow-sm ${
+                  isCorrect ? "bg-[#84C5C4]" : "bg-[#E57373]"
+                }`}
+              >
+                {isCorrect ? "Corect!" : "Greșit"}
+              </div>
+            )}
           </div>
 
           <h2 className="text-[20px] sm:text-[24px] font-bold text-gray-900 mb-8 leading-snug">
             {question.text}
           </h2>
 
-          {isWritten ? (
+          {isTextAnswer ? (
             <div className="mb-8">
               <textarea
                 value={writtenAnswer}
-                onChange={(event) => setWrittenAnswer(event.target.value)}
-                className="w-full min-h-[140px] rounded-[16px] border-2 border-[#E5E7EB] bg-white p-4 text-[16px] text-[#4B5563] outline-none focus:border-[#9B8EC7]"
-                placeholder="Scrie raspunsul aici..."
+                onChange={(event) => !isSubmitted && setWrittenAnswer(event.target.value)}
+                disabled={isSubmitted}
+                rows={isFreeText ? 8 : undefined}
+                // Clamp free-text answers to a reasonable upper bound so a
+                // pasted essay (100k chars) can't blow up the API request.
+                maxLength={isFreeText ? FREE_TEXT_MAX_LENGTH : undefined}
+                className={`w-full rounded-[16px] border-2 border-[#E5E7EB] bg-white p-4 text-[16px] text-[#4B5563] outline-none focus:border-[#9B8EC7] ${
+                  isFreeText ? "min-h-[160px]" : "min-h-[140px]"
+                }`}
+                placeholder={
+                  isFreeText
+                    ? "Scrie un raspuns detaliat aici..."
+                    : "Scrie raspunsul aici..."
+                }
               />
+              {isFreeText && !isSubmitted && (
+                <div className="mt-3 flex items-start justify-between gap-3">
+                  <p className="text-xs text-[#6A7282]">
+                    Răspunsul tău va fi evaluat de AI după trimitere. Această
+                    evaluare poate dura câteva secunde.
+                  </p>
+                  <span className="text-xs text-[#6A7282] whitespace-nowrap tabular-nums">
+                    {writtenAnswer.length} / {FREE_TEXT_MAX_LENGTH}
+                  </span>
+                </div>
+              )}
+              {isFreeText && isSubmitted && (
+                <div className="mt-4 rounded-[16px] bg-[#F4F1F8] p-4 text-sm text-[#5A4A7A]">
+                  Răspunsul tău a fost trimis pentru evaluare AI. Scorul și
+                  feedback-ul vor apărea pe pagina de rezultate.
+                </div>
+              )}
+              {isWritten && isSubmitted && (
+                <div className={`mt-4 rounded-[16px] p-4 text-sm ${
+                  isCorrect ? "bg-[#F2F8F8] text-[#31706E]" : "bg-[#FDF6F6] text-[#C62828]"
+                }`}>
+                  {isCorrect
+                    ? "Raspuns corect."
+                    : `Raspuns asteptat: ${question.correctText || "nu este definit"}`}
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex flex-col gap-4 mb-8">
-              {(question.options ?? []).map((option, optIdx) => {
-                const isSelected = selectedIdx === optIdx;
-                const containerClasses = isSelected
-                  ? "border-[#9B8EC7] bg-[#F9F7FA]"
-                  : "border-[#E5E7EB] bg-white hover:border-[#BDA6CE]";
-                const circleClasses = isSelected
-                  ? "bg-[#9B8EC7] text-white"
-                  : "bg-[#F2EAE0] text-[#6A7282]";
-                const textClasses = isSelected ? "text-[#333333]" : "text-[#4B5563]";
+            {(question.options ?? []).map((option, optIdx) => {
+              const isSelected = selectedIdx === optIdx;
+              const isThisCorrect = optIdx === question.correctIdx;
 
-                return (
-                  <button
-                    key={optIdx}
-                    onClick={() => setSelectedIdx(optIdx)}
-                    className={`w-full flex items-center text-left p-4 rounded-[16px] border-2 transition-all duration-200 ${containerClasses}`}
-                  >
-                    <div
-                      className={`w-10 h-10 flex items-center justify-center rounded-full mr-4 font-bold text-sm transition-colors shrink-0 ${circleClasses}`}
+              let containerClasses =
+                "border-[#E5E7EB] bg-white hover:border-[#BDA6CE]";
+              let circleClasses = "bg-[#F2EAE0] text-[#6A7282]";
+              let textClasses = "text-[#4B5563]";
+              let content: ReactNode = OPTION_LABELS[optIdx] ?? "";
+
+              if (isSubmitted) {
+                if (isThisCorrect) {
+                  containerClasses = "border-[#84C5C4] bg-[#F2F8F8]";
+                  circleClasses = "bg-[#84C5C4] text-white";
+                  textClasses = "text-[#31706E] font-semibold";
+                  content = (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
                     >
-                      {OPTION_LABELS[optIdx] ?? ""}
-                    </div>
-                    <span className={`text-[16px] ${textClasses}`}>{option}</span>
-                  </button>
-                );
-              })}
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  );
+                } else if (isSelected && !isThisCorrect) {
+                  containerClasses = "border-[#E57373] bg-[#FDF6F6]";
+                  circleClasses = "bg-[#E57373] text-white";
+                  textClasses = "text-[#C62828] font-semibold";
+                  content = (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  );
+                } else {
+                  containerClasses = "border-[#E5E7EB] bg-white opacity-60";
+                }
+              } else if (isSelected) {
+                containerClasses = "border-[#9B8EC7] bg-[#F9F7FA]";
+                circleClasses = "bg-[#9B8EC7] text-white";
+                textClasses = "text-[#333333]";
+              }
+
+              return (
+                <button
+                  key={optIdx}
+                  onClick={() => !isSubmitted && setSelectedIdx(optIdx)}
+                  disabled={isSubmitted}
+                  className={`w-full flex items-center text-left p-4 rounded-[16px] border-2 transition-all duration-200 ${containerClasses}`}
+                >
+                  <div
+                    className={`w-10 h-10 flex items-center justify-center rounded-full mr-4 font-bold text-sm transition-colors shrink-0 ${circleClasses}`}
+                  >
+                    {content}
+                  </div>
+                  <span className={`text-[16px] ${textClasses}`}>{option}</span>
+                </button>
+              );
+            })}
+            </div>
+          )}
+
+          {/* Explanation */}
+          {isSubmitted && question.explanation && (
+            <div className="bg-[#EBE3D8] rounded-[16px] p-6 mb-8 border border-[#E0D6C8]">
+              <p className="text-[#5A4A3A] text-[15px] leading-relaxed">
+                <span className="font-bold text-[#3E3228]">Explicație: </span>
+                {question.explanation}
+              </p>
             </div>
           )}
 
@@ -130,23 +267,41 @@ export default function QuizQuestionPage({
             <button
               onClick={onPrev}
               className="px-6 py-3 border-2 border-[#E5E7EB] text-[#A0AABF] font-semibold rounded-[16px] hover:bg-gray-50 transition-colors flex items-center gap-2"
-              disabled={index === 0 || isSubmitting}
+              disabled={isSubmitted || index === 0}
             >
-              <span>&lt;</span> Prev
+              <span>&lt;</span> Anterioara
             </button>
 
             <button
-              onClick={handleNext}
-              disabled={!hasAnswer || isSubmitting}
+              onClick={handleConfirm}
+              disabled={!canConfirm}
               className={`px-8 py-3 rounded-[16px] font-semibold text-white transition-all flex items-center justify-center
-                ${
-                  hasAnswer && !isSubmitting
-                    ? "bg-[#9B8EC7] hover:opacity-90 shadow-md"
-                    : "bg-[#D1D5DB] cursor-not-allowed"
-                }
-              `}
+                  ${
+                    canConfirm
+                      ? "bg-[#9B8EC7] hover:opacity-90 shadow-md"
+                      : "bg-[#D1D5DB] cursor-not-allowed"
+                  }
+                `}
             >
-              {isSubmitting ? "Se trimite..." : isLast ? "Trimite Quiz" : "Următoarea"}
+              {isSubmitted ? (
+                <>
+                  Următoarea
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4 ml-2 mt-0.5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </>
+              ) : (
+                "Confirmă răspunsul"
+              )}
             </button>
           </div>
         </div>

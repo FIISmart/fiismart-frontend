@@ -78,7 +78,24 @@ function translateAuthError(raw: string): string {
 }
 
 function dashboardFor(role: UserRole): string {
-  return role === UserRole.PROFESSOR ? "/professor/dashboard" : "/student/dashboard";
+  if (role === UserRole.ADMIN) return "/admin/dashboard";
+  if (role === UserRole.PROFESSOR) return "/professor/dashboard";
+  return "/student/dashboard";
+}
+
+/**
+ * True only when the given path's role-namespace matches the user's role.
+ * Used to discard stale `from` paths after a logout/login-as-different-role
+ * cycle (e.g. user was on /student/* then logged in as admin — we don't
+ * want to send them back to /student/* and bounce them to /unauthorized).
+ */
+function roleAllowsPath(role: UserRole, path: string): boolean {
+  if (path.startsWith("/admin/")) return role === UserRole.ADMIN;
+  if (path.startsWith("/professor/")) return role === UserRole.PROFESSOR;
+  if (path.startsWith("/student/")) return role === UserRole.STUDENT;
+  // Non role-namespaced paths (e.g. /dashboard, /, /auth/...) — let the
+  // target's own guard decide.
+  return true;
 }
 
 export default function AuthPage() {
@@ -94,7 +111,8 @@ export default function AuthPage() {
   const goAfterAuth = (user: AuthUser) => {
     const state = location.state as LocationState;
     const fallback = dashboardFor(user.role);
-    const target = state?.from?.pathname ?? fallback;
+    const from = state?.from?.pathname;
+    const target = from && roleAllowsPath(user.role, from) ? from : fallback;
     navigate(target, { replace: true });
   };
 

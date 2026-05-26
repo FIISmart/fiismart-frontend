@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Plus, GraduationCap, BookOpen, Clock, Users, Trash2, HelpCircle, ArrowLeft } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import * as api from "@/lib/api";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { toast } from "sonner";
+import { aiCourseDraftSchema } from "@/features/chat/services/aiDraft.schema";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,6 +38,7 @@ export default function CoursesListPage() {
   const { user } = useAuth();
   const teacherId = user?.id;
   const navigate = useNavigate();
+  const location = useLocation();
   const [courses, setCourses] = useState<CourseListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deletingCourseId, setDeletingCourseId] = useState<string | null>(null);
@@ -58,6 +60,46 @@ export default function CoursesListPage() {
       setIsCreatingCourse(false);
     }
   };
+
+  // AI draft pickup: the chatbot navigates here with
+  // `location.state.aiDraft = { type: "course", payload }`. We validate the
+  // payload with zod, then create a course pre-filled with title/description
+  // from the draft and forward to the builder so the professor can review and
+  // edit. Guarded by a ref so a refresh / re-render doesn't re-trigger.
+  const aiDraftHandledRef = useRef(false);
+  useEffect(() => {
+    if (aiDraftHandledRef.current) return;
+    const aiDraft = (location.state as { aiDraft?: { type?: string; payload?: unknown } } | null)
+      ?.aiDraft;
+    if (!aiDraft || aiDraft.type !== "course") return;
+    if (!teacherId) return;
+    aiDraftHandledRef.current = true;
+
+    const parsed = aiCourseDraftSchema.safeParse(aiDraft.payload);
+    // Always clear state so a refresh doesn't re-trigger.
+    navigate(location.pathname, { replace: true, state: {} });
+    if (!parsed.success) {
+      toast.error("Draft AI invalid — încercați din nou.");
+      return;
+    }
+
+    (async () => {
+      setIsCreatingCourse(true);
+      try {
+        const created = await api.createCourse({
+          title: parsed.data.title,
+          description: parsed.data.description,
+          teacherId,
+          tags: [],
+        });
+        toast.success("Curs creat din draft AI. Editează-l acum.");
+        navigate(`/professor/courses/${created.id}`);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Eroare la crearea cursului din draft AI.");
+        setIsCreatingCourse(false);
+      }
+    })();
+  }, [location, navigate, teacherId]);
 
   useEffect(() => {
     if (!teacherId) return;

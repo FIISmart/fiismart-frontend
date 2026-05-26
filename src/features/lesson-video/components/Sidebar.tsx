@@ -191,7 +191,7 @@ export default function Sidebar({
                     return (
                       <div
                         key={lecture.lectureId}
-                        onClick={() => onSelectLecture(lecture.lectureId)}
+                        onClick={() => lecture.lectureId && onSelectLecture(lecture.lectureId)}
                         className={`flex items-start gap-3 p-3 rounded-lg transition-colors cursor-pointer border ${
                           isSelected
                             ? "bg-secondary/20 border-primary"

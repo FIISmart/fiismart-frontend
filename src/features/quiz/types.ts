@@ -1,16 +1,18 @@
-/**
- * Student-facing quiz question. Intentionally omits the answer-key fields
- * (`correctIdx`, `correctText`, `explanation`) that the course-builder uses —
- * the BE strips those from `GET /student-quizzes/:id` so the answer key never
- * reaches the student client. For the editor type that DOES carry those
- * fields, see `@/lib/course-types`.
- */
 export interface QuizQuestion {
   id: string;
   text: string;
-  type?: "multiple_choice" | "written" | string;
+  type?: "multiple_choice" | "written" | "free_text" | string;
   options: string[];
+  correctIdx?: number;
+  correctText?: string | null;
   points?: number;
+  explanation?: string;
+  // Free-text (AI-graded) fields. Surfaced to the player so it can render
+  // the textarea + AI-grading note, and to the result page so it can show
+  // missing concepts in context.
+  sampleAnswer?: string;
+  keyConcepts?: string[];
+  passThreshold?: number;
 }
 
 export interface Quiz {
@@ -26,16 +28,18 @@ export interface Quiz {
   questions: QuizQuestion[];
 }
 
-/**
- * One submitted answer in a quiz attempt. `correct` is stamped by the BE
- * after grading — the client must NOT send it; if present in a POST body
- * the server ignores it.
- */
 export interface QuizAttemptAnswer {
   questionId: string;
   selectedIdx: number;
   writtenAnswer?: string;
-  correct?: boolean;
+  correct: boolean;
+  // AI-grading fields, populated by the BE for free_text questions.
+  // `aiScore` may be null when grading failed entirely; downstream UI must
+  // treat null as "unavailable" rather than "0".
+  aiScore?: number | null;
+  aiConfidence?: number;
+  aiReasoning?: string;
+  aiMissingConcepts?: string[];
 }
 
 export interface QuizAttempt {

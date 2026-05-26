@@ -11,13 +11,22 @@ export interface Lesson {
   quiz?: Quiz;
 }
 
+export type QuizQuestionType = 'multiple_choice' | 'written' | 'free_text';
+
 export interface QuizQuestion {
   id: string;
   question: string;
-  type: 'multiple_choice' | 'written'; 
-  options?: string[]; 
-  correctAnswer: number | string; 
+  type: QuizQuestionType;
+  options?: string[];
+  correctAnswer: number | string;
   explanation?: string;
+  // Free-text (AI-graded) fields. Only meaningful when type === 'free_text'.
+  // We do not clear them on type switch so a user can toggle back to free_text
+  // without losing the model answer / concepts they typed.
+  sampleAnswer?: string;
+  keyConcepts?: string[];
+  /** Pass threshold in percent (0-100). Defaults to 70 on save when missing. */
+  passThreshold?: number;
 }
 
 export interface Quiz {
@@ -196,13 +205,28 @@ export function mapQuizToFE(quiz: any): Quiz {
     passingScore: quiz.passingScore ?? 70,
     timeLimit: quiz.timeLimit ?? 30,
     shuffleQuestions: quiz.shuffleQuestions ?? false,
-    questions: (Array.isArray(quiz.questions) ? quiz.questions : []).filter(Boolean).map((q: any) => ({
-      id: q.id ?? generateId(),
-      question: q.text ?? "",
-      type: q.type === 'written' ? 'written' : 'multiple_choice',
-      options: q.options || [],
-      correctAnswer: q.type === 'written' ? (q.correctText ?? "") : (q.correctIdx ?? 0),
-      explanation: q.explanation,
-    })),
+    questions: (Array.isArray(quiz.questions) ? quiz.questions : []).filter(Boolean).map((q: any) => {
+      const type: QuizQuestionType =
+        q.type === 'free_text'
+          ? 'free_text'
+          : q.type === 'written'
+            ? 'written'
+            : 'multiple_choice';
+      const correctAnswer: number | string =
+        type === 'multiple_choice' ? (q.correctIdx ?? 0) : (q.correctText ?? "");
+      return {
+        id: q.id ?? generateId(),
+        question: q.text ?? "",
+        type,
+        options: q.options || [],
+        correctAnswer,
+        explanation: q.explanation,
+        // Preserve AI-graded fields when the BE returns them. Undefined for
+        // legacy multiple_choice / written.
+        sampleAnswer: q.sampleAnswer ?? undefined,
+        keyConcepts: Array.isArray(q.keyConcepts) ? q.keyConcepts : undefined,
+        passThreshold: typeof q.passThreshold === 'number' ? q.passThreshold : undefined,
+      };
+    }),
   };
 }

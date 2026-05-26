@@ -1,6 +1,7 @@
 export const UserRole = {
   STUDENT: "STUDENT",
   PROFESSOR: "PROFESSOR",
+  ADMIN: "ADMIN",
 } as const;
 
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
@@ -16,6 +17,10 @@ export interface AuthUser {
   emailVerified?: boolean;
   /** True pentru utilizatorii Google nou-creați care nu și-au selectat rolul încă. */
   needsRoleSelection?: boolean;
+  banned?: boolean;
+  banReason?: string | null;
+  bannedAt?: string | null;
+  bannedBy?: string | null;
 }
 
 export interface AuthState {

@@ -2,12 +2,16 @@ export interface CourseHeader {
   courseId: string;
   title: string;
   description: string;
-  teacher: {
+  teacherDisplayName?: string;
+  teacherId?: string;
+  teacher?: {
     teacherId: string;
     displayName: string;
   };
   overallProgress: number;
   finalQuiz?: QuizStatus | null;
+  enrollmentCount?: number;
+  tags?: string[];
 }
 
 export interface CourseDetails {
@@ -115,4 +119,31 @@ export interface AddCommentPayload {
   body: string;
   timestampSecs: number;
   videoTimestamp: number;
+  parentCommentId?: string | null;
+}
+
+export interface GroupedVideoMarker {
+  time: number;
+  comments: CourseComment[];
+  count: number;
+}
+export interface ReviewRequest {
+  rating: number;
+  comment: string;
+}
+
+export interface ReviewResponse {
+  id: string;
+  studentId: string;
+  authorName: string;
+  courseId: string;
+  stars: number;
+  body: string;
+  createdAt: string;
+  deleted?: boolean;
+}
+
+export interface StreakResponse {
+  currentStreak: number;
+  hasCompletedToday: boolean;
 }
