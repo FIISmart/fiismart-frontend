@@ -55,14 +55,12 @@ export default function LessonVideoPage() {
 
   const studentId = user?.id ?? null;
 
-  // Sync lecture id with route
   useEffect(() => {
     if (lectureId) {
       setActiveLectureId(lectureId);
     }
   }, [lectureId]);
 
-  // Fetch course data
   const fetchCourseData = useCallback(async () => {
     if (!studentId || !courseId) return;
 
@@ -89,7 +87,6 @@ export default function LessonVideoPage() {
     void fetchCourseData();
   }, [fetchCourseData, refreshTrigger]);
 
-  // Fetch lecture details
   const fetchLectureDetails = useCallback(async () => {
     if (!studentId || !courseId || !activeLectureId) return;
 
@@ -110,7 +107,6 @@ export default function LessonVideoPage() {
     void fetchLectureDetails();
   }, [fetchLectureDetails]);
 
-  // Group comments by timestamp
   const groupedMarkersList = useMemo((): GroupedVideoMarker[] => {
     const groups: Record<number, CourseComment[]> = {};
 
@@ -255,20 +251,16 @@ export default function LessonVideoPage() {
 
   return (
       <div className="min-h-screen bg-edu-bg">
-        <div className="hidden lg:block">
           <Header />
-        </div>
 
-        <main className="max-w-[1200px] mx-auto lg:px-8 lg:py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 lg:gap-8">
-            {/* MAIN CONTENT */}
-            <div className="lg:col-span-2 flex flex-col gap-8">
+        <main className="max-w-[1200px] mx-auto p-4 sm:p-6 lg:p-8">
+          <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6 lg:gap-8">
 
+            <div className="lg:col-span-2 flex flex-col gap-6 order-1">
               <div className="flex justify-end">
                 {studentId && <StreakBadge studentId={studentId} />}
               </div>
 
-              {/* Logica de redare din branch-ul main (Video / Text) */}
               {lessonType === "video" ? (
                   videoSrc ? (
                       <VideoPlayer
@@ -285,11 +277,11 @@ export default function LessonVideoPage() {
                           onDurationDetected={handleDurationDetected}
                       />
                   ) : (
-                      <div className="bg-card border border-border rounded-2xl p-8 text-center text-muted-foreground">
+                      <div className="bg-card border border-border rounded-2xl p-6 text-center text-muted-foreground">
                         Video-ul nu este disponibil.
                         <div className="mt-4">
                           <Button onClick={() => void handleMarkComplete()} disabled={lectureDetails?.completed}>
-                            {lectureDetails?.completed ? "Parcurs" : "Marcheaza ca parcursa"}
+                            {lectureDetails?.completed ? "Parcurs" : "Marchează ca parcursă"}
                           </Button>
                         </div>
                       </div>
@@ -297,12 +289,11 @@ export default function LessonVideoPage() {
               ) : lectureDetails ? (
                   <LessonContent lecture={lectureDetails} onMarkComplete={handleMarkComplete} />
               ) : (
-                  <div className="bg-card border border-border rounded-2xl p-8 text-center text-muted-foreground">
-                    Lectia nu este disponibila.
+                  <div className="bg-card border border-border rounded-2xl p-6 text-center text-muted-foreground">
+                    Lecția nu este disponibilă.
                   </div>
               )}
 
-              {/* Buton de Quiz din branch-ul de feature */}
               {currentModuleQuizId && (
                   <button
                       onClick={() => navigate(`/student/quizzes/${currentModuleQuizId}`)}
@@ -311,14 +302,26 @@ export default function LessonVideoPage() {
                     Mergi la Quiz
                   </button>
               )}
+            </div>
 
-              {/* COURSE INFO */}
-              <div className="bg-card border border-border rounded-2xl p-8 shadow-sm">
+            <div className="lg:col-span-1 order-2">
+              <Sidebar
+                  studentId={studentId ?? ""}
+                  courseId={courseId ?? ""}
+                  activeLectureId={activeLectureId}
+                  onSelectLecture={handleSelectLecture}
+                  overallProgress={courseData?.overallProgress ?? 0}
+                  finalQuiz={courseData?.finalQuiz}
+                  refreshTrigger={refreshTrigger}
+              />
+            </div>
+
+            <div className="lg:col-span-2 flex flex-col gap-6 order-3">
+              <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm">
                 <CourseInfo courseData={courseData} />
               </div>
 
-              {/* COMMENTS */}
-              <div className="bg-card border border-border rounded-2xl p-8 shadow-sm">
+              <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm">
                 <CommentsSection
                     studentId={studentId ?? ""}
                     courseId={courseId ?? ""}
@@ -331,8 +334,7 @@ export default function LessonVideoPage() {
                 />
               </div>
 
-              {/* REVIEW */}
-              <div className="bg-card border border-border rounded-2xl p-8 shadow-sm">
+              <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm">
                 <ReviewSection
                     studentId={studentId ?? ""}
                     courseId={courseId ?? ""}
@@ -341,18 +343,6 @@ export default function LessonVideoPage() {
               </div>
             </div>
 
-            {/* SIDEBAR */}
-            <div className="hidden lg:block lg:col-span-1">
-              <Sidebar
-                  studentId={studentId ?? ""}
-                  courseId={courseId ?? ""}
-                  activeLectureId={activeLectureId}
-                  onSelectLecture={handleSelectLecture}
-                  overallProgress={courseData?.overallProgress ?? 0}
-                  finalQuiz={courseData?.finalQuiz}
-                  refreshTrigger={refreshTrigger}
-              />
-            </div>
           </div>
         </main>
       </div>
