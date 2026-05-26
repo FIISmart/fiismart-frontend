@@ -227,6 +227,45 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             const call: ToolCall = { name: ev.data.name, args: ev.data.args };
             accumulatedToolCalls = [...accumulatedToolCalls, call];
             setPendingToolCalls(accumulatedToolCalls);
+          } else if (ev.event === "tool_progress") {
+            // Atașăm evenimentul de progres pe ultimul tool call în desfășurare
+            // (cel cu același `name` și fără `result` încă). Iterăm din coadă
+            // ca să găsim cel mai recent match și recompunem array-ul fără
+            // mutare in-place (ca să re-renderează React).
+            let attached = false;
+            const next: ToolCall[] = new Array(accumulatedToolCalls.length);
+            for (let i = accumulatedToolCalls.length - 1; i >= 0; i--) {
+              const tc = accumulatedToolCalls[i];
+              if (!attached && tc.name === ev.data.name && tc.result === undefined) {
+                const entry = {
+                  step: ev.data.step,
+                  total: ev.data.total,
+                  message: ev.data.message,
+                  ts: now(),
+                };
+                const updatedProgress = [...(tc.progress ?? []), entry];
+                // Cap la 100 entries ca să evităm growth nemărginit pe un
+                // tool care emite în buclă.
+                const capped =
+                  updatedProgress.length > 100
+                    ? updatedProgress.slice(-100)
+                    : updatedProgress;
+                next[i] = { ...tc, progress: capped };
+                attached = true;
+              } else {
+                next[i] = tc;
+              }
+            }
+            if (attached) {
+              accumulatedToolCalls = next;
+              setPendingToolCalls(accumulatedToolCalls);
+            } else if (import.meta.env.DEV) {
+              // eslint-disable-next-line no-console
+              console.warn(
+                "[chat] tool_progress without a pending tool call:",
+                ev.data,
+              );
+            }
           } else if (ev.event === "tool_result") {
             accumulatedToolCalls = accumulatedToolCalls.map((tc) =>
               tc.name === ev.data.name && tc.result === undefined
