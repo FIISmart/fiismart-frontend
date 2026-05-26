@@ -39,7 +39,7 @@ export default function LessonVideoPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [activeLectureId, setActiveLectureId] = useState<string | null>(
-      lectureId ?? null
+    lectureId && lectureId !== "undefined" ? lectureId : null
   );
 
   const [lectureDetails, setLectureDetails] =
@@ -60,9 +60,7 @@ export default function LessonVideoPage() {
   const studentId = user?.id ?? null;
 
   useEffect(() => {
-    if (lectureId) {
-      setActiveLectureId(lectureId);
-    }
+    if (lectureId && lectureId !== "undefined") setActiveLectureId(lectureId);
   }, [lectureId]);
 
   const fetchCourseData = useCallback(async () => {
@@ -80,8 +78,15 @@ export default function LessonVideoPage() {
 
       setCourseData(data);
 
+      // If we don't have a lecture yet, default to the first one in the course
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const firstLectureId = (data as any)?.modules?.[0]?.lectures?.[0]?.lectureId;
-      if (!activeLectureId && firstLectureId && typeof firstLectureId === "string") {
+      if (
+        !activeLectureId &&
+        firstLectureId &&
+        typeof firstLectureId === "string" &&
+        firstLectureId !== "undefined"
+      ) {
         setActiveLectureId(firstLectureId);
       }
     } catch {
@@ -96,9 +101,9 @@ export default function LessonVideoPage() {
   }, [fetchCourseData, refreshTrigger]);
 
   const fetchLectureDetails = useCallback(async () => {
-    if (!courseId || !activeLectureId) return;
+    if (!courseId || !activeLectureId || activeLectureId === "undefined") return;
 
-    // <-- NOU: Fallback inteligent pentru ID-ul utilizatorului
+    // Fallback inteligent pentru ID-ul utilizatorului (preview profesor etc.)
     const currentId = studentId ?? user?.id;
     if (!currentId) return;
 
@@ -177,6 +182,7 @@ export default function LessonVideoPage() {
   }, []);
 
   const handleSelectLecture = useCallback((nextLectureId: string) => {
+    if (!nextLectureId) return;
     setActiveLectureId(nextLectureId);
     if (courseId) {
       if (isPreview) {
@@ -189,7 +195,7 @@ export default function LessonVideoPage() {
 
   const handleMarkComplete = useCallback(async (durationSecs?: number) => {
     if (isPreview) return;
-    if (!studentId || !courseId || !activeLectureId) return;
+    if (!studentId || !courseId || !activeLectureId || activeLectureId === "undefined") return;
     const nextDuration = durationSecs ?? lectureDetails?.durationSecs;
     try {
       await lessonVideoService.saveProgress(studentId, courseId, activeLectureId, {
@@ -213,7 +219,7 @@ export default function LessonVideoPage() {
 
   const handleDurationDetected = useCallback(async (durationSecs: number) => {
     if (isPreview) return;
-    if (!studentId || !courseId || !activeLectureId || durationSecs <= 0) return;
+    if (!studentId || !courseId || !activeLectureId || activeLectureId === "undefined" || durationSecs <= 0) return;
     const currentDuration = lectureDetails?.durationSecs ?? 0;
     if (currentDuration > 0 && Math.abs(currentDuration - durationSecs) <= 1) return;
 

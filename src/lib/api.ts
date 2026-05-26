@@ -736,3 +736,94 @@ export function checkMyEnrollment(courseId: string) {
 export function enrollMe(courseId: string) {
   return request<{ id: string }>(`/enrollments/me/${courseId}`, { method: "POST" });
 }
+
+// ── Admin ───────────────────────────────────────────────
+
+export interface AdminStatsAPI {
+  totalUsers: number;
+  totalStudents: number;
+  totalProfessors: number;
+  totalAdmins: number;
+  totalCourses: number;
+  publishedCourses: number;
+  totalEnrollments: number;
+  totalComments: number;
+}
+
+export interface AdminUserAPI {
+  id: string;
+  email: string;
+  displayName: string | null;
+  role: string;
+  isAdmin: boolean;
+  banned: boolean;
+  banReason: string | null;
+  bannedAt: string | null;
+  needsRoleSelection: boolean;
+  createdAt: string | null;
+  lastLoginAt: string | null;
+  ownedCoursesCount: number;
+  enrolledCoursesCount: number;
+}
+
+export interface AdminCourseAPI {
+  id: string;
+  title: string;
+  description: string;
+  teacherId: string;
+  status: string;
+  hidden: boolean;
+  tags: string[];
+  thumbnailUrl: string | null;
+  enrollmentCount: number;
+  moduleCount: number;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface AdminEnrollmentAPI {
+  id: string;
+  studentId: string;
+  studentName: string;
+  courseId: string;
+  courseTitle: string;
+  status: string;
+  overallProgress: number;
+  enrolledAt: string | null;
+}
+
+export function adminGetStats() {
+  return request<AdminStatsAPI>("/admin/stats");
+}
+
+export function adminGetUsers() {
+  return request<AdminUserAPI[]>("/admin/users");
+}
+
+export function adminUpdateUser(userId: string, data: { displayName?: string; isAdmin?: boolean; banned?: boolean; banReason?: string }) {
+  return request<AdminUserAPI>(`/admin/users/${userId}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export function adminDeleteUser(userId: string) {
+  return request<void>(`/admin/users/${userId}`, { method: "DELETE" });
+}
+
+export function adminGetCourses() {
+  return request<AdminCourseAPI[]>("/admin/courses");
+}
+
+export function adminUpdateCourse(courseId: string, data: { title?: string; description?: string; status?: string; hidden?: boolean; tags?: string[] }) {
+  return request<AdminCourseAPI>(`/admin/courses/${courseId}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export function adminDeleteCourse(courseId: string) {
+  return request<void>(`/admin/courses/${courseId}`, { method: "DELETE" });
+}
+
+export function adminGetEnrollments() {
+  return request<AdminEnrollmentAPI[]>("/admin/enrollments");
+}
+
+export function adminDeleteEnrollment(enrollmentId: string) {
+  return request<void>(`/admin/enrollments/${enrollmentId}`, { method: "DELETE" });
+}

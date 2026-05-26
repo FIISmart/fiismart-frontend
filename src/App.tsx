@@ -5,6 +5,7 @@ import AuthPage from "@/features/auth/pages/AuthPage";
 import AuthCallbackPage from "@/features/auth/pages/AuthCallbackPage";
 import CompleteProfilePage from "@/features/auth/pages/CompleteProfilePage";
 import UnauthorizedPage from "@/features/auth/pages/UnauthorizedPage";
+import BannedPage from "@/features/auth/pages/BannedPage";
 import TermsOfServicePage from "@/features/auth/components/TermsOfServicePage";
 import PrivacyPolicyPage from "@/features/auth/components/PrivacyPolicyPage";
 import RoleDashboardRedirect from "@/features/auth/components/RoleDashboardRedirect";
@@ -18,6 +19,10 @@ import MyQuizzesPage from "@/features/course-builder/pages/MyQuizzesPage";
 import CoursesListPage from "@/features/courses/pages/CoursesListPage";
 import StudentCoursesPage from "@/features/dashboard-student/pages/StudentCoursesPage";
 import StudentCourseDetailPage from "@/features/dashboard-student/pages/StudentCourseDetailPage";
+import AdminDashboardPage from "@/features/admin/pages/AdminDashboardPage";
+import AdminUsersPage from "@/features/admin/pages/AdminUsersPage";
+import AdminCoursesPage from "@/features/admin/pages/AdminCoursesPage";
+import AdminEnrollmentsPage from "@/features/admin/pages/AdminEnrollmentsPage";
 import ProfessorPreviewRedirectPage from "@/features/lesson-video/pages/ProfessorPreviewRedirectPage";
 import { Toaster } from "sonner";
 import { ChatProvider } from "@/features/chat/context/ChatContext";
@@ -55,6 +60,7 @@ export default function App() {
       <Route path="/terms" element={<TermsOfServicePage />} />
       <Route path="/privacy" element={<PrivacyPolicyPage />} />
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
+      <Route path="/banned" element={<BannedPage />} />
 
       {/* Student-only */}
       <Route element={<ProtectedRoute allowedRoles={[UserRole.STUDENT]} />}>
@@ -75,8 +81,16 @@ export default function App() {
         <Route path="/professor/preview/:courseId/lectures/:lectureId" element={<LessonVideoPage />} />
       </Route>
 
+      {/* Admin-only */}
+      <Route element={<ProtectedRoute allowedRoles={[UserRole.ADMIN]} />}>
+        <Route path="/admin/dashboard"   element={<AdminDashboardPage />} />
+        <Route path="/admin/users"       element={<AdminUsersPage />} />
+        <Route path="/admin/courses"     element={<AdminCoursesPage />} />
+        <Route path="/admin/enrollments" element={<AdminEnrollmentsPage />} />
+      </Route>
+
       {/* Role-aware dashboard alias */}
-      <Route element={<ProtectedRoute allowedRoles={[UserRole.STUDENT, UserRole.PROFESSOR]} />}>
+      <Route element={<ProtectedRoute allowedRoles={[UserRole.STUDENT, UserRole.PROFESSOR, UserRole.ADMIN]} />}>
         <Route path="/dashboard" element={<RoleDashboardRedirect />} />
       </Route>
 
