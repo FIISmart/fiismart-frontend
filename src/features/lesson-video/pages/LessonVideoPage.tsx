@@ -1,19 +1,19 @@
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useAuth } from "@/features/auth/context/AuthContext";
-import { Spinner } from "@/components/ui/spinner";
-import { Button } from "@/components/ui/button";
+import { useAuth } from "@/features/auth/context/AuthContext.tsx";
+import { Spinner } from "@/components/ui/spinner.tsx";
+import { Button } from "@/components/ui/button.tsx";
 
-import Header from "../components/Header";
-import VideoPlayer from "../components/VideoPlayer";
-import LessonContent, { inferLessonType } from "../components/LessonContent";
-import CourseInfo from "../components/CourseInfo";
-import Sidebar from "../components/Sidebar";
-import CommentsSection from "../components/CommentsSection";
-import { ReviewSection } from "../components/ReviewSection";
-import { StreakBadge } from "../components/StreakBadge";
+import Header from "../components/Header.tsx";
+import VideoPlayer from "../components/VideoPlayer.tsx";
+import LessonContent, { inferLessonType } from "../components/LessonContent.tsx";
+import CourseInfo from "../components/CourseInfo.tsx";
+import Sidebar from "../components/Sidebar.tsx";
+import CommentsSection from "../components/CommentsSection.tsx";
+import { ReviewSection } from "../components/ReviewSection.tsx";
+import { StreakBadge } from "../components/StreakBadge.tsx";
 
-import { lessonVideoService } from "../services/lesson-video.service";
+import { lessonVideoService } from "../services/lesson-video.service.ts";
 
 import type {
   CourseComment,
@@ -74,10 +74,9 @@ export default function LessonVideoPage() {
 
       setCourseData(data);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (!activeLectureId && (data as any)?.modules?.[0]?.lectures?.[0]) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setActiveLectureId((data as any).modules[0].lectures[0].lectureId);
+      const firstLectureId = (data as any)?.modules?.[0]?.lectures?.[0]?.lectureId;
+      if (!activeLectureId && firstLectureId && typeof firstLectureId === "string") {
+        setActiveLectureId(firstLectureId);
       }
     } catch {
       setError("Eroare la încărcarea cursului.");
@@ -265,9 +264,8 @@ export default function LessonVideoPage() {
             {/* MAIN CONTENT */}
             <div className="lg:col-span-2 flex flex-col gap-8">
 
-              {/* Streak Badge adăugat din branch-ul de feature */}
               <div className="flex justify-end">
-                <StreakBadge studentId={studentId ?? ""} />
+                {studentId && <StreakBadge studentId={studentId} />}
               </div>
 
               {/* Logica de redare din branch-ul main (Video / Text) */}

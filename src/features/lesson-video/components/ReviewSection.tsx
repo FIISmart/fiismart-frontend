@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { Star, Send, MessageSquareQuote } from "lucide-react";
 import { lessonVideoService } from "../services/lesson-video.service";
 import type { ReviewResponse } from "../types";
@@ -16,37 +16,65 @@ export function ReviewSection({ studentId, courseId, lectureId }: ReviewSectionP
     const [rating, setRating] = useState<number>(5);
     const [hoveredRating, setHoveredRating] = useState<number>(0);
     const [comment, setComment] = useState<string>("");
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [loading, setLoading] = useState(true);
 
-    // 1. Preluare recenzii
+    // Stări noi conform Fix 4
+    const [hasReviewed, setHasReviewed] = useState(false);
+    const [existingReviewId, setExistingReviewId] = useState<string | null>(null);
+
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+    const [loading, setLoading] = useState<boolean>(true);
+
+    // 1. Preluare recenzii + Verificare status
     useEffect(() => {
         let mounted = true;
-        lessonVideoService.getReviews(studentId, courseId, lectureId)
-            .then((data) => {
-                if (mounted) {
-                    setReviews(data);
-                    setLoading(false);
+
+        Promise.all([
+            lessonVideoService.getReviews(studentId, courseId, lectureId),
+            lessonVideoService.checkReviewExists(studentId, courseId)
+        ]).then(([data, existsData]) => {
+            if (!mounted) return;
+            setReviews(data);
+            setHasReviewed(existsData.reviewed);
+
+            // dacă a recenzat deja, găsește id-ul recenziei existente pentru a încărca textul în formular
+            if (existsData.reviewed) {
+                const existing = data.find(r => r.studentId === studentId);
+                if (existing) {
+                    setExistingReviewId(existing.id);
+                    setRating(existing.stars);
+                    setComment(existing.body);
                 }
-            })
-            .catch((error) => {
-                console.error("Eroare la preluarea recenziilor:", error);
-                if (mounted) setLoading(false);
-            });
+            }
+            setLoading(false);
+        }).catch((error) => {
+            console.error("Eroare la preluarea recenziilor:", error);
+            if (mounted) setLoading(false);
+        });
+
         return () => { mounted = false; };
     }, [studentId, courseId, lectureId]);
 
-    // 2. Adăugare recenzie
-    const handleSubmit = async (e: React.FormEvent) => {
+    // 2. Adăugare sau Editare recenzie
+    const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!comment.trim()) return;
 
         setIsSubmitting(true);
         try {
-            const newReview = await lessonVideoService.addReview(studentId, courseId, lectureId, { rating, comment });
-            setReviews((prev) => [newReview, ...prev]);
-            setComment("");
-            setRating(5);
+            if (hasReviewed && existingReviewId) {
+                // Editează recenzia existentă
+                await lessonVideoService.updateReview(existingReviewId, { stars: rating, body: comment });
+                // Actualizează local lista
+                setReviews(prev => prev.map(r =>
+                    r.id === existingReviewId ? { ...r, stars: rating, body: comment } : r
+                ));
+            } else {
+                // Adaugă recenzie nouă
+                const newReview = await lessonVideoService.addReview(studentId, courseId, lectureId, { rating, comment });
+                setReviews(prev => [newReview, ...prev]);
+                setHasReviewed(true);
+                setExistingReviewId(newReview.id);
+            }
         } catch (error) {
             console.error("Eroare la trimiterea recenziei:", error);
         } finally {
@@ -60,20 +88,27 @@ export function ReviewSection({ studentId, courseId, lectureId }: ReviewSectionP
 
     return (
         <div className="space-y-6">
-            {/* HEADER - Identic cu CommentsSection */}
+            {/* HEADER */}
             <div className="flex items-center justify-between border-b border-border pb-4">
                 <h3 className="font-bold text-xl flex items-center gap-2 text-foreground">
                     <MessageSquareQuote size={24} className="text-primary" />
                     Recenzii
                 </h3>
                 <span className="px-3 py-1 bg-accent/30 text-foreground text-sm font-medium rounded-full">
-          {reviews.length} {reviews.length === 1 ? 'recenzie' : 'recenzii'}
-        </span>
+                    {reviews.length} {reviews.length === 1 ? 'recenzie' : 'recenzii'}
+                </span>
             </div>
 
-            {/* FORMULAR ADĂUGARE - Folosind bg-muted/30 ca la comentarii */}
+            {/* FORMULAR ADĂUGARE/EDITARE */}
             <div className="bg-muted/30 p-4 rounded-xl border border-border">
                 <form onSubmit={handleSubmit} className="flex flex-col">
+                    {/* Mesaj informativ dacă a recenzat deja */}
+                    {hasReviewed && (
+                        <p className="text-xs font-semibold text-primary mb-3 bg-primary/10 w-fit px-2 py-1 rounded">
+                            Ai lăsat deja o recenzie. O poți actualiza mai jos.
+                        </p>
+                    )}
+
                     {/* Steluțe interactive */}
                     <div className="flex items-center gap-3 mb-3 px-1">
                         <span className="text-sm font-medium text-muted-foreground">Evaluează lecția:</span>
@@ -98,8 +133,8 @@ export function ReviewSection({ studentId, courseId, lectureId }: ReviewSectionP
                             })}
                         </div>
                         <span className="text-xs font-bold text-foreground ml-2">
-              {hoveredRating || rating} / 5
-            </span>
+                            {hoveredRating || rating} / 5
+                        </span>
                     </div>
 
                     <textarea
@@ -117,7 +152,7 @@ export function ReviewSection({ studentId, courseId, lectureId }: ReviewSectionP
                             className="flex items-center gap-2 bg-primary text-white px-5 py-2 rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
                         >
                             <Send size={16} />
-                            {isSubmitting ? "Se postează..." : "Postează recenzia"}
+                            {isSubmitting ? "Se salvează..." : hasReviewed ? "Actualizează recenzia" : "Postează recenzia"}
                         </button>
                     </div>
                 </form>
@@ -128,10 +163,9 @@ export function ReviewSection({ studentId, courseId, lectureId }: ReviewSectionP
                 {reviews.map((review) => (
                     <div key={review.id} className="py-4 border-b border-border last:border-0 last:pb-0">
                         <div className="flex justify-between items-start mb-3">
-                            {/* Autor și dată (design asemănător cu un profil) */}
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                                    {review.authorName.substring(0, 2).toUpperCase()}
+                                    {review.authorName?.substring(0, 2).toUpperCase() || "??"}
                                 </div>
                                 <div>
                                     <p className="text-sm font-bold text-foreground">{review.authorName}</p>
@@ -140,21 +174,19 @@ export function ReviewSection({ studentId, courseId, lectureId }: ReviewSectionP
                                     </p>
                                 </div>
                             </div>
-
-                            {/* Rating-ul afișat */}
                             <div className="flex items-center gap-0.5 text-primary">
                                 {[1, 2, 3, 4, 5].map((star) => (
                                     <Star
                                         key={star}
                                         size={14}
-                                        fill={review.rating >= star ? "currentColor" : "none"}
-                                        className={review.rating >= star ? "text-primary" : "text-muted-foreground/30"}
+                                        fill={review.stars >= star ? "currentColor" : "none"}
+                                        className={review.stars >= star ? "text-primary" : "text-muted-foreground/30"}
                                     />
                                 ))}
                             </div>
                         </div>
 
-                        <p className="text-sm text-foreground/90 pl-[52px]">{review.comment}</p>
+                        <p className="text-sm text-foreground/90 pl-[52px]">{review.body}</p>
                     </div>
                 ))}
 
