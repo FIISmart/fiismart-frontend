@@ -1,4 +1,22 @@
 export const API_BASE = import.meta.env.VITE_API_URL || "/api";
+const API_ORIGIN = import.meta.env.VITE_API_ORIGIN;
+
+export function resolveApiAssetUrl(url?: string | null): string {
+  if (!url) return "";
+  if (/^(https?:)?\/\//i.test(url) || url.startsWith("blob:") || url.startsWith("data:")) {
+    return url;
+  }
+
+  if (API_ORIGIN && url.startsWith("/api/")) {
+    return `${API_ORIGIN.replace(/\/$/, "")}${url}`;
+  }
+
+  if (/^https?:\/\//i.test(API_BASE) && url.startsWith("/api/")) {
+    return `${new URL(API_BASE).origin}${url}`;
+  }
+
+  return url;
+}
 
 /** Eroare aruncată de apiFetch pentru răspunsuri non-2xx. Poartă și codul din JSON. */
 export class ApiError extends Error {
@@ -15,10 +33,25 @@ export class ApiError extends Error {
 /** localStorage key for the bearer token. Mirrored from features/auth/services/auth.service.ts. */
 const TOKEN_KEY = "fiismart_token";
 
-function authHeader(): Record<string, string> {
+export function authHeader(): Record<string, string> {
   if (typeof window === "undefined") return {};
   const token = window.localStorage.getItem(TOKEN_KEY);
   return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+export async function fetchApiAssetBlobUrl(url: string): Promise<string> {
+  const resolvedUrl = resolveApiAssetUrl(url);
+  const res = await fetch(resolvedUrl, {
+    headers: { ...authHeader() },
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: res.statusText }));
+    throw new ApiError(err.message || `File request failed: ${res.status}`, res.status, err.code);
+  }
+
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
 }
 
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
@@ -78,6 +111,8 @@ export interface CourseAPI {
   status: string;
   tags: string[];
   thumbnailUrl: string | null;
+  enrollmentCount?: number;
+  avgRating?: number;
   createdAt: string;
   updatedAt: string;
   // Backend now uses Modules
@@ -174,7 +209,7 @@ export function deleteModule(courseId: string, moduleId: string) {
 export function addLectureToModule(
   courseId: string, 
   moduleId: string, 
-  data: { title: string; type?: string; content?: string; videoUrl?: string; pdfUrl?: string; order: number; durationSecs: number }
+  data: { title: string; type?: string; content?: string; videoUrl?: string | null; pdfUrl?: string | null; order: number; durationSecs: number }
 ) {
   return request<LectureAPI>(`/courses/${courseId}/builder/modules/${moduleId}/lectures`, {
     method: "POST",
@@ -293,7 +328,7 @@ export interface ModuleQuizQuestionPayload {
   type?: string;
   points?: number;
   options: string[];
-  correctIdx: number;
+  correctIdx?: number | null;
   correctText?: string | null;
   explanation?: string;
 }

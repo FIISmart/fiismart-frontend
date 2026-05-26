@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { CheckCircle2, ExternalLink, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { resolveFileUrl } from "@/lib/api";
+import { fetchApiAssetBlobUrl } from "@/lib/api";
 import type { LectureDetails } from "../types";
 
 type Props = {
@@ -31,7 +31,8 @@ export function estimateReadingDurationSecs(text?: string | null): number {
 }
 
 function sourceLooksRemote(source: string): boolean {
-  return URL_RE.test(source) || source.startsWith("/");
+  const trimmed = source.trim();
+  return URL_RE.test(trimmed) || (trimmed.startsWith("/") && !trimmed.includes("\n"));
 }
 
 function renderInline(text: string): ReactNode[] {
@@ -126,6 +127,9 @@ export default function LessonContent({ lecture, onMarkComplete, isSaving = fals
   const source = lecture.content || lecture.pdfUrl || lecture.videoUrl || "";
   const [remoteMarkdown, setRemoteMarkdown] = useState<string | null>(null);
   const [loadingMarkdown, setLoadingMarkdown] = useState(false);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [loadingPdf, setLoadingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   useEffect(() => {
     if (type !== "markdown" || !sourceLooksRemote(source)) {
@@ -146,6 +150,45 @@ export default function LessonContent({ lecture, onMarkComplete, isSaving = fals
     return () => controller.abort();
   }, [source, type]);
 
+  useEffect(() => {
+    const pdfSource = lecture.pdfUrl || lecture.content || lecture.videoUrl || "";
+    if (type !== "pdf" || !pdfSource) {
+      setPdfBlobUrl(null);
+      setPdfError(null);
+      return;
+    }
+
+    let currentBlobUrl: string | null = null;
+    let cancelled = false;
+    setPdfBlobUrl(null);
+    setLoadingPdf(true);
+    setPdfError(null);
+
+    fetchApiAssetBlobUrl(pdfSource)
+      .then((blobUrl) => {
+        if (cancelled) {
+          URL.revokeObjectURL(blobUrl);
+          return;
+        }
+        currentBlobUrl = blobUrl;
+        setPdfBlobUrl(blobUrl);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setPdfBlobUrl(null);
+          setPdfError(err instanceof Error ? err.message : "PDF-ul nu poate fi incarcat.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingPdf(false);
+      });
+
+    return () => {
+      cancelled = true;
+      if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+    };
+  }, [lecture.content, lecture.pdfUrl, lecture.videoUrl, type]);
+
   const markdownContent = remoteMarkdown ?? source;
   const estimatedDuration = useMemo(
     () => estimateReadingDurationSecs(markdownContent),
@@ -161,9 +204,9 @@ export default function LessonContent({ lecture, onMarkComplete, isSaving = fals
             <p className="text-xs font-semibold uppercase tracking-wide text-primary">Document</p>
             <h1 className="truncate text-xl font-bold text-foreground">{lecture.title}</h1>
           </div>
-          {pdfUrl && (
+          {pdfBlobUrl && (
             <Button asChild variant="outline" className="gap-2 shrink-0">
-              <a href={resolveFileUrl(pdfUrl)} target="_blank" rel="noreferrer">
+              <a href={pdfBlobUrl} target="_blank" rel="noreferrer">
                 <ExternalLink className="h-4 w-4" />
                 Deschide
               </a>
@@ -171,16 +214,21 @@ export default function LessonContent({ lecture, onMarkComplete, isSaving = fals
           )}
         </div>
 
-        {pdfUrl ? (
+        {loadingPdf ? (
+          <div className="flex min-h-[360px] items-center justify-center text-muted-foreground">
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Se incarca PDF-ul...
+          </div>
+        ) : pdfBlobUrl ? (
           <iframe
             title={lecture.title}
-            src={resolveFileUrl(pdfUrl)}
+            src={pdfBlobUrl}
             className="h-[70vh] min-h-[520px] w-full bg-muted"
           />
         ) : (
           <div className="flex min-h-[360px] flex-col items-center justify-center gap-3 p-8 text-center text-muted-foreground">
             <FileText className="h-10 w-10" />
-            <p>PDF-ul nu este disponibil.</p>
+            <p>{pdfUrl ? (pdfError ?? "PDF-ul nu poate fi incarcat.") : "PDF-ul nu este disponibil."}</p>
           </div>
         )}
 

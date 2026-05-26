@@ -27,7 +27,7 @@ export function quizToModuleQuizPayload(quiz: Quiz): api.ModuleQuizPayload {
           type: "written",
           points: 1,
           options: [],
-          correctIdx: 0,
+          correctIdx: null,
           correctText,
           explanation: question.explanation?.trim() || undefined,
         };

@@ -10,7 +10,11 @@ const navLinks = [
   { label: "Contact", href: "#contact" },
 ];
 
-export default function Navbar() {
+type NavbarProps = {
+  solid?: boolean;
+};
+
+export default function Navbar({ solid = false }: NavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
@@ -31,7 +35,7 @@ export default function Navbar() {
   return (
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 navbar-blur ${
-        isScrolled
+        solid || isScrolled
           ? "bg-background/80 shadow-card border-b border-border"
           : "bg-transparent"
       }`}

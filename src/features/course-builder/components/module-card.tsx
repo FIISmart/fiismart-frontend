@@ -226,8 +226,8 @@ export function ModuleCard({
           title: lesson.title,
           type: lesson.type,
           content: lesson.content,
-          videoUrl: lesson.content,
-          pdfUrl: lesson.type === "pdf" ? lesson.content : undefined,
+          videoUrl: lesson.type === "video" ? lesson.content : null,
+          pdfUrl: lesson.type === "pdf" ? lesson.content : null,
           durationSecs: (lesson.duration || 0) * 60,
         });
 
@@ -243,8 +243,8 @@ export function ModuleCard({
           title: lesson.title,
           type: lesson.type,
           content: lesson.content,
-          videoUrl: lesson.content,
-          pdfUrl: lesson.type === "pdf" ? lesson.content : undefined,
+          videoUrl: lesson.type === "video" ? lesson.content : null,
+          pdfUrl: lesson.type === "pdf" ? lesson.content : null,
           order: moduleItems.length,
           durationSecs: (lesson.duration || 0) * 60,
         });
@@ -597,6 +597,7 @@ export function ModuleCard({
         onCancel={() => { setActiveModuleQuizId(null); setEditingQuiz(undefined); }}
         onRemove={module.quiz ? () => handleRemoveModuleQuiz() : undefined}
         isOpen={activeModuleQuizId !== null}
+        supportsWritten
       />
       <QuizEditor
         quiz={editingLessonQuiz?.quiz}
