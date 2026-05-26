@@ -20,7 +20,7 @@ import { mapCourseToFE } from "@/lib/course-types";
 import * as api from "@/lib/api";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { toast } from "sonner";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { courseRefreshBus } from "@/features/chat/context/CourseRefreshBus";
 
 const pendingNewCourseCreations = new Map<string, Promise<api.CourseAPI>>();
@@ -44,6 +44,7 @@ function isNotFoundError(err: unknown): boolean {
 export default function CourseBuilderPage() {
   const { user } = useAuth();
   const teacherId = user?.id;
+  const navigate = useNavigate();
   const { courseId: routeCourseId } = useParams<{ courseId: string }>();
   const [searchParams] = useSearchParams();
   const [course, setCourse] = useState<Course | null>(null);
@@ -327,13 +328,13 @@ export default function CourseBuilderPage() {
     setIsSaving(true);
     try {
       await api.publishCourse(course.id);
-      setCourse(prev => prev ? { ...prev, status: "published" } : prev);
+      setPublishDialogOpen(false);
       toast.success("Curs publicat!");
-    } catch (err) {
+      navigate("/professor/courses", { replace: true });
+    } catch {
       toast.error("Eroare la publicare");
     } finally {
       setIsSaving(false);
-      setPublishDialogOpen(false);
     }
   };
 
