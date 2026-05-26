@@ -18,11 +18,13 @@ import MyQuizzesPage from "@/features/course-builder/pages/MyQuizzesPage";
 import CoursesListPage from "@/features/courses/pages/CoursesListPage";
 import StudentCoursesPage from "@/features/dashboard-student/pages/StudentCoursesPage";
 import StudentCourseDetailPage from "@/features/dashboard-student/pages/StudentCourseDetailPage";
+import ProfessorPreviewRedirectPage from "@/features/lesson-video/pages/ProfessorPreviewRedirectPage";
 import { Toaster } from "sonner";
 import { ChatProvider } from "@/features/chat/context/ChatContext";
 import { FloatingChatButton } from "@/features/chat/components/FloatingChatButton";
 import { ChatPanel } from "@/features/chat/components/ChatPanel";
 import { useAuth } from "@/features/auth/context/AuthContext";
+
 
 /**
  * Chatbot global: provider-ul rămâne montat permanent (cost minim), iar
@@ -69,6 +71,8 @@ export default function App() {
         <Route path="/professor/courses" element={<CoursesListPage />} />
         <Route path="/professor/quizzes" element={<MyQuizzesPage />} />
         <Route path="/professor/courses/:courseId" element={<CourseBuilderPage />} />
+        <Route path="/professor/preview/:courseId" element={<ProfessorPreviewRedirectPage />} />
+        <Route path="/professor/preview/:courseId/lectures/:lectureId" element={<LessonVideoPage />} />
       </Route>
 
       {/* Role-aware dashboard alias */}

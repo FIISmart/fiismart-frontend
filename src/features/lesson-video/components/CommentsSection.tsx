@@ -18,6 +18,7 @@ interface Props {
   activeCommentId: string | null;
   onCommentsLoaded: (comments: CourseComment[]) => void;
   onRefreshComments: () => Promise<void>;
+  isPreview?: boolean; // <-- Am adăugat isPreview în interfață
 }
 
 export default function CommentsSection({
@@ -29,6 +30,7 @@ export default function CommentsSection({
                                           activeCommentId,
                                           onCommentsLoaded,
                                           onRefreshComments,
+                                          isPreview = false, // <-- Extragem isPreview cu o valoare default
                                         }: Props) {
   const [comments, setComments] = useState<CourseComment[]>([]);
   const [text, setText] = useState("");
@@ -52,7 +54,7 @@ export default function CommentsSection({
   }
 
   const fetchComments = useCallback(async () => {
-    if (!lectureId) return;
+    if (!lectureId || !studentId) return; // Siguranță
     try {
       const data = await lessonVideoService.getComments(
           studentId,
@@ -191,12 +193,20 @@ export default function CommentsSection({
         </div>
 
         <div className="bg-muted/30 p-4 rounded-xl border border-border">
-        <textarea
-            placeholder="Pune o întrebare sau lasă un comentariu..."
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            className="w-full bg-muted border border-border rounded-xl p-3 text-sm focus:outline-none focus:border-primary resize-none h-24 mb-3"
-        />
+          {/* Banner de avertizare pentru Mod Preview adăugat aici */}
+          {isPreview && (
+              <div className="mb-3 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium flex items-center gap-2">
+                <span>👁️</span>
+                <span>Mod Preview — comentariile postate sunt vizibile studenților</span>
+              </div>
+          )}
+
+          <textarea
+              placeholder="Pune o întrebare sau lasă un comentariu..."
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              className="w-full bg-muted border border-border rounded-xl p-3 text-sm focus:outline-none focus:border-primary resize-none h-24 mb-3"
+          />
 
           <div className="flex justify-between items-center">
             <button
