@@ -44,6 +44,13 @@ interface AuthContextValue extends AuthState {
   loginWithCognito: (code: string, state: string) => Promise<AuthUser>;
   /** Utilizatorii Google fără rol selectat apelează aceasta după ce aleg rolul. */
   assignRole: (role: UserRole, firstName?: string, lastName?: string) => Promise<AuthUser>;
+  /**
+   * Re-fetch /auth/me with the stored token and replace the in-memory user.
+   * Use this when the in-context user is suspected stale — e.g. a route
+   * guard sees a role mismatch and wants to verify the BE side before
+   * redirecting to /unauthorized.
+   */
+  refreshUser: () => Promise<AuthUser | null>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -131,6 +138,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return updated;
   }, []);
 
+  const refreshUser = useCallback(async (): Promise<AuthUser | null> => {
+    const me = await getCurrentUser();
+    setUser(me);
+    return me;
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -145,9 +158,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       loginWithCognito,
       assignRole,
+      refreshUser,
     }),
     [user, isLoading, login, signup, verifyEmail, resendVerification,
-     forgotPassword, resetPassword, logout, loginWithCognito, assignRole]
+     forgotPassword, resetPassword, logout, loginWithCognito, assignRole, refreshUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
