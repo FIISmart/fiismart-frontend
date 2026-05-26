@@ -75,8 +75,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (payload: LoginPayload): Promise<AuthUser> => {
     const res = await loginRequest(payload);
-    setUser(res.user);
-    return res.user;
+    // POST /auth/login returns the user object as it sits in MongoDB right
+    // now — but role promotion (Cognito groups → MongoDB role) only runs in
+    // the JWT converter on subsequent requests. Re-fetch /auth/me so the
+    // post-login redirect sees the upgraded role (admin promoted via group).
+    const fresh = await getCurrentUser();
+    const finalUser = fresh ?? res.user;
+    setUser(finalUser);
+    return finalUser;
   }, []);
 
   const signup = useCallback(async (payload: SignupPayload): Promise<RegisterResponse> => {
