@@ -17,6 +17,8 @@ import QuizPlayerPage from "@/features/quiz/pages/QuizPlayerPage";
 import CourseBuilderPage from "@/features/course-builder/pages/CourseBuilderPage";
 import MyQuizzesPage from "@/features/course-builder/pages/MyQuizzesPage";
 import CoursesListPage from "@/features/courses/pages/CoursesListPage";
+import TimetablePage from "@/features/timetable/pages/TimetablePage";
+import StatisticsPage from "@/features/statistics/pages/StatisticsPage";
 import StudentCoursesPage from "@/features/dashboard-student/pages/StudentCoursesPage";
 import StudentCourseDetailPage from "@/features/dashboard-student/pages/StudentCourseDetailPage";
 import AdminDashboardPage from "@/features/admin/pages/AdminDashboardPage";
@@ -69,6 +71,8 @@ export default function App() {
         <Route path="/student/courses/:courseId" element={<StudentCourseDetailPage />} />
         <Route path="/student/courses/:courseId/lectures/:lectureId" element={<LessonVideoPage />} />
         <Route path="/student/quizzes/:quizId" element={<QuizPlayerPage />} />
+        <Route path="/student/timetable" element={<TimetablePage />} />
+        <Route path="/student/statistics" element={<StatisticsPage />} />
       </Route>
 
       {/* Professor-only */}
@@ -77,6 +81,7 @@ export default function App() {
         <Route path="/professor/courses" element={<CoursesListPage />} />
         <Route path="/professor/quizzes" element={<MyQuizzesPage />} />
         <Route path="/professor/courses/:courseId" element={<CourseBuilderPage />} />
+        <Route path="/professor/timetable" element={<TimetablePage />} />
         <Route path="/professor/preview/:courseId" element={<ProfessorPreviewRedirectPage />} />
         <Route path="/professor/preview/:courseId/lectures/:lectureId" element={<LessonVideoPage />} />
       </Route>
