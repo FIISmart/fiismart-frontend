@@ -24,16 +24,18 @@
  * un prompt generic.
  */
 import { useMemo } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import type { RouteContext } from "../types";
 
+/**
+ * IMPORTANT: This hook lives in ChatProvider, which is mounted at the
+ * App root *outside* any `<Route>` element. React Router's `useParams`
+ * only returns values when called inside the matched `<Route>` subtree,
+ * so at this level it would always return `{}`. We parse IDs directly
+ * from `location.pathname` with explicit regexes instead.
+ */
 export function useRouteContext(): RouteContext {
   const location = useLocation();
-  const params = useParams<{
-    courseId?: string;
-    lectureId?: string;
-    quizId?: string;
-  }>();
 
   return useMemo<RouteContext>(() => {
     const path = location.pathname;
@@ -41,26 +43,26 @@ export function useRouteContext(): RouteContext {
     // Student
     if (path === "/student/dashboard") return { route: "student-dashboard" };
     if (path === "/student/courses") return { route: "student-courses" };
-    if (/^\/student\/quizzes\/[^/]+$/.test(path)) {
-      return { route: "quiz-player", quizId: params.quizId };
+    {
+      const m = path.match(/^\/student\/quizzes\/([^/]+)$/);
+      if (m) return { route: "quiz-player", quizId: m[1] };
     }
-    if (/^\/student\/courses\/[^/]+\/lectures\/[^/]+$/.test(path)) {
-      return {
-        route: "lecture-view",
-        courseId: params.courseId,
-        lectureId: params.lectureId,
-      };
+    {
+      const m = path.match(/^\/student\/courses\/([^/]+)\/lectures\/([^/]+)$/);
+      if (m) return { route: "lecture-view", courseId: m[1], lectureId: m[2] };
     }
-    if (/^\/student\/courses\/[^/]+$/.test(path)) {
-      return { route: "course-view", courseId: params.courseId };
+    {
+      const m = path.match(/^\/student\/courses\/([^/]+)$/);
+      if (m) return { route: "course-view", courseId: m[1] };
     }
 
     // Professor
     if (path === "/professor/dashboard") return { route: "professor-dashboard" };
     if (path === "/professor/courses") return { route: "professor-courses" };
     if (path === "/professor/quizzes") return { route: "professor-quizzes" };
-    if (/^\/professor\/courses\/[^/]+$/.test(path)) {
-      return { route: "course-builder", courseId: params.courseId };
+    {
+      const m = path.match(/^\/professor\/courses\/([^/]+)$/);
+      if (m) return { route: "course-builder", courseId: m[1] };
     }
 
     // Public / shared
@@ -68,5 +70,5 @@ export function useRouteContext(): RouteContext {
     if (path.startsWith("/auth")) return { route: "auth" };
 
     return { route: "unknown" };
-  }, [location.pathname, params.courseId, params.lectureId, params.quizId]);
+  }, [location.pathname]);
 }
