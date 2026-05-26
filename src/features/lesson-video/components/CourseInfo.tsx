@@ -1,52 +1,56 @@
-import { Star, Users } from "lucide-react";
+import { Users, Star } from "lucide-react";
 import type { CourseHeader } from "../types";
 
-interface CourseInfoProps {
+interface Props {
   courseData: CourseHeader | null;
 }
 
-export default function CourseInfo({ courseData }: CourseInfoProps) {
-  const teacherName = courseData?.teacher?.displayName || "Profesor";
+export default function CourseInfo({ courseData }: Props) {
+  if (!courseData) return null;
 
-  const teacherInitials = courseData?.teacher?.displayName
-    ? courseData.teacher.displayName.substring(0, 2).toUpperCase()
-    : "PR";
+  const teacherName = courseData.teacherDisplayName || courseData.teacher?.displayName || "Profesor";
+
+  const firstTag = courseData.tags && courseData.tags.length > 0
+      ? courseData.tags[0]
+      : "Curs Standard";
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">
-          {courseData?.title || "Titlu curs indisponibil"}
-        </h1>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between p-4 bg-muted/20 rounded-xl border border-border/50">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white font-bold">
-            {teacherInitials}
-          </div>
-          <div>
-            <p className="font-semibold text-foreground">{teacherName}</p>
-            <p className="text-sm text-muted-foreground">Instructor</p>
-          </div>
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground mb-2">
+            {courseData.title}
+          </h2>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            {courseData.description || "Nicio descriere adăugată pentru acest curs."}
+          </p>
         </div>
 
-        <div className="flex gap-6 mt-4 sm:mt-0">
-          <div className="flex items-center gap-2">
-            <Users size={18} className="text-primary" />
-            <span className="text-sm font-medium">Studenți înscriși</span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-border pt-6">
+
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+              {teacherName.substring(0, 2).toUpperCase()}
+            </div>
+            <div>
+              <p className="text-sm font-bold text-foreground">{teacherName}</p>
+              <p className="text-xs text-muted-foreground">Instructor</p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Star size={18} className="text-primary fill-primary" />
-            <span className="text-sm font-medium">Curs Nou</span>
+
+          <div className="flex flex-wrap items-center gap-3">
+
+            <div className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-lg border border-border">
+              <Users size={16} />
+              <span>{courseData.enrollmentCount || 0} Studenți înscriși</span>
+            </div>
+
+            <div className="flex items-center gap-1.5 text-sm font-bold text-primary bg-primary/10 px-3 py-1.5 rounded-lg">
+              <Star size={16} fill="currentColor" />
+              <span>{firstTag}</span>
+            </div>
+
           </div>
         </div>
       </div>
-
-      <p className="text-muted-foreground leading-relaxed">
-        {courseData?.description ||
-          "Nu există o descriere disponibilă pentru acest curs."}
-      </p>
-    </div>
   );
 }

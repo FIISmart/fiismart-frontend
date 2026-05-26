@@ -2,12 +2,16 @@ export interface CourseHeader {
   courseId: string;
   title: string;
   description: string;
-  teacher: {
+  teacherDisplayName?: string;
+  teacherId?: string;
+  teacher?: {
     teacherId: string;
     displayName: string;
   };
   overallProgress: number;
   finalQuiz?: QuizStatus | null;
+  enrollmentCount?: number;
+  tags?: string[];
 }
 
 export interface CourseDetails {
