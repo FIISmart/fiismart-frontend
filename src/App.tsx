@@ -31,8 +31,8 @@ import { useAuth } from "@/features/auth/context/AuthContext";
  * dar state-ul provider-ului există de îndată ce user-ul se loghează.
  */
 function ChatMount() {
-  const { isAuthenticated } = useAuth();
-  if (!isAuthenticated) return null;
+  const { isAuthenticated, user } = useAuth();
+  if (!isAuthenticated || user?.role !== "PROFESSOR") return null;
   return (
     <>
       <FloatingChatButton />
