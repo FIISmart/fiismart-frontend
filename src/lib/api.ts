@@ -484,6 +484,11 @@ export function uploadThumbnail(file: File) {
   return postMultipart("/files/thumbnail", file);
 }
 
+/** Upload an account avatar image (JPG/PNG/WebP/GIF, max 5MB). */
+export function uploadAvatar(file: File) {
+  return postMultipart("/files/avatar", file);
+}
+
 /**
  * Streaming POST helper for Server-Sent Events (SSE).
  *
@@ -698,6 +703,118 @@ export function markAllNotificationsRead() {
   return request<void>("/notifications/read-all", { method: "PATCH" });
 }
 
+export interface AccountProfileAPI {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  displayName?: string;
+  role: string;
+  phone?: string | null;
+  bio?: string | null;
+  avatarUrl?: string | null;
+  faculty?: string | null;
+  specialization?: string | null;
+  studyYear?: number | null;
+  educationLevel?: string | null;
+  department?: string | null;
+  academicTitle?: string | null;
+  interests?: string[] | null;
+  subjects?: string[] | null;
+  tutorProfileEnabled?: boolean | null;
+}
+
+export interface AccountProfilePayload {
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
+  phone?: string;
+  bio?: string;
+  avatarUrl?: string;
+  faculty?: string;
+  specialization?: string;
+  studyYear?: number | null;
+  educationLevel?: string;
+  department?: string;
+  academicTitle?: string;
+  interests?: string[];
+  subjects?: string[];
+  tutorProfileEnabled?: boolean | null;
+}
+
+export function getMyProfile() {
+  return request<AccountProfileAPI>("/auth/me");
+}
+
+export function updateMyProfile(data: AccountProfilePayload) {
+  return request<AccountProfileAPI>("/auth/me", {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export interface PublicUserProfileAPI {
+  id: string;
+  displayName?: string | null;
+  role: string;
+  avatarUrl?: string | null;
+  headline?: string | null;
+  bio?: string | null;
+  faculty?: string | null;
+  specialization?: string | null;
+  studyYear?: number | null;
+  educationLevel?: string | null;
+  department?: string | null;
+  academicTitle?: string | null;
+  interests?: string[] | null;
+  subjects?: string[] | null;
+  tutorProfileEnabled?: boolean | null;
+  tutorRating?: number | null;
+  tutorReviewCount?: number | null;
+  experienceYears?: number | null;
+  availability?: string | null;
+  priceLabel?: string | null;
+  publishedCourseCount: number;
+}
+
+export function getUserProfile(userId: string) {
+  return request<PublicUserProfileAPI>(`/users/${userId}/profile`);
+}
+
+export interface ProfessorCommentAPI {
+  commentId: string;
+  courseId: string;
+  courseTitle: string;
+  lectureId: string;
+  authorId: string;
+  authorDisplayName: string;
+  body: string;
+  createdAt: string;
+  likeCount: number;
+  repliesCount: number;
+  answered?: boolean;
+  isAnswered?: boolean;
+  status?: string | null;
+}
+
+export function getProfessorComments(limit = 100, offset = 0) {
+  return request<ProfessorCommentAPI[]>(`/teacher-dashboard/me/comments?limit=${limit}&offset=${offset}`);
+}
+
+export function replyToProfessorComment(commentId: string, body: string) {
+  return request<ProfessorCommentAPI>(`/teacher-dashboard/comments/${commentId}/replies`, {
+    method: "POST",
+    body: JSON.stringify({ body }),
+  });
+}
+
+export function updateProfessorCommentStatus(commentId: string, status: "OPEN" | "ANSWERED" | "RESOLVED") {
+  return request<ProfessorCommentAPI>(`/teacher-dashboard/comments/${commentId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
 // ── Quiz attempt lifecycle (timer + anti-cheat flow) ───────────────────────
 //
 // IMPORTANT: the FE never sends score/passed/correct. Grading is server-side.
@@ -822,6 +939,7 @@ export interface TutorRequestAPI {
   tutorName?: string | null;
   message: string;
   status: "pending" | "accepted" | "declined" | "resolved";
+  conversationId?: string | null;
   createdAt: string;
 }
 
@@ -829,10 +947,50 @@ export function getProfessorTutorRequests() {
   return request<TutorRequestAPI[]>("/tutor-requests/professor/me");
 }
 
+export function getStudentTutorRequests() {
+  return request<TutorRequestAPI[]>("/tutor-requests/student/me");
+}
+
 export function updateTutorRequestStatus(id: string, status: TutorRequestAPI["status"]) {
   return request<TutorRequestAPI>(`/tutor-requests/${id}/status`, {
     method: "PATCH",
     body: JSON.stringify({ status }),
+  });
+}
+
+export interface MentorMessageAPI {
+  id: string;
+  senderId: string;
+  senderName?: string | null;
+  senderRole?: string | null;
+  text: string;
+  createdAt: string;
+}
+
+export interface MentorConversationAPI {
+  id: string;
+  requestId: string;
+  studentId: string;
+  studentName?: string | null;
+  tutorId: string;
+  tutorName?: string | null;
+  messages: MentorMessageAPI[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function getTutorRequestConversation(requestId: string) {
+  return request<MentorConversationAPI>(`/tutor-requests/${requestId}/conversation`);
+}
+
+export function getMentorConversationMessages(conversationId: string) {
+  return request<MentorMessageAPI[]>(`/tutor-requests/conversations/${conversationId}/messages`);
+}
+
+export function sendMentorConversationMessage(conversationId: string, text: string) {
+  return request<MentorMessageAPI>(`/tutor-requests/conversations/${conversationId}/messages`, {
+    method: "POST",
+    body: JSON.stringify({ text }),
   });
 }
 

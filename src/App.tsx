@@ -16,6 +16,7 @@ import ContactPage from "@/features/landing/pages/ContactPage";
 import BecomeProfessorPage from "@/features/landing/pages/BecomeProfessorPage";
 import PublicTutorsPage from "@/features/landing/pages/PublicTutorsPage";
 import ProfessorDashboardPage from "@/features/dashboard-prof/pages/ProfessorDashboardPage";
+import ProfessorCommentsPage from "@/features/dashboard-prof/pages/ProfessorCommentsPage";
 import StudentDashboardPage from "@/features/dashboard-student/pages/StudentDashboardPage";
 import LessonVideoPage from "@/features/lesson-video/pages/LessonVideoPage";
 import QuizPlayerPage from "@/features/quiz/pages/QuizPlayerPage";
@@ -26,12 +27,17 @@ import TimetablePage from "@/features/timetable/pages/TimetablePage";
 import StatisticsPage from "@/features/statistics/pages/StatisticsPage";
 import TutorsPage from "@/features/tutors/pages/TutorsPage";
 import ProfessorMentorRequestsPage from "@/features/tutors/pages/ProfessorMentorRequestsPage";
+import StudentMentorRequestsPage from "@/features/tutors/pages/StudentMentorRequestsPage";
+import MentorConversationPage from "@/features/tutors/pages/MentorConversationPage";
 import StudentCoursesPage from "@/features/dashboard-student/pages/StudentCoursesPage";
 import StudentCourseDetailPage from "@/features/dashboard-student/pages/StudentCourseDetailPage";
 import AdminDashboardPage from "@/features/admin/pages/AdminDashboardPage";
 import AdminUsersPage from "@/features/admin/pages/AdminUsersPage";
 import AdminCoursesPage from "@/features/admin/pages/AdminCoursesPage";
 import AdminEnrollmentsPage from "@/features/admin/pages/AdminEnrollmentsPage";
+import AccountPage from "@/features/account/pages/AccountPage";
+import UserProfilePage from "@/features/users/pages/UserProfilePage";
+import { AuthenticatedLayout } from "@/components/layout/AuthenticatedLayout";
 import ProfessorPreviewRedirectPage from "@/features/lesson-video/pages/ProfessorPreviewRedirectPage";
 import { Toaster } from "sonner";
 import { ChatProvider } from "@/features/chat/context/ChatContext";
@@ -79,32 +85,42 @@ export default function App() {
 
           {/* Student-only */}
           <Route element={<ProtectedRoute allowedRoles={[UserRole.STUDENT]} />}>
-            <Route path="/student/dashboard" element={<StudentDashboardPage />} />
-            <Route path="/student/courses" element={<StudentCoursesPage />} />
-            <Route path="/student/courses/:courseId" element={<StudentCourseDetailPage />} />
-            <Route path="/student/courses/:courseId/lectures/:lectureId" element={<LessonVideoPage />} />
-            <Route path="/student/quizzes/:quizId" element={<QuizPlayerPage />} />
-            <Route path="/student/timetable" element={<TimetablePage />} />
-            <Route path="/student/statistics" element={<StatisticsPage />} />
-            <Route path="/student/tutors" element={<TutorsPage />} />
+            <Route element={<AuthenticatedLayout />}>
+              <Route path="/student/dashboard" element={<StudentDashboardPage />} />
+              <Route path="/student/courses" element={<StudentCoursesPage />} />
+              <Route path="/student/courses/:courseId" element={<StudentCourseDetailPage />} />
+              <Route path="/student/courses/:courseId/lectures/:lectureId" element={<LessonVideoPage />} />
+              <Route path="/student/quizzes/:quizId" element={<QuizPlayerPage />} />
+              <Route path="/student/timetable" element={<TimetablePage />} />
+              <Route path="/student/statistics" element={<StatisticsPage />} />
+              <Route path="/student/tutors" element={<TutorsPage />} />
+              <Route path="/student/mentor-requests" element={<StudentMentorRequestsPage />} />
+              <Route path="/student/mentor-requests/:requestId/chat" element={<MentorConversationPage />} />
+              <Route path="/student/account" element={<AccountPage />} />
+            </Route>
           </Route>
 
           {/* Professor-only */}
           <Route element={<ProtectedRoute allowedRoles={[UserRole.PROFESSOR]} />}>
-            <Route path="/professor/dashboard" element={<ProfessorDashboardPage />} />
-            <Route path="/professor/courses" element={<CoursesListPage />} />
-            <Route path="/professor/quizzes" element={<MyQuizzesPage />} />
-            <Route path="/professor/courses/:courseId" element={<CourseBuilderPage />} />
-            <Route path="/professor/timetable" element={<TimetablePage />} />
-            <Route path="/professor/statistics" element={<StatisticsPage />} />
-            <Route path="/professor/mentor-requests" element={<ProfessorMentorRequestsPage />} />
+            <Route element={<AuthenticatedLayout />}>
+              <Route path="/professor/dashboard" element={<ProfessorDashboardPage />} />
+              <Route path="/professor/courses" element={<CoursesListPage />} />
+              <Route path="/professor/quizzes" element={<MyQuizzesPage />} />
+              <Route path="/professor/courses/:courseId" element={<CourseBuilderPage />} />
+              <Route path="/professor/timetable" element={<TimetablePage />} />
+              <Route path="/professor/statistics" element={<StatisticsPage />} />
+              <Route path="/professor/comments" element={<ProfessorCommentsPage />} />
+              <Route path="/professor/mentor-requests" element={<ProfessorMentorRequestsPage />} />
+              <Route path="/professor/mentor-requests/:requestId/chat" element={<MentorConversationPage />} />
+              <Route path="/professor/account" element={<AccountPage />} />
 
-            {/* Professor course preview */}
-            <Route path="/professor/preview/:courseId" element={<ProfessorPreviewRedirectPage />} />
-            <Route
-                path="/professor/preview/:courseId/lectures/:lectureId"
-                element={<LessonVideoPage previewMode />}
-            />
+              {/* Professor course preview */}
+              <Route path="/professor/preview/:courseId" element={<ProfessorPreviewRedirectPage />} />
+              <Route
+                  path="/professor/preview/:courseId/lectures/:lectureId"
+                  element={<LessonVideoPage previewMode />}
+              />
+            </Route>
           </Route>
 
           {/* Admin-only */}
@@ -113,11 +129,15 @@ export default function App() {
             <Route path="/admin/users" element={<AdminUsersPage />} />
             <Route path="/admin/courses" element={<AdminCoursesPage />} />
             <Route path="/admin/enrollments" element={<AdminEnrollmentsPage />} />
+            <Route path="/admin/account" element={<AccountPage />} />
           </Route>
 
           {/* Role-aware dashboard alias */}
           <Route element={<ProtectedRoute allowedRoles={[UserRole.STUDENT, UserRole.PROFESSOR, UserRole.ADMIN]} />}>
             <Route path="/dashboard" element={<RoleDashboardRedirect />} />
+            <Route element={<AuthenticatedLayout />}>
+              <Route path="/users/:userId" element={<UserProfilePage />} />
+            </Route>
           </Route>
 
           {/* Compatibility shims for legacy / external links */}

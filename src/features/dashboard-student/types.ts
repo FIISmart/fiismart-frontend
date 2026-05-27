@@ -21,6 +21,7 @@ export interface StudentCourse {
   enrollmentCount: number;
   avgRating: number;
   courseId?: string;
+  thumbnailUrl?: string | null;
 }
 
 export interface StudentQuiz {

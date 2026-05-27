@@ -22,6 +22,7 @@ import { useAuth } from "@/features/auth/context/AuthContext";
 import { toast } from "sonner";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { courseRefreshBus } from "@/features/chat/context/CourseRefreshBus";
+import { ProfDashboardNavbar } from "@/features/dashboard-prof/components/ProfDashboardNavbar";
 
 const pendingNewCourseCreations = new Map<string, Promise<api.CourseAPI>>();
 
@@ -338,6 +339,15 @@ export default function CourseBuilderPage() {
     }
   };
 
+  const handlePreview = () => {
+    const firstLecture = course.modules.flatMap((module) => module.lessons)[0];
+    if (!firstLecture) {
+      toast.info("Adauga cel putin o lectie pentru a putea previzualiza cursul.");
+      return;
+    }
+    navigate(`/professor/preview/${course.id}/lectures/${firstLecture.id}`);
+  };
+
   const totalLessons = course.modules.reduce((acc, m) => acc + m.lessons.length, 0);
   const canPublish = course.title && totalLessons > 0;
 
@@ -352,11 +362,13 @@ export default function CourseBuilderPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <ProfDashboardNavbar />
       <CourseHeader
         course={course}
         onUpdate={handleUpdateCourse}
         onSaveDraft={handleSaveDraft}
         onPublish={() => setPublishDialogOpen(true)}
+        onPreview={handlePreview}
         isSaving={isSaving}
       />
 

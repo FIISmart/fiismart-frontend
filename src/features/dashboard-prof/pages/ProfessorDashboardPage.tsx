@@ -119,7 +119,7 @@ export function ProfessorDashboardPage() {
                 <StatCard
                     title="Studenți activi"
                     value={data.stats.studentsEnrolled}
-                    subtitle="Înrolati în total"
+                    subtitle="Înscriși în total"
                     icon={<Users size={24} />}
                     iconBgColor="bg-edu-secondary/20"
                     iconColor="text-edu-primary"

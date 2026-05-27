@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { BookOpen, Clock, Star, Users } from "lucide-react";
-import { landingService, type PopularCourse } from "../services/landing.service";
 import { resolveFileUrl } from "@/lib/api";
+import { landingService, type PopularCourse } from "../services/landing.service";
 
 const FALLBACK_THUMBNAIL =
   "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=640&h=360&fit=crop";
@@ -35,8 +35,10 @@ export default function Courses() {
           setCourses(courseData);
           setCategories(categoryData);
         }
-      } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Nu am putut incarca lista de cursuri.");
+      } catch {
+        if (!cancelled) {
+          setError("Nu am putut incarca momentan aceasta sectiune. Incearca din nou mai tarziu.");
+        }
       } finally {
         if (!cancelled) setIsLoading(false);
       }

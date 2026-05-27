@@ -14,6 +14,18 @@ export interface AuthUser {
   /** Câmp de conveniență — backend-ul returnează și displayName. */
   displayName?: string;
   role: UserRole;
+  phone?: string | null;
+  bio?: string | null;
+  avatarUrl?: string | null;
+  faculty?: string | null;
+  specialization?: string | null;
+  studyYear?: number | null;
+  educationLevel?: string | null;
+  department?: string | null;
+  academicTitle?: string | null;
+  interests?: string[] | null;
+  subjects?: string[] | null;
+  tutorProfileEnabled?: boolean | null;
   emailVerified?: boolean;
   /** True pentru utilizatorii Google nou-creați care nu și-au selectat rolul încă. */
   needsRoleSelection?: boolean;

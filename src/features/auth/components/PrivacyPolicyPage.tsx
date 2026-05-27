@@ -23,7 +23,7 @@ export default function PrivacyPolicyPage() {
             <span className="font-semibold tracking-tight">FII Smart</span>
           </Link>
           <Link to="/terms" className="text-sm text-edu-purple hover:underline">
-            Terms of Service â†’
+            Terms of Service →
           </Link>
         </div>
       </header>
@@ -406,7 +406,7 @@ export default function PrivacyPolicyPage() {
             <ArrowLeft className="size-4" aria-hidden="true" /> Înapoi
           </Button>
           <Link to="/terms" className="text-sm text-edu-purple hover:underline">
-            Terms of Service â†’
+            Terms of Service →
           </Link>
         </div>
       </article>

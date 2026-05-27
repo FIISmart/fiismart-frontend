@@ -24,7 +24,7 @@ export default function TermsOfServicePage() {
             <span className="font-semibold tracking-tight">FII Smart</span>
           </Link>
           <Link to="/privacy" className="text-sm text-edu-purple hover:underline">
-            Privacy Policy â†’
+            Privacy Policy →
           </Link>
         </div>
       </header>
@@ -215,7 +215,7 @@ export default function TermsOfServicePage() {
           <p>
             Our total liability to you for any claim arising out of these Terms
             shall not exceed the greater of (a) the amount you paid us in the
-            twelve months preceding the claim, or (b) â‚¬50.
+            twelve months preceding the claim, or (b) €50.
           </p>
         </Section>
 
@@ -288,7 +288,7 @@ export default function TermsOfServicePage() {
             <ArrowLeft className="size-4" aria-hidden="true" /> Înapoi
           </Button>
           <Link to="/privacy" className="text-sm text-edu-purple hover:underline">
-            Privacy Policy â†’
+            Privacy Policy →
           </Link>
         </div>
       </article>
