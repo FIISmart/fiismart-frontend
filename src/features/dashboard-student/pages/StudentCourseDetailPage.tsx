@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { StudentNavbar } from "../components/StudentNavbar";
-import { getCourse, getModules, checkMyEnrollment, enrollMe } from "@/lib/api";
+import { getCourse, getModules, checkMyEnrollment, enrollMe, resolveFileUrl } from "@/lib/api";
 import type { CourseAPI, ModuleResponse } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -89,7 +89,7 @@ export default function StudentCourseDetailPage() {
             <div className="bg-white rounded-2xl overflow-hidden border border-black/5 shadow-sm">
               <div className="aspect-[21/7] overflow-hidden">
                 <img
-                  src={course.thumbnailUrl ?? FALLBACK_THUMBNAIL}
+                  src={resolveFileUrl(course.thumbnailUrl) || FALLBACK_THUMBNAIL}
                   alt={course.title}
                   className="w-full h-full object-cover"
                 />
