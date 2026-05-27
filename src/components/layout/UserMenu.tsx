@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { getHomePath } from "@/lib/routes";
+import { resolveFileUrl } from "@/lib/api";
 
 type UserMenuProps = {
   displayName?: string;
@@ -43,7 +44,7 @@ export function UserMenu({ displayName, initials, variant = "light" }: UserMenuP
           aria-label="Meniu cont"
         >
           {user?.avatarUrl ? (
-            <img src={user.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
+            <img src={resolveFileUrl(user.avatarUrl)} alt="" className="h-8 w-8 rounded-full object-cover" />
           ) : (
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
               {safeInitials}

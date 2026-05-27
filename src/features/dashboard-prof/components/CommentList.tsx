@@ -20,7 +20,7 @@ export function CommentList({ comments }: CommentListProps) {
     <div className="mb-12">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-2xl font-bold font-poppins text-edu-foreground">Comentarii Relevante</h3>
-        <Link to="/professor/courses" className="text-sm font-medium text-[#BDA6CE] hover:text-edu-primary transition">
+        <Link to="/professor/comments" className="text-sm font-medium text-[#BDA6CE] hover:text-edu-primary transition">
           Vezi toate
         </Link>
       </div>

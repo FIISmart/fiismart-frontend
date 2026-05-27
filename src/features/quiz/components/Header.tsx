@@ -4,10 +4,14 @@ import { NotificationBell } from "@/features/notifications/NotificationBell";
 import { UserMenu } from "@/components/layout/UserMenu";
 import { getHomePath } from "@/lib/routes";
 import { useAuth } from "@/features/auth/context/AuthContext";
+import { useAuthenticatedLayout } from "@/components/layout/AuthenticatedLayoutContext";
 
 export default function Header() {
+  const insideGlobalLayout = useAuthenticatedLayout();
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  if (insideGlobalLayout) return null;
 
   return (
     <header className="flex h-[56px] w-full shrink-0 items-center justify-between border-b border-[#E5DDD4] bg-[#F2EAE0] px-4 sm:px-6">

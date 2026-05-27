@@ -6,8 +6,10 @@ import { NotificationBell } from "@/features/notifications/NotificationBell";
 import { getCoursesPath, getHomePath, getStatisticsPath } from "@/lib/routes";
 import { Logo } from "@/components/brand/Logo";
 import { UserMenu, accountPathForRole } from "@/components/layout/UserMenu";
+import { useAuthenticatedLayout } from "@/components/layout/AuthenticatedLayoutContext";
 
 export default function Header() {
+  const insideGlobalLayout = useAuthenticatedLayout();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -18,6 +20,8 @@ export default function Header() {
     { to: getStatisticsPath(user?.role), label: "Statistici" },
     { to: accountPathForRole(user?.role), label: "Contul meu" },
   ];
+
+  if (insideGlobalLayout) return null;
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card px-4 py-4 md:px-6">

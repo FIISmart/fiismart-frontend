@@ -173,15 +173,25 @@ export default function TutorsPage() {
                     <span className="text-right">{tutor.availability || "Disponibilitate neprecizata"}</span>
                   </div>
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full gap-2"
-                    onClick={() => setSelectedTutor(tutor)}
-                  >
-                    <Send className="h-4 w-4" />
-                    Trimite cerere
-                  </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() => navigate(`/users/${tutor.id}`)}
+                    >
+                      <UserRound className="h-4 w-4" />
+                      Vezi profil
+                    </Button>
+                    <Button
+                      type="button"
+                      className="gap-2"
+                      onClick={() => setSelectedTutor(tutor)}
+                    >
+                      <Send className="h-4 w-4" />
+                      Trimite cerere
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}

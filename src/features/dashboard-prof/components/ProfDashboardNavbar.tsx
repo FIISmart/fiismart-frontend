@@ -5,8 +5,10 @@ import { NotificationBell } from "@/features/notifications/NotificationBell";
 import { Logo } from "@/components/brand/Logo";
 import { UserMenu } from "@/components/layout/UserMenu";
 import { useAuth } from "@/features/auth/context/AuthContext";
+import { useAuthenticatedLayout } from "@/components/layout/AuthenticatedLayoutContext";
 
-export function ProfDashboardNavbar() {
+export function ProfDashboardNavbar({ forceVisible = false }: { forceVisible?: boolean }) {
+  const insideGlobalLayout = useAuthenticatedLayout();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -19,9 +21,12 @@ export function ProfDashboardNavbar() {
     { to: "/professor/dashboard", label: "Dashboard" },
     { to: "/professor/courses", label: "Cursuri" },
     { to: "/professor/quizzes", label: "Quiz-uri" },
+    { to: "/professor/comments", label: "Comentarii" },
     { to: "/professor/statistics", label: "Statistici" },
     { to: "/professor/mentor-requests", label: "Mentorat" },
   ];
+
+  if (insideGlobalLayout && !forceVisible) return null;
 
   return (
     <header className="w-full bg-edu-bg border-b border-edu-border sticky top-0 z-50">

@@ -484,6 +484,11 @@ export function uploadThumbnail(file: File) {
   return postMultipart("/files/thumbnail", file);
 }
 
+/** Upload an account avatar image (JPG/PNG/WebP/GIF, max 5MB). */
+export function uploadAvatar(file: File) {
+  return postMultipart("/files/avatar", file);
+}
+
 /**
  * Streaming POST helper for Server-Sent Events (SSE).
  *
@@ -708,6 +713,15 @@ export interface AccountProfileAPI {
   phone?: string | null;
   bio?: string | null;
   avatarUrl?: string | null;
+  faculty?: string | null;
+  specialization?: string | null;
+  studyYear?: number | null;
+  educationLevel?: string | null;
+  department?: string | null;
+  academicTitle?: string | null;
+  interests?: string[] | null;
+  subjects?: string[] | null;
+  tutorProfileEnabled?: boolean | null;
 }
 
 export interface AccountProfilePayload {
@@ -717,6 +731,15 @@ export interface AccountProfilePayload {
   phone?: string;
   bio?: string;
   avatarUrl?: string;
+  faculty?: string;
+  specialization?: string;
+  studyYear?: number | null;
+  educationLevel?: string;
+  department?: string;
+  academicTitle?: string;
+  interests?: string[];
+  subjects?: string[];
+  tutorProfileEnabled?: boolean | null;
 }
 
 export function getMyProfile() {
@@ -727,6 +750,68 @@ export function updateMyProfile(data: AccountProfilePayload) {
   return request<AccountProfileAPI>("/auth/me", {
     method: "PATCH",
     body: JSON.stringify(data),
+  });
+}
+
+export interface PublicUserProfileAPI {
+  id: string;
+  displayName?: string | null;
+  role: string;
+  avatarUrl?: string | null;
+  headline?: string | null;
+  bio?: string | null;
+  faculty?: string | null;
+  specialization?: string | null;
+  studyYear?: number | null;
+  educationLevel?: string | null;
+  department?: string | null;
+  academicTitle?: string | null;
+  interests?: string[] | null;
+  subjects?: string[] | null;
+  tutorProfileEnabled?: boolean | null;
+  tutorRating?: number | null;
+  tutorReviewCount?: number | null;
+  experienceYears?: number | null;
+  availability?: string | null;
+  priceLabel?: string | null;
+  publishedCourseCount: number;
+}
+
+export function getUserProfile(userId: string) {
+  return request<PublicUserProfileAPI>(`/users/${userId}/profile`);
+}
+
+export interface ProfessorCommentAPI {
+  commentId: string;
+  courseId: string;
+  courseTitle: string;
+  lectureId: string;
+  authorId: string;
+  authorDisplayName: string;
+  body: string;
+  createdAt: string;
+  likeCount: number;
+  repliesCount: number;
+  answered?: boolean;
+  isAnswered?: boolean;
+  status?: string | null;
+}
+
+export function getProfessorComments(limit = 100, offset = 0) {
+  return request<ProfessorCommentAPI[]>(`/teacher-dashboard/me/comments?limit=${limit}&offset=${offset}`);
+}
+
+export function replyToProfessorComment(commentId: string, body: string) {
+  return request<ProfessorCommentAPI>(`/teacher-dashboard/comments/${commentId}/replies`, {
+    method: "POST",
+    body: JSON.stringify({ body }),
+  });
+}
+
+export function updateProfessorCommentStatus(commentId: string, status: "OPEN" | "ANSWERED" | "RESOLVED") {
+  return request<ProfessorCommentAPI>(`/teacher-dashboard/comments/${commentId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
   });
 }
 

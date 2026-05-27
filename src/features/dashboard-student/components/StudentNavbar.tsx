@@ -4,15 +4,20 @@ import { Link, useNavigate } from "react-router-dom";
 import { NotificationBell } from "@/features/notifications/NotificationBell";
 import { Logo } from "@/components/brand/Logo";
 import { UserMenu } from "@/components/layout/UserMenu";
+import { useAuthenticatedLayout } from "@/components/layout/AuthenticatedLayoutContext";
 
 interface StudentNavbarProps {
   studentName: string;
   initials: string;
+  forceVisible?: boolean;
 }
 
-export function StudentNavbar({ studentName, initials }: StudentNavbarProps) {
+export function StudentNavbar({ studentName, initials, forceVisible = false }: StudentNavbarProps) {
+  const insideGlobalLayout = useAuthenticatedLayout();
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
+
+  if (insideGlobalLayout && !forceVisible) return null;
 
   const navItems = [
     { to: "/student/dashboard", label: "Dashboard" },

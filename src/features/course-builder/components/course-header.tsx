@@ -21,6 +21,7 @@ import {
   Tag,
   Clock,
   BookOpen,
+  Eye,
 } from "lucide-react";
 import type { Course } from "@/lib/course-types";
 import { Link } from "react-router-dom";
@@ -32,6 +33,7 @@ interface CourseHeaderProps {
   onUpdate: (updates: Partial<Course>) => void;
   onSaveDraft: () => void;
   onPublish: () => void;
+  onPreview: () => void;
   isSaving?: boolean;
 }
 
@@ -40,6 +42,7 @@ export function CourseHeader({
   onUpdate,
   onSaveDraft,
   onPublish,
+  onPreview,
   isSaving,
 }: CourseHeaderProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -104,7 +107,7 @@ export function CourseHeader({
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border">
+      <header className="sticky top-[72px] z-40 bg-card/95 backdrop-blur-sm border-b border-border">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
           {/* Mobile: Stacked Layout */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between sm:h-16 py-3 sm:py-0 gap-3 sm:gap-4">
@@ -145,6 +148,14 @@ export function CourseHeader({
 
             {/* Bottom Row on Mobile: Action Buttons */}
             <div className="flex items-center gap-2 sm:gap-2 w-full sm:w-auto">
+              <Button
+                variant="outline"
+                onClick={onPreview}
+                className="gap-1.5 sm:gap-2 flex-1 sm:flex-none text-sm"
+              >
+                <Eye className="h-4 w-4" />
+                <span className="sm:inline">Preview</span>
+              </Button>
               <Button
                 variant="outline"
                 onClick={onSaveDraft}
