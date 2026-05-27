@@ -176,6 +176,14 @@ export default function QuizPlayerPage() {
             Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000)),
           answers: synthesizedAnswers,
         });
+        // Reconcile the local `correctAnswers` counter with the BE verdict.
+        // The per-question page cannot determine MCQ correctness locally
+        // (the answer key never reaches the browser — see
+        // StudentPlayableQuestionDTO on the BE), so every MCQ defaults to
+        // `isCorrect: false` until grading lands. Without this line the
+        // result page would display 0/N for any correct quiz attempt.
+        const beCorrectCount = synthesizedAnswers.filter((a) => a.correct).length;
+        setCorrectAnswers(beCorrectCount);
       } catch (err) {
         console.error("Eroare la trimiterea raspunsurilor:", err);
         const msg =
