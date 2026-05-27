@@ -8,11 +8,15 @@ export interface LandingStats {
 }
 
 export interface PopularCourse {
+  id: string;
   title: string;
   description: string;
   thumbnailUrl: string | null;
   avgRating: number;
   enrollmentCount: number;
+  tags: string[];
+  teacherName: string;
+  durationSecs: number;
 }
 
 export const landingService = {

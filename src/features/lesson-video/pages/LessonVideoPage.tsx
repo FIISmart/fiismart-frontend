@@ -22,8 +22,11 @@ import type {
   GroupedVideoMarker,
   LectureDetails,
 } from "../types";
+type LessonVideoPageProps = {
+  previewMode?: boolean;
+};
 
-export default function LessonVideoPage() {
+export default function LessonVideoPage({ previewMode = false }: LessonVideoPageProps) {
   const { courseId, lectureId } = useParams<{
     courseId: string;
     lectureId: string;
@@ -56,6 +59,7 @@ export default function LessonVideoPage() {
   const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
 
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
 
   const studentId = user?.id ?? null;
 
@@ -67,9 +71,30 @@ export default function LessonVideoPage() {
     if (!courseId) return;
 
     try {
-      let data;
+      let data: CourseHeader;
       if (isPreview) {
-        data = await apiFetch<CourseHeader>(`/preview/courses/${courseId}`);
+        const { getCourseBuilderQuizzes } = await import("@/lib/api");
+        const [courseRaw, builderQuizzes] = await Promise.all([
+          apiFetch<any>(`/courses/${courseId}`),
+          getCourseBuilderQuizzes(courseId).catch(() => [])
+        ]);
+
+        const finalQuiz = builderQuizzes.find(q => q.quizScope === 'course_final');
+
+        data = {
+          courseId: courseRaw.id,
+          title: courseRaw.title,
+          description: courseRaw.description,
+          thumbnailUrl: courseRaw.thumbnailUrl,
+          tags: courseRaw.tags || [],
+          teacher: {
+            teacherId: courseRaw.teacherId,
+            displayName: "Profesor",
+          },
+          overallProgress: 0,
+          finalQuiz: finalQuiz ? { quizId: finalQuiz.id, statusLabel: "Disponibil" } : undefined,
+          modules: [],
+        } as unknown as CourseHeader;
       } else {
         // Endpoint normal (studenți)
         if (!studentId) return;
@@ -103,6 +128,51 @@ export default function LessonVideoPage() {
   const fetchLectureDetails = useCallback(async () => {
     if (!courseId || !activeLectureId || activeLectureId === "undefined") return;
 
+    if (previewMode) {
+      try {
+        const { getModules } = await import("@/lib/api");
+        const modules = await getModules(courseId);
+        
+        const currentLecture = modules
+          .flatMap((module: any) => module.lectures || [])
+          .find((lecture: any) => lecture.id === activeLectureId);
+
+        if (!currentLecture) {
+           setError("Lecția nu a putut fi găsită în modul preview.");
+           return;
+        }
+
+        // Determina tipul lectiei daca lipseste din backend, pentru backwards compatibility
+        let computedType = currentLecture.type;
+        if (!computedType) {
+          if (currentLecture.pdfUrl || (currentLecture.content && currentLecture.content.includes(".pdf"))) {
+            computedType = "pdf";
+          } else if (currentLecture.videoUrl) {
+            computedType = "video";
+          } else {
+            computedType = "markdown";
+          }
+        }
+
+        setLectureDetails({
+          lectureId: currentLecture.id,
+          title: currentLecture.title,
+          type: computedType,
+          content: currentLecture.content,
+          videoUrl: currentLecture.videoUrl,
+          pdfUrl: currentLecture.pdfUrl,
+          durationSecs: currentLecture.durationSecs || 0,
+          order: currentLecture.order || 0,
+          completed: false,
+          watchedPercent: 0,
+          positionSecs: 0,
+        } as any);
+      } catch (err) {
+         console.error("Eroare la preluarea lecției (preview):", err);
+      }
+      return;
+    }
+
     // Fallback inteligent pentru ID-ul utilizatorului (preview profesor etc.)
     const currentId = studentId ?? user?.id;
     if (!currentId) return;
@@ -118,7 +188,7 @@ export default function LessonVideoPage() {
     } catch (err) {
       console.error("Eroare la preluarea lecției:", err);
     }
-  }, [studentId, user?.id, courseId, activeLectureId]);
+  }, [previewMode, courseId, activeLectureId, studentId, user?.id]);
 
   useEffect(() => {
     void fetchLectureDetails();
@@ -177,7 +247,25 @@ export default function LessonVideoPage() {
     setActiveCommentId(id);
   };
 
-  const handleProgressSaved = useCallback(() => {
+  const handleProgressSaved = useCallback((response?: {
+    lectureId: string;
+    watchedPercent: number;
+    positionSecs: number;
+    completed: boolean;
+    overallProgress: number;
+  }) => {
+    if (response) {
+      setLectureDetails((prev) => prev && prev.lectureId === response.lectureId ? {
+        ...prev,
+        completed: response.completed,
+        watchedPercent: response.watchedPercent,
+        positionSecs: response.positionSecs,
+      } : prev);
+      setCourseData((prev) => prev ? {
+        ...prev,
+        overallProgress: response.overallProgress,
+      } : prev);
+    }
     setRefreshTrigger((prev) => prev + 1);
   }, []);
 
@@ -197,8 +285,9 @@ export default function LessonVideoPage() {
     if (isPreview) return;
     if (!studentId || !courseId || !activeLectureId || activeLectureId === "undefined") return;
     const nextDuration = durationSecs ?? lectureDetails?.durationSecs;
+    setIsSaving(true);
     try {
-      await lessonVideoService.saveProgress(studentId, courseId, activeLectureId, {
+      const response = await lessonVideoService.saveProgress(studentId, courseId, activeLectureId, {
         watchedPercent: 100,
         positionSecs: nextDuration ?? 0,
         completed: true,
@@ -206,14 +295,22 @@ export default function LessonVideoPage() {
       });
       setLectureDetails((prev) => prev ? {
         ...prev,
-        completed: true,
-        watchedPercent: 100,
-        positionSecs: nextDuration ?? prev.positionSecs,
+        completed: response.completed,
+        watchedPercent: response.watchedPercent,
+        positionSecs: response.positionSecs,
         durationSecs: nextDuration ?? prev.durationSecs,
       } : prev);
+      
+      setCourseData(prev => prev ? {
+          ...prev,
+          overallProgress: response.overallProgress
+      } : prev);
+      
       handleProgressSaved();
     } catch (err) {
       console.error("Eroare la marcarea lectiei ca parcursa:", err);
+    } finally {
+      setIsSaving(false);
     }
   }, [activeLectureId, courseId, handleProgressSaved, lectureDetails?.durationSecs, studentId, isPreview]);
 
@@ -224,13 +321,19 @@ export default function LessonVideoPage() {
     if (currentDuration > 0 && Math.abs(currentDuration - durationSecs) <= 1) return;
 
     try {
-      await lessonVideoService.saveProgress(studentId, courseId, activeLectureId, {
+      const response = await lessonVideoService.saveProgress(studentId, courseId, activeLectureId, {
         watchedPercent: lectureDetails?.watchedPercent ?? 0,
         positionSecs: lectureDetails?.positionSecs ?? 0,
         completed: Boolean(lectureDetails?.completed),
         durationSecs,
       });
-      setLectureDetails((prev) => prev ? { ...prev, durationSecs } : prev);
+      setLectureDetails((prev) => prev ? { ...prev, durationSecs, completed: response.completed, watchedPercent: response.watchedPercent } : prev);
+      
+      setCourseData(prev => prev ? {
+          ...prev,
+          overallProgress: response.overallProgress
+      } : prev);
+      
       handleProgressSaved();
     } catch (err) {
       console.error("Eroare la salvarea duratei lectiei:", err);
@@ -300,31 +403,32 @@ export default function LessonVideoPage() {
                           markers={groupedMarkersList}
                           onProgressSaved={handleProgressSaved}
                           onDurationDetected={handleDurationDetected}
+                          previewMode={previewMode}
                       />
                   ) : (
                       <div className="bg-card border border-border rounded-2xl p-6 text-center text-muted-foreground">
                         Video-ul nu este disponibil.
-                        <div className="mt-4">
-                          <Button onClick={() => void handleMarkComplete()} disabled={lectureDetails?.completed}>
+                        {!isPreview && <div className="mt-4">
+                          <Button onClick={() => void handleMarkComplete()} disabled={lectureDetails?.completed || isSaving}>
                             {lectureDetails?.completed ? "Parcurs" : "Marchează ca parcursă"}
                           </Button>
-                        </div>
+                        </div>}
                       </div>
                   )
               ) : lectureDetails ? (
-                  <LessonContent lecture={lectureDetails} onMarkComplete={handleMarkComplete} />
+                  <LessonContent lecture={lectureDetails} onMarkComplete={handleMarkComplete} isSaving={isSaving} readOnly={isPreview} />
               ) : (
                   <div className="bg-card border border-border rounded-2xl p-6 text-center text-muted-foreground">
                     Lecția nu este disponibilă.
                   </div>
               )}
 
-              {currentModuleQuizId && (
+              {lectureDetails?.quiz?.quizId && (
                   <button
-                      onClick={() => navigate(isPreview ? `/professor/quizzes` : `/student/quizzes/${currentModuleQuizId}`)}
-                      className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-4 rounded-xl transition-colors duration-200 shadow-md"
+                      onClick={() => navigate(isPreview ? `/professor/quizzes` : `/student/quizzes/${lectureDetails.quiz!.quizId}?courseId=${courseId}`)}
+                      className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-4 rounded-xl transition-colors duration-200 shadow-md flex items-center justify-center gap-2"
                   >
-                    Mergi la Quiz
+                    Mergi la Quiz-ul Lecției
                   </button>
               )}
             </div>
@@ -338,6 +442,7 @@ export default function LessonVideoPage() {
                   overallProgress={courseData?.overallProgress ?? 0}
                   finalQuiz={courseData?.finalQuiz}
                   refreshTrigger={refreshTrigger}
+                  previewMode={previewMode}
               />
             </div>
 
@@ -346,28 +451,34 @@ export default function LessonVideoPage() {
                 <CourseInfo courseData={courseData} />
               </div>
 
-              <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm">
-                <CommentsSection
-                    studentId={isPreview ? (user?.id ?? "") : (studentId ?? "")}
-                    courseId={courseId ?? ""}
-                    lectureId={activeLectureId || ""}
-                    currentTime={currentTime}
-                    onSeek={handleSeekAndHighlight}
-                    activeCommentId={activeCommentId}
-                    onCommentsLoaded={setLectureComments}
-                    onRefreshComments={fetchLectureDetails}
-                    isPreview={isPreview}
-                />
-              </div>
+              {isPreview ? (
+                  <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm text-sm text-muted-foreground">
+                    Comentariile, recenziile si progresul sunt dezactivate in modul preview profesor.
+                  </div>
+              ) : (
+                  <>
+                    <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm">
+                      <CommentsSection
+                          studentId={studentId ?? ""}
+                          courseId={courseId ?? ""}
+                          lectureId={activeLectureId || ""}
+                          currentTime={currentTime}
+                          onSeek={handleSeekAndHighlight}
+                          activeCommentId={activeCommentId}
+                          onCommentsLoaded={setLectureComments}
+                          onRefreshComments={fetchLectureDetails}
+                      />
+                    </div>
 
-              <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm">
-                <ReviewSection
-                    studentId={studentId ?? ""}
-                    courseId={courseId ?? ""}
-                    lectureId={activeLectureId || ""}
-                    isPreview={isPreview}
-                />
-              </div>
+                    <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm">
+                      <ReviewSection
+                          studentId={studentId ?? ""}
+                          courseId={courseId ?? ""}
+                          lectureId={activeLectureId || ""}
+                      />
+                    </div>
+                  </>
+              )}
             </div>
 
           </div>

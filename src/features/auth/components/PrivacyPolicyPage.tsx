@@ -20,10 +20,10 @@ export default function PrivacyPolicyPage() {
           </Button>
           <Link to="/" className="flex items-center gap-2">
             <GraduationCap className="size-5 text-edu-purple" aria-hidden="true" />
-            <span className="font-semibold tracking-tight">FIISmart</span>
+            <span className="font-semibold tracking-tight">FII Smart</span>
           </Link>
           <Link to="/terms" className="text-sm text-edu-purple hover:underline">
-            Terms of Service →
+            Terms of Service â†’
           </Link>
         </div>
       </header>
@@ -41,15 +41,15 @@ export default function PrivacyPolicyPage() {
         </h1>
         <p className="mt-4 text-lg text-muted-foreground">
           Your privacy matters to us. This policy explains exactly what personal
-          data FIISmart collects, why we collect it, how we use and protect it,
+          data FII Smart collects, why we collect it, how we use and protect it,
           and what rights you have under the GDPR.
         </p>
         <hr className="mt-8 border-border/60" />
 
         <Section id="intro" title="1. Introduction">
           <p>
-            This Privacy Policy applies to the FIISmart e-learning platform
-            ("Service") operated by the FIISmart student project team at the
+            This Privacy Policy applies to the FII Smart e-learning platform
+            ("Service") operated by the FII Smart student project team at the
             Faculty of Computer Science (FII), Alexandru Ioan Cuza University,
             Iași, Romania ("we", "us", "our").
           </p>
@@ -69,7 +69,7 @@ export default function PrivacyPolicyPage() {
         <Section id="controller" title="2. Data Controller">
           <p>The data controller responsible for your personal data is:</p>
           <ContactBox>
-            <p><strong>FIISmart Project Team</strong></p>
+            <p><strong>FII Smart Project Team</strong></p>
             <p>Faculty of Computer Science (FII)</p>
             <p>Alexandru Ioan Cuza University</p>
             <p>Bd. Carol I nr. 11, Iași 700506, România</p>
@@ -284,7 +284,7 @@ export default function PrivacyPolicyPage() {
 
         <Section id="cookies" title="9. Cookies & Local Storage">
           <p>
-            FIISmart does not currently use tracking or advertising cookies.
+            FII Smart does not currently use tracking or advertising cookies.
             We use browser <strong>localStorage</strong> to store your session
             tokens (access token and refresh token) so that you remain logged
             in between browser sessions. These are strictly necessary for the
@@ -359,7 +359,7 @@ export default function PrivacyPolicyPage() {
             or the processing of your personal data, please contact us:
           </p>
           <ContactBox>
-            <p><strong>FIISmart Privacy Team</strong></p>
+            <p><strong>FII Smart Privacy Team</strong></p>
             <p>Faculty of Computer Science (FII)</p>
             <p>Alexandru Ioan Cuza University</p>
             <p>Bd. Carol I nr. 11, Iași 700506, România</p>
@@ -406,7 +406,7 @@ export default function PrivacyPolicyPage() {
             <ArrowLeft className="size-4" aria-hidden="true" /> Înapoi
           </Button>
           <Link to="/terms" className="text-sm text-edu-purple hover:underline">
-            Terms of Service →
+            Terms of Service â†’
           </Link>
         </div>
       </article>
@@ -454,3 +454,4 @@ function ContactBox({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+

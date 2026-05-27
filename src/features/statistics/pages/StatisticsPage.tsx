@@ -1,347 +1,275 @@
-import { useState, useEffect } from "react";
-import { useAuth } from "@/features/auth/context/AuthContext";
-import Navbar from "@/features/landing/components/Navbar";
-import "../../landing/landing.css";
-import { 
-  BookOpen, 
-  CheckCircle2, 
-  Clock, 
-  Flame, 
-  Trophy, 
-  Star,
-  Zap,
-  MessageSquare,
-  GraduationCap
-} from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { BarChart3, BookOpen, CheckCircle2, ClipboardCheck, GraduationCap, Star, TrendingUp, Users } from "lucide-react";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { 
-  getStats, 
-  getCourses, 
-  getQuizzes 
-} from "@/features/dashboard-student/services/dashboard-student.service";
-import type { 
-  StudentStats, 
-  StudentCourse, 
-  StudentQuiz 
-} from "@/features/dashboard-student/types";
 import { Spinner } from "@/components/ui/spinner";
-import { toast } from "sonner";
+import { useAuth } from "@/features/auth/context/AuthContext";
+import { UserRole } from "@/features/auth/types";
+import { StudentNavbar } from "@/features/dashboard-student/components/StudentNavbar";
+import { ProfDashboardNavbar } from "@/features/dashboard-prof/components/ProfDashboardNavbar";
+import { getCourses, getQuizzes, getStats } from "@/features/dashboard-student/services/dashboard-student.service";
+import type { StudentCourse, StudentQuiz, StudentStats } from "@/features/dashboard-student/types";
+import { apiFetch } from "@/lib/api";
+import type { DashboardOverviewResponse } from "@/features/dashboard-prof/types";
+
+type StatTileProps = {
+  title: string;
+  value: string | number;
+  subtitle?: string;
+  icon: ReactNode;
+};
+
+function StatTile({ title, value, subtitle, icon }: StatTileProps) {
+  return (
+    <Card className="border-border/60 bg-white shadow-sm">
+      <CardContent className="flex items-center gap-4 p-5">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#9b8ec7]/12 text-[#9b8ec7]">
+          {icon}
+        </div>
+        <div>
+          <p className="text-2xl font-bold text-[#1a1a2e]">{value}</p>
+          <p className="text-sm font-semibold text-[#5a5470]">{title}</p>
+          {subtitle ? <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p> : null}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function StatisticsPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<StudentStats | null>(null);
-  const [courses, setCourses] = useState<StudentCourse[]>([]);
-  const [quizzes, setQuizzes] = useState<StudentQuiz[]>([]);
+  const [studentStats, setStudentStats] = useState<StudentStats | null>(null);
+  const [studentCourses, setStudentCourses] = useState<StudentCourse[]>([]);
+  const [studentQuizzes, setStudentQuizzes] = useState<StudentQuiz[]>([]);
+  const [professorOverview, setProfessorOverview] = useState<DashboardOverviewResponse | null>(null);
+
+  const isProfessor = user?.role === UserRole.PROFESSOR;
 
   useEffect(() => {
     if (!user?.id) return;
+    let cancelled = false;
+    setLoading(true);
 
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [s, c, q] = await Promise.all([
+    const load = isProfessor
+      ? apiFetch<DashboardOverviewResponse>("/teacher-dashboard/me/overview").then((data) => {
+          if (!cancelled) setProfessorOverview(data);
+        })
+      : Promise.all([
           getStats(user.id),
           getCourses(user.id),
-          getQuizzes(user.id)
-        ]);
-        setStats(s);
-        setCourses(c || []);
-        setQuizzes(q || []);
-      } catch (error) {
-        console.error("Failed to fetch statistics:", error);
-        toast.error("Nu am putut încărca datele statistice.");
-      } finally {
-        setLoading(false);
+          getQuizzes(user.id),
+        ]).then(([stats, courses, quizzes]) => {
+          if (cancelled) return;
+          setStudentStats(stats);
+          setStudentCourses(courses ?? []);
+          setStudentQuizzes(quizzes ?? []);
+        });
+
+    load.catch((err) => {
+      if (!cancelled) {
+        const message = err instanceof Error ? err.message : "Nu am putut incarca statisticile.";
+        toast.error(message);
       }
+    }).finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
     };
+  }, [isProfessor, user?.id]);
 
-    fetchData();
-  }, [user?.id]);
+  const firstName = user?.firstName || (isProfessor ? "Profesor" : "Student");
+  const initials = `${user?.firstName?.[0] ?? (isProfessor ? "P" : "S")}${user?.lastName?.[0] ?? ""}`.toUpperCase();
 
-  if (loading) {
+  const averageProgress = useMemo(() => {
+    if (studentCourses.length === 0) return 0;
+    return Math.round(studentCourses.reduce((sum, course) => sum + course.overallProgress, 0) / studentCourses.length);
+  }, [studentCourses]);
+
+  const quizAverage = useMemo(() => {
+    if (studentQuizzes.length === 0) return 0;
+    return Math.round(studentQuizzes.reduce((sum, quiz) => sum + quiz.scor, 0) / studentQuizzes.length);
+  }, [studentQuizzes]);
+
+  if (!user || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F4EFE8]">
-        <Spinner className="size-8 text-primary" />
+      <div className="flex min-h-screen items-center justify-center bg-[#F4EFE8]">
+        <Spinner className="size-8 text-[#9b8ec7]" />
       </div>
     );
   }
 
-  const userInitials = user
-    ? ((user.firstName?.[0] || "") + (user.lastName?.[0] || "")).toUpperCase()
-    : "S";
+  if (isProfessor) {
+    const stats = professorOverview?.stats;
+    const courses = professorOverview?.coursesPreview ?? [];
+    const quizzes = professorOverview?.quizzesPreview ?? [];
 
-  const coursesInProgress = courses.filter(c => c.overallProgress < 100);
-  const finishedCourses = courses.filter(c => c.overallProgress === 100);
+    return (
+      <div className="min-h-screen bg-[#F4EFE8]">
+        <ProfDashboardNavbar />
+        <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-[#9b8ec7]">Statistici profesor</p>
+            <h1 className="mt-1 text-3xl font-bold text-[#1a1a2e]">Activitatea cursurilor tale</h1>
+            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+              Datele sunt calculate din cursurile create, inscrieri si incercari de quiz.
+            </p>
+          </div>
 
-  // Mock data for things not yet in backend
-  const teachers = [
-    { name: "Prof. Andrei C.", subject: "Programare", courses: 2, rating: 5, initials: "AC", color: "bg-primary/20 text-primary" },
-    { name: "Prof. Maria S.", subject: "Design", courses: 1, rating: 5, initials: "MS", color: "bg-secondary/30 text-secondary" },
-    { name: "Prof. Cristina L.", subject: "Data", courses: 1, rating: 4, initials: "CL", color: "bg-yellow-100 text-yellow-700" }
-  ];
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatTile title="Studenti inscrisi" value={stats?.studentsEnrolled ?? 0} icon={<Users className="h-5 w-5" />} />
+            <StatTile title="Cursuri active" value={stats?.activeCourses ?? 0} icon={<BookOpen className="h-5 w-5" />} />
+            <StatTile title="Quiz-uri completate" value={stats?.quizzesCompleted ?? 0} icon={<ClipboardCheck className="h-5 w-5" />} />
+            <StatTile title="Rata completare" value={`${stats?.completionRatePct ?? 0}%`} icon={<TrendingUp className="h-5 w-5" />} />
+          </div>
 
-  const achievements = [
-    { icon: "🏆", title: "Primul certificat", subtitle: "Obținut în Mar 2026", unlocked: finishedCourses.length > 0 },
-    { icon: "🔥", title: `Streak ${stats?.streakDays || 0} zile`, subtitle: "Activ", unlocked: (stats?.streakDays || 0) > 0 },
-    { icon: "⚡", title: "Rapid learner", subtitle: "10h în prima săptămână", unlocked: true },
-    { icon: "🎓", title: "Expert", subtitle: "Finalizează 5 cursuri", unlocked: finishedCourses.length >= 5 },
-    { icon: "💬", title: "Contributor", subtitle: "Postează 10 comentarii", unlocked: false }
-  ];
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card className="bg-white">
+              <CardContent className="p-6">
+                <h2 className="mb-4 text-lg font-bold text-[#1a1a2e]">Top cursuri recente</h2>
+                {courses.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nu exista cursuri create momentan.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {courses.map((course) => (
+                      <div key={course.courseId} className="rounded-xl border border-border/60 p-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <p className="font-semibold text-[#1a1a2e]">{course.title}</p>
+                            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{course.description}</p>
+                          </div>
+                          <span className="rounded-full bg-[#9b8ec7]/10 px-2.5 py-1 text-xs font-semibold text-[#5a5470]">
+                            {course.enrollmentCount} inscrieri
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-  const weeklyActivity = [
-    { day: "L", value: 30 },
-    { day: "M", value: 65 },
-    { day: "M", value: 45 },
-    { day: "J", value: 80 },
-    { day: "V", value: 50 },
-    { day: "S", value: 20 },
-    { day: "D", value: 35 }
-  ];
+            <Card className="bg-white">
+              <CardContent className="p-6">
+                <h2 className="mb-4 text-lg font-bold text-[#1a1a2e]">Quiz-uri</h2>
+                {quizzes.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nu exista incercari de quiz pentru cursurile tale.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {quizzes.map((quiz) => (
+                      <div key={quiz.quizId} className="flex items-center justify-between rounded-xl border border-border/60 p-4">
+                        <div>
+                          <p className="font-semibold text-[#1a1a2e]">{quiz.title}</p>
+                          <p className="text-sm text-muted-foreground">{quiz.courseTitle}</p>
+                        </div>
+                        <div className="text-right text-sm">
+                          <p className="font-bold text-[#1a1a2e]">{quiz.avgScorePct}%</p>
+                          <p className="text-xs text-muted-foreground">{quiz.attemptsCount} incercari</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
-  const quizAverage = quizzes.length > 0 
-    ? Math.round(quizzes.reduce((acc, q) => acc + q.scor, 0) / quizzes.length)
-    : 0;
+  const coursesInProgress = studentCourses.filter((course) => course.overallProgress > 0 && course.overallProgress < 100);
+  const finishedCourses = studentCourses.filter((course) => course.overallProgress >= 100);
 
   return (
     <div className="min-h-screen bg-[#F4EFE8]">
-      <Navbar solid={true} />
-      
-      {/* Profile Header */}
-      <div className="mt-16 lg:mt-18 bg-[#2D2A3E] relative overflow-hidden py-12">
-        {/* Decorative blobs */}
-        <div className="absolute w-80 h-80 rounded-full bg-primary/15 -top-24 -right-16 blur-[40px]" />
-        <div className="absolute w-56 h-56 rounded-full bg-secondary/10 -bottom-16 left-8 blur-[30px]" />
-        
-        <div className="fii-container relative z-10">
-          <div className="flex flex-col md:flex-row md:items-end gap-6">
-            <div className="p-1 bg-gradient-to-br from-primary via-secondary to-yellow-200 rounded-full inline-flex">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-secondary to-primary flex items-center justify-center text-3xl font-bold text-white font-heading">
-                {userInitials}
-              </div>
-            </div>
-            
-            <div className="flex-1 pb-1">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-white text-3xl font-bold font-heading">
-                  {user?.firstName} {user?.lastName}
-                </h1>
-                <span className="bg-primary/30 text-[#e0d8f5] text-[11px] font-semibold px-3 py-1 rounded-full border border-primary/40">
-                  Student
-                </span>
-              </div>
-              <p className="text-white/60 text-sm mt-1 font-body">
-                {user?.email} · Iași, România · Membru din Ian. 2026
-              </p>
-            </div>
-            
-            <div className="flex gap-3 pb-1">
-              <button className="bg-primary hover:opacity-90 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-all font-body">
-                Editează profilul
-              </button>
-              <button className="bg-transparent text-white/80 border border-white/25 px-4 py-2.5 rounded-lg text-sm transition-all hover:bg-white/5 font-body">
-                Setări
-              </button>
-            </div>
-          </div>
-          
-          <div className="flex gap-0 mt-8 border-b border-white/10">
-            <div className="px-5 py-3 border-b-2 border-secondary text-white text-sm font-medium cursor-pointer font-body">Statistici</div>
-            <div className="px-5 py-3 border-b-2 border-transparent text-white/45 text-sm font-medium hover:text-white/70 transition-colors cursor-pointer font-body">Cursuri</div>
-            <div className="px-5 py-3 border-b-2 border-transparent text-white/45 text-sm font-medium hover:text-white/70 transition-colors cursor-pointer font-body">Certificate</div>
-            <div className="px-5 py-3 border-b-2 border-transparent text-white/45 text-sm font-medium hover:text-white/70 transition-colors cursor-pointer font-body">Comunitate</div>
-          </div>
-        </div>
-      </div>
-
-      <main className="fii-container py-10">
-        
-        {/* Overview Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-          <Card className="text-center py-5 border-border/50 shadow-sm">
-            <CardContent className="p-0">
-              <div className="text-2xl font-bold text-primary font-heading">{stats?.enrolledCourses || 0}</div>
-              <p className="text-xs text-muted-foreground font-medium mt-1">Cursuri înscrise</p>
-            </CardContent>
-          </Card>
-          <Card className="text-center py-5 border-border/50 shadow-sm">
-            <CardContent className="p-0">
-              <div className="text-2xl font-bold text-green-500 font-heading">{finishedCourses.length}</div>
-              <p className="text-xs text-muted-foreground font-medium mt-1">Finalizate</p>
-            </CardContent>
-          </Card>
-          <Card className="text-center py-5 border-border/50 shadow-sm">
-            <CardContent className="p-0">
-              <div className="text-2xl font-bold text-orange-500 font-heading">47h</div>
-              <p className="text-xs text-muted-foreground font-medium mt-1">Ore învățate</p>
-            </CardContent>
-          </Card>
-          <Card className="text-center py-5 border-border/50 shadow-sm">
-            <CardContent className="p-0">
-              <div className="text-2xl font-bold text-destructive font-heading">{stats?.streakDays || 0}</div>
-              <p className="text-xs text-muted-foreground font-medium mt-1">Zile streak 🔥</p>
-            </CardContent>
-          </Card>
-          <Card className="text-center py-5 border-border/50 shadow-sm">
-            <CardContent className="p-0">
-              <div className="text-2xl font-bold font-heading">{finishedCourses.length > 0 ? finishedCourses.length : 0}</div>
-              <p className="text-xs text-muted-foreground font-medium mt-1">Certificate</p>
-            </CardContent>
-          </Card>
+      <StudentNavbar studentName={firstName} initials={initials} />
+      <main className="mx-auto flex w-full max-w-[1280px] flex-col gap-8 px-4 py-8 md:px-12">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-wide text-[#9b8ec7]">Statistici student</p>
+          <h1 className="mt-1 font-serif text-3xl font-bold text-[#1a1a2e]">Progresul tau</h1>
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            Date calculate din inscrieri, progresul lectiilor si rezultatele quiz-urilor.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-10">
-          
-          {/* Left Column: Courses */}
-          <div className="lg:col-span-2 flex flex-col gap-6">
-            <h2 className="text-xl font-bold text-[#2D2A3E] font-heading">Cursuri în desfășurare</h2>
-            
-            <div className="flex flex-col gap-4">
-              {coursesInProgress.length > 0 ? (
-                coursesInProgress.map((course, idx) => (
-                  <Card key={idx} className="p-5 border-border/50 shadow-sm hover:border-primary/30 transition-colors">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex-1 mr-4">
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <span className="bg-primary/10 text-primary text-[11px] font-semibold px-2.5 py-0.5 rounded-full">
-                            {course.overallProgress < 30 ? "Început" : "În lucru"}
-                          </span>
-                          <span className="text-[11px] text-muted-foreground">{course.enrollmentCount} studenți</span>
-                        </div>
-                        <h4 className="text-base font-bold text-[#2D2A3E] font-heading leading-tight">
-                          {course.title}
-                        </h4>
-                        <div className="flex items-center gap-1 text-xs text-orange-500 mt-1 font-semibold">
-                          <Star size={12} fill="currentColor" />
-                          {course.avgRating}
-                        </div>
-                      </div>
-                      <span className="text-xl font-bold text-primary font-heading">
-                        {course.overallProgress}%
-                      </span>
-                    </div>
-                    <Progress value={course.overallProgress} className="h-2 bg-primary/15" />
-                    <p className="text-[11px] text-muted-foreground mt-3">Continuă parcursul de învățare pe FiiSmart.</p>
-                  </Card>
-                ))
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatTile title="Cursuri inscrise" value={studentStats?.enrolledCourses ?? studentCourses.length} icon={<BookOpen className="h-5 w-5" />} />
+          <StatTile title="In progres" value={coursesInProgress.length} icon={<BarChart3 className="h-5 w-5" />} />
+          <StatTile title="Finalizate" value={finishedCourses.length} icon={<CheckCircle2 className="h-5 w-5" />} />
+          <StatTile title="Scor mediu quiz" value={`${quizAverage}%`} icon={<Star className="h-5 w-5" />} />
+        </div>
+
+        <Card className="bg-white">
+          <CardContent className="p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-[#1a1a2e]">Progres mediu cursuri</h2>
+                <p className="text-sm text-muted-foreground">{studentCourses.length} cursuri in cont</p>
+              </div>
+              <span className="text-2xl font-bold text-[#9b8ec7]">{averageProgress}%</span>
+            </div>
+            <Progress value={averageProgress} className="h-2" />
+          </CardContent>
+        </Card>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="bg-white">
+            <CardContent className="p-6">
+              <h2 className="mb-4 text-lg font-bold text-[#1a1a2e]">Cursuri</h2>
+              {studentCourses.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nu esti inscris la niciun curs.</p>
               ) : (
-                <Card className="p-8 text-center border-dashed border-2 border-border/50 bg-white/30">
-                  <p className="text-muted-foreground italic">Nu ai cursuri în desfășurare în acest moment.</p>
-                </Card>
+                <div className="space-y-4">
+                  {studentCourses.map((course) => (
+                    <div key={course.courseId ?? course.title} className="rounded-xl border border-border/60 p-4">
+                      <div className="mb-2 flex items-center justify-between gap-4">
+                        <p className="font-semibold text-[#1a1a2e]">{course.title}</p>
+                        <span className="text-sm font-bold text-[#9b8ec7]">{course.overallProgress}%</span>
+                      </div>
+                      <Progress value={course.overallProgress} className="h-2" />
+                    </div>
+                  ))}
+                </div>
               )}
+            </CardContent>
+          </Card>
 
-              {finishedCourses.map((course, idx) => (
-                <Card key={`fin-${idx}`} className="p-5 border-green-500/20 shadow-sm bg-white/50">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1 mr-4">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className="bg-green-100 text-green-700 text-[11px] font-semibold px-2.5 py-0.5 rounded-full">
-                          ✓ Finalizat
-                        </span>
+          <Card className="bg-white">
+            <CardContent className="p-6">
+              <h2 className="mb-4 text-lg font-bold text-[#1a1a2e]">Quiz-uri completate</h2>
+              {studentQuizzes.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nu ai quiz-uri completate momentan.</p>
+              ) : (
+                <div className="space-y-3">
+                  {studentQuizzes.map((quiz, index) => (
+                    <div key={`${quiz.quizId ?? quiz.titluQuiz}-${index}`} className="flex items-center justify-between rounded-xl border border-border/60 p-4">
+                      <div>
+                        <p className="font-semibold text-[#1a1a2e]">{quiz.titluQuiz}</p>
+                        <p className="text-sm text-muted-foreground">{quiz.numeCurs}</p>
                       </div>
-                      <h4 className="text-base font-bold text-[#2D2A3E] font-heading leading-tight">
-                        {course.title}
-                      </h4>
-                      <div className="flex items-center gap-1 text-xs text-orange-500 mt-1 font-semibold">
-                        <Star size={12} fill="currentColor" />
-                        {course.avgRating}
+                      <div className="text-right">
+                        <p className="font-bold text-[#1a1a2e]">{quiz.scor}%</p>
+                        <p className="text-xs text-muted-foreground">{quiz.status}</p>
                       </div>
-                    </div>
-                    <span className="text-xl font-bold text-green-500 font-heading">100%</span>
-                  </div>
-                  <div className="h-2 bg-green-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-green-500 w-full" />
-                  </div>
-                  <p className="text-[11px] text-muted-foreground mt-3 italic">🏆 Certificat obținut pentru {course.title}</p>
-                </Card>
-              ))}
-            </div>
-          </div>
-
-          {/* Right Column: Sidebar Stats */}
-          <div className="flex flex-col gap-8">
-            
-            <section>
-              <h2 className="text-lg font-bold text-[#2D2A3E] font-heading mb-4">Activitate săptămânală</h2>
-              <Card className="p-5 border-border/50 shadow-sm">
-                <div className="flex items-end gap-2.5 h-28 px-1">
-                  {weeklyActivity.map((item, idx) => (
-                    <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
-                      <div 
-                        className="w-full bg-primary/20 rounded-t-sm transition-all group-hover:bg-primary" 
-                        style={{ height: `${item.value}%`, backgroundColor: item.value > 60 ? '#9B8EC7' : undefined }} 
-                      />
-                      <span className="text-[10px] text-muted-foreground font-bold">{item.day}</span>
                     </div>
                   ))}
                 </div>
-                <p className="text-[11px] text-muted-foreground mt-4 text-center">8.4h medie / zi activă această săptămână</p>
-              </Card>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-bold text-[#2D2A3E] font-heading mb-4">Profesorii tăi</h2>
-              <Card className="p-5 border-border/50 shadow-sm">
-                <div className="flex flex-col gap-5">
-                  {teachers.map((t, idx) => (
-                    <div key={idx}>
-                      <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${t.color}`}>
-                          {t.initials}
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-[#2D2A3E]">{t.name}</p>
-                          <p className="text-[11px] text-muted-foreground">{t.subject} · {t.courses} cursuri</p>
-                        </div>
-                        <div className="flex text-orange-400 text-[10px]">
-                          {[...Array(5)].map((_, i) => (
-                            <Star key={i} size={10} fill={i < t.rating ? "currentColor" : "none"} className={i >= t.rating ? "text-muted/30" : ""} />
-                          ))}
-                        </div>
-                      </div>
-                      {idx < teachers.length - 1 && <div className="h-px bg-border/40 mt-5" />}
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-bold text-[#2D2A3E] font-heading mb-4">Performanță quiz</h2>
-              <Card className="p-4 border-border/50 shadow-sm">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-primary/5 rounded-xl p-3 text-center border border-primary/10">
-                    <div className="text-xl font-bold text-primary font-heading">{quizAverage}%</div>
-                    <p className="text-[10px] text-muted-foreground font-medium mt-0.5">Medie răspunsuri</p>
-                  </div>
-                  <div className="bg-green-50 rounded-xl p-3 text-center border border-green-100">
-                    <div className="text-xl font-bold text-green-500 font-heading">{quizzes.length}</div>
-                    <p className="text-[10px] text-muted-foreground font-medium mt-0.5">Quiz-uri completate</p>
-                  </div>
-                </div>
-              </Card>
-            </section>
-
-          </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Achievements */}
-        <div className="mt-12">
-          <h2 className="text-xl font-bold text-[#2D2A3E] font-heading mb-6">Realizări</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {achievements.map((a, idx) => (
-              <Card key={idx} className={`text-center p-5 border-border/50 shadow-sm transition-all hover:-translate-y-1 ${!a.unlocked ? 'opacity-40 grayscale' : 'border-primary/30 bg-white'}`}>
-                <div className="text-3xl mb-3">{a.icon}</div>
-                <p className="text-sm font-bold text-[#2D2A3E] font-heading leading-tight">{a.title}</p>
-                <p className="text-[10px] text-muted-foreground mt-1.5 font-medium">{a.subtitle}</p>
-              </Card>
-            ))}
-          </div>
-        </div>
-
+        <Card className="bg-white">
+          <CardContent className="flex items-center gap-4 p-5 text-sm text-muted-foreground">
+            <GraduationCap className="h-5 w-5 shrink-0 text-[#9b8ec7]" />
+            Statisticile care nu au suport backend real au fost eliminate din aceasta pagina in loc sa afiseze valori inventate.
+          </CardContent>
+        </Card>
       </main>
     </div>
   );
 }
-

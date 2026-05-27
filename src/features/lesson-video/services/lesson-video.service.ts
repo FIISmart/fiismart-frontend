@@ -15,10 +15,7 @@ import type {
  * Student-facing endpoints for Lesson Video page
  */
 
-// 👇 EXTINDEM RequestInit ca să suportăm skipDevMock
-export type ApiFetchOptions = RequestInit & {
-  skipDevMock?: boolean;
-};
+export type ApiFetchOptions = RequestInit;
 
 export const lessonVideoService = {
   // =========================
@@ -116,7 +113,15 @@ export const lessonVideoService = {
       lectureId: string,
       payload: LectureProgressPayload
   ) {
-    return apiFetch<void>(
+    return apiFetch<{
+      lectureId: string;
+      watchedPercent: number;
+      positionSecs: number;
+      completed: boolean;
+      overallProgress: number;
+      enrollmentStatus: string;
+      courseCompleted: boolean;
+    }>(
         `/students/${studentId}/courses/${courseId}/lectures/${lectureId}/progress`,
         {
           method: "PUT",

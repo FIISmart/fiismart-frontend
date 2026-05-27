@@ -48,7 +48,7 @@ export default function About() {
               educatiei impreuna
             </h2>
             <p className="font-body text-body-lg text-muted-foreground mb-6 leading-relaxed">
-              FIISmart este mai mult decat o platforma de cursuri online. Suntem o
+              FII Smart este mai mult decat o platforma de cursuri online. Suntem o
               comunitate de invatare dedicata sa transforme felul in care oamenii
               acumuleaza cunostinte si abilitati in Romania.
             </p>

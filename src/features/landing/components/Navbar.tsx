@@ -1,13 +1,16 @@
 import { useState, useEffect } from "react";
-import { Menu, X, GraduationCap } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
+import { Logo } from "@/components/brand/Logo";
 
-const navLinks = [
+type NavLink = { label: string; href: string; to?: never } | { label: string; to: string; href?: never };
+
+const navLinks: NavLink[] = [
   { label: "Functionalitati", href: "#Functionalitati" },
-  { label: "Cursuri", href: "#cursuri" },
-  { label: "Comunitate", href: "#comunitate" },
-  { label: "Contact", href: "#contact" },
+  { label: "Cursuri", to: "/courses" },
+  { label: "Tutori", to: "/tutors" },
+  { label: "Contact", to: "/contact" },
 ];
 
 type NavbarProps = {
@@ -43,19 +46,20 @@ export default function Navbar({ solid = false }: NavbarProps) {
       <div className="fii-container">
         <div className="flex items-center justify-between h-16 lg:h-18">
           {/* Logo */}
-          <a
-            href="#"
-            className="flex items-center gap-2 font-heading font-bold text-lg text-foreground"
-          >
-            <GraduationCap size={28} className="text-primary" />
-            <span>
-              FII<span className="text-primary">Smart</span>
-            </span>
-          </a>
+          <Logo textClassName="text-lg" />
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-8">
             {navLinks.map((link) => (
+              link.to ? (
+              <Link
+                key={link.label}
+                to={link.to}
+                className="text-muted-foreground hover:text-primary font-body text-body transition-colors duration-150"
+              >
+                {link.label}
+              </Link>
+              ) : (
               <a
                 key={link.label}
                 href={link.href}
@@ -63,6 +67,7 @@ export default function Navbar({ solid = false }: NavbarProps) {
               >
                 {link.label}
               </a>
+              )
             ))}
           </div>
 
@@ -108,6 +113,16 @@ export default function Navbar({ solid = false }: NavbarProps) {
           <div className="md:hidden py-4 border-t border-border bg-background/95">
             <div className="flex flex-col gap-3">
               {navLinks.map((link) => (
+                link.to ? (
+                <Link
+                  key={link.label}
+                  to={link.to}
+                  className="text-muted-foreground hover:text-primary font-body text-body px-2 py-2 transition-colors"
+                  onClick={() => setIsMobileOpen(false)}
+                >
+                  {link.label}
+                </Link>
+                ) : (
                 <a
                   key={link.label}
                   href={link.href}
@@ -116,6 +131,7 @@ export default function Navbar({ solid = false }: NavbarProps) {
                 >
                   {link.label}
                 </a>
+                )
               ))}
               <div className="flex flex-col gap-2 pt-3 border-t border-border">
                 {isAuthenticated ? (

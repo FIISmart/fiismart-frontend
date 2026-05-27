@@ -4,9 +4,9 @@ import Hero from "../components/Hero";
 import Stats from "../components/Stats";
 import Features from "../components/Features";
 import Courses from "../components/Courses";
+import Mentors from "../components/Mentors";
 import HowItWorks from "../components/HowItWorks";
 import About from "../components/About";
-import Testimonials from "../components/Testimonials";
 import CTA from "../components/CTA";
 import Footer from "../components/Footer";
 
@@ -18,9 +18,9 @@ export default function LandingPage() {
       <Stats />
       <Features />
       <Courses />
+      <Mentors />
       <HowItWorks />
       <About />
-      <Testimonials />
       <CTA />
       <Footer />
     </div>

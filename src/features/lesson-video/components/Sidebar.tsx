@@ -22,6 +22,7 @@ interface SidebarProps {
   overallProgress?: number;
   finalQuiz?: QuizStatus | null;
   refreshTrigger?: number;
+  previewMode?: boolean;
 }
 
 const formatDuration = (seconds: number) => {
@@ -77,6 +78,7 @@ export default function Sidebar({
   overallProgress = 0,
   finalQuiz,
   refreshTrigger = 0,
+  previewMode = false,
 }: SidebarProps) {
   const navigate = useNavigate();
   const [modules, setModules] = useState<ModuleSummary[]>([]);
@@ -86,7 +88,44 @@ export default function Sidebar({
   useEffect(() => {
     const fetchModules = async () => {
       try {
-        const data = await lessonVideoService.getModules(studentId, courseId);
+        let data: ModuleSummary[] = [];
+        if (previewMode) {
+          const { getModules, getCourseBuilderQuizzes } = await import("@/lib/api");
+          const [builderModules, builderQuizzes] = await Promise.all([
+             getModules(courseId),
+             getCourseBuilderQuizzes(courseId)
+          ]);
+          
+          data = builderModules.map((mod: any) => {
+            const moduleQuiz = builderQuizzes.find(q => q.quizScope === 'module' && q.moduleId === mod.id);
+            return {
+              moduleId: mod.id,
+              title: mod.title,
+              order: mod.order,
+              lectures: (mod.lectures || []).map((lec: any) => {
+                const lectureQuiz = builderQuizzes.find(q => q.quizScope === 'lecture' && q.lectureId === lec.id);
+                return {
+                  lectureId: lec.id,
+                  title: lec.title,
+                  type: lec.type || "video",
+                  content: lec.content,
+                  videoUrl: lec.videoUrl,
+                  pdfUrl: lec.pdfUrl,
+                  order: lec.order,
+                  durationSecs: lec.durationSecs || 0,
+                  completed: false,
+                  watchedPercent: 0,
+                  lastPositionSecs: 0,
+                  quiz: lectureQuiz ? { quizId: lectureQuiz.id, statusLabel: "Disponibil" } : undefined,
+                };
+              }),
+              quiz: moduleQuiz ? { quizId: moduleQuiz.id, statusLabel: "Disponibil" } : undefined,
+            };
+          });
+        } else {
+          data = await lessonVideoService.getModules(studentId, courseId);
+        }
+        
         setModules(data);
         if (data && data.length > 0 && expandedModules.length === 0) {
           setExpandedModules([data[0].moduleId]);
@@ -101,7 +140,7 @@ export default function Sidebar({
     void fetchModules();
     // Keep the user's current accordion state during background refreshes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [studentId, courseId, refreshTrigger]);
+  }, [studentId, courseId, refreshTrigger, previewMode]);
 
   const toggleModule = (moduleId: string) => {
     setExpandedModules((prev) =>
@@ -113,6 +152,12 @@ export default function Sidebar({
 
   const openQuiz = (quiz?: QuizStatus | null) => {
     if (!quiz?.quizId) return;
+    if (previewMode) {
+      import("sonner").then(({ toast }) => {
+        toast.info("Quiz-ul poate fi parcurs doar ca student.");
+      });
+      return;
+    }
     navigate(`/student/quizzes/${quiz.quizId}?courseId=${courseId}`);
   };
 

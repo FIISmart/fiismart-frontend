@@ -1,4 +1,5 @@
-import { MoreVertical } from "lucide-react";
+import { ExternalLink } from "lucide-react";
+import { Link } from "react-router-dom";
 import type { QuizPreview } from "../types";
 
 interface QuizTableProps {
@@ -10,9 +11,9 @@ export function QuizTable({ quizzes }: QuizTableProps) {
       <div className="mb-12">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-2xl font-bold font-poppins text-edu-foreground">Quiz-urile Mele</h3>
-          <a href="#" className="text-sm font-medium text-[#BDA6CE] hover:text-edu-primary transition">
+          <Link to="/professor/quizzes" className="text-sm font-medium text-[#BDA6CE] hover:text-edu-primary transition">
             Vezi toate
-          </a>
+          </Link>
         </div>
 
         <div className="bg-edu-card rounded-2xl overflow-hidden shadow-sm overflow-x-auto">
@@ -62,9 +63,13 @@ export function QuizTable({ quizzes }: QuizTableProps) {
                       </td>
 
                       <td className="py-4 px-6 text-right">
-                        <button className="text-edu-muted-fg hover:text-edu-primary transition p-1 rounded-md hover:bg-edu-bg">
-                          <MoreVertical size={18} />
-                        </button>
+                        <Link
+                          to={`/professor/courses/${quiz.courseId}`}
+                          className="inline-flex text-edu-muted-fg hover:text-edu-primary transition p-1 rounded-md hover:bg-edu-bg"
+                          aria-label="Deschide cursul"
+                        >
+                          <ExternalLink size={18} />
+                        </Link>
                       </td>
                     </tr>
                 ))

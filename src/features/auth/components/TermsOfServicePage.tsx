@@ -21,10 +21,10 @@ export default function TermsOfServicePage() {
           </Button>
           <Link to="/" className="flex items-center gap-2">
             <GraduationCap className="size-5 text-edu-purple" aria-hidden="true" />
-            <span className="font-semibold tracking-tight">FIISmart</span>
+            <span className="font-semibold tracking-tight">FII Smart</span>
           </Link>
           <Link to="/privacy" className="text-sm text-edu-purple hover:underline">
-            Privacy Policy →
+            Privacy Policy â†’
           </Link>
         </div>
       </header>
@@ -40,7 +40,7 @@ export default function TermsOfServicePage() {
           Terms of Service
         </h1>
         <p className="mt-4 text-lg text-muted-foreground">
-          Please read these terms carefully before using FIISmart. By creating an
+          Please read these terms carefully before using FII Smart. By creating an
           account or accessing the platform, you agree to be bound by these terms.
         </p>
         <hr className="mt-8 border-border/60" />
@@ -48,7 +48,7 @@ export default function TermsOfServicePage() {
         <Section id="acceptance" title="1. Acceptance of Terms">
           <p>
             These Terms of Service ("Terms") govern your access to and use of the
-            FIISmart platform ("Service"), operated by the FIISmart student project
+            FII Smart platform ("Service"), operated by the FII Smart student project
             team at the Faculty of Computer Science (FII), Alexandru Ioan Cuza
             University, Iași, Romania ("we", "us", or "our").
           </p>
@@ -67,7 +67,7 @@ export default function TermsOfServicePage() {
 
         <Section id="service" title="2. Description of Service">
           <p>
-            FIISmart is an educational e-learning platform designed for the students
+            FII Smart is an educational e-learning platform designed for the students
             and teachers of FII UAIC. The Service allows teachers to create and
             publish courses with lectures and quizzes, and allows students to enrol
             in those courses, track their progress, take quizzes, and leave reviews.
@@ -78,7 +78,7 @@ export default function TermsOfServicePage() {
             Features, availability, and functionality may change at any time.
           </p>
           <Callout>
-            <strong>Note:</strong> FIISmart is a student-developed project and is
+            <strong>Note:</strong> FII Smart is a student-developed project and is
             not an official service of Alexandru Ioan Cuza University. It does not
             replace or substitute any official university system.
           </Callout>
@@ -147,15 +147,15 @@ export default function TermsOfServicePage() {
 
         <Section id="ip" title="6. Intellectual Property">
           <p>
-            <strong>Platform content.</strong> The FIISmart name, logo, interface
-            design, and all software code are owned by the FIISmart project team.
+            <strong>Platform content.</strong> The FII Smart name, logo, interface
+            design, and all software code are owned by the FII Smart project team.
             You may not copy, reproduce, distribute, or create derivative works from
             any part of the platform without our prior written consent.
           </p>
           <p>
             <strong>User-generated content.</strong> Teachers retain ownership of
             the course content they create and upload. By publishing content on
-            FIISmart, you grant us a non-exclusive, royalty-free, worldwide licence
+            FII Smart, you grant us a non-exclusive, royalty-free, worldwide licence
             to host, display, and deliver that content to enrolled students as part
             of the Service.
           </p>
@@ -215,7 +215,7 @@ export default function TermsOfServicePage() {
           <p>
             Our total liability to you for any claim arising out of these Terms
             shall not exceed the greater of (a) the amount you paid us in the
-            twelve months preceding the claim, or (b) €50.
+            twelve months preceding the claim, or (b) â‚¬50.
           </p>
         </Section>
 
@@ -263,11 +263,11 @@ export default function TermsOfServicePage() {
 
         <Section id="contact" title="13. Contact">
           <p>
-            If you have questions about these Terms, please contact the FIISmart
+            If you have questions about these Terms, please contact the FII Smart
             team at:
           </p>
           <ContactBox>
-            <p><strong>FIISmart Project Team</strong></p>
+            <p><strong>FII Smart Project Team</strong></p>
             <p>Faculty of Computer Science (FII)</p>
             <p>Alexandru Ioan Cuza University</p>
             <p>Bd. Carol I nr. 11, Iași 700506, România</p>
@@ -288,7 +288,7 @@ export default function TermsOfServicePage() {
             <ArrowLeft className="size-4" aria-hidden="true" /> Înapoi
           </Button>
           <Link to="/privacy" className="text-sm text-edu-purple hover:underline">
-            Privacy Policy →
+            Privacy Policy â†’
           </Link>
         </div>
       </article>
@@ -336,3 +336,4 @@ function ContactBox({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+

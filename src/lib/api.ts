@@ -786,6 +786,56 @@ export function enrollMe(courseId: string) {
   return request<{ id: string }>(`/enrollments/me/${courseId}`, { method: "POST" });
 }
 
+// Tutors
+export interface TutorAPI {
+  id: string;
+  displayName: string;
+  headline?: string | null;
+  tags: string[];
+  bio: string;
+  courseCount: number;
+  publishedCourseCount: number;
+  avgRating: number;
+  reviewCount: number;
+  experienceYears: number;
+  avatarUrl?: string | null;
+  availability?: string | null;
+  priceLabel?: string | null;
+}
+
+export function getTutors() {
+  return request<TutorAPI[]>("/tutors");
+}
+
+export function createTutorRequest(data: { tutorId: string; message?: string }) {
+  return request<{ id: string; status: string; tutorId: string; createdAt: string }>("/tutor-requests", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export interface TutorRequestAPI {
+  id: string;
+  studentId: string;
+  studentName?: string | null;
+  tutorId: string;
+  tutorName?: string | null;
+  message: string;
+  status: "pending" | "accepted" | "declined" | "resolved";
+  createdAt: string;
+}
+
+export function getProfessorTutorRequests() {
+  return request<TutorRequestAPI[]>("/tutor-requests/professor/me");
+}
+
+export function updateTutorRequestStatus(id: string, status: TutorRequestAPI["status"]) {
+  return request<TutorRequestAPI>(`/tutor-requests/${id}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
 // ── Admin ───────────────────────────────────────────────
 
 export interface AdminStatsAPI {

@@ -26,6 +26,10 @@ const EMPTY_OVERVIEW: DashboardOverviewResponse = {
     studentsEnrolled: 0,
     activeCourses: 0,
     quizzesCompleted: 0,
+    totalQuizzes: 0,
+    lectureQuizzes: 0,
+    moduleQuizzes: 0,
+    finalQuizzes: 0,
     completionRatePct: 0,
   },
   coursesPreview: [],
@@ -129,9 +133,9 @@ export function ProfessorDashboardPage() {
                     iconColor="text-edu-foreground"
                 />
                 <StatCard
-                    title="Quiz-uri completate"
-                    value={data.stats.quizzesCompleted}
-                    subtitle="De către studenți"
+                    title="Quiz-uri create"
+                    value={data.stats.totalQuizzes ?? 0}
+                    subtitle={`${data.stats.lectureQuizzes ?? 0} lectie · ${data.stats.moduleQuizzes ?? 0} modul · ${data.stats.finalQuizzes ?? 0} final`}
                     icon={<Star size={24} />}
                     iconBgColor="bg-edu-secondary/30"
                     iconColor="text-edu-primary"
@@ -160,6 +164,13 @@ export function ProfessorDashboardPage() {
                     icon={<BookOpen size={28} />}
                     bgColorClass="bg-[#4FD1C5]"
                     to="/professor/courses"
+                />
+                <ActionCard
+                    title="Cereri de mentorat"
+                    description="Raspunde studentilor care au nevoie de sprijin."
+                    icon={<Users size={28} />}
+                    bgColorClass="bg-[#9B8EC7]"
+                    to="/professor/mentor-requests"
                 />
               </div>
 
@@ -218,3 +229,5 @@ export function ProfessorDashboardPage() {
 }
 
 export default ProfessorDashboardPage;
+
+

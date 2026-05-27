@@ -10,6 +10,11 @@ import TermsOfServicePage from "@/features/auth/components/TermsOfServicePage";
 import PrivacyPolicyPage from "@/features/auth/components/PrivacyPolicyPage";
 import RoleDashboardRedirect from "@/features/auth/components/RoleDashboardRedirect";
 import LandingPage from "@/features/landing/pages/LandingPage";
+import PublicCoursesPage from "@/features/landing/pages/PublicCoursesPage";
+import AboutPage from "@/features/landing/pages/AboutPage";
+import ContactPage from "@/features/landing/pages/ContactPage";
+import BecomeProfessorPage from "@/features/landing/pages/BecomeProfessorPage";
+import PublicTutorsPage from "@/features/landing/pages/PublicTutorsPage";
 import ProfessorDashboardPage from "@/features/dashboard-prof/pages/ProfessorDashboardPage";
 import StudentDashboardPage from "@/features/dashboard-student/pages/StudentDashboardPage";
 import LessonVideoPage from "@/features/lesson-video/pages/LessonVideoPage";
@@ -19,6 +24,8 @@ import MyQuizzesPage from "@/features/course-builder/pages/MyQuizzesPage";
 import CoursesListPage from "@/features/courses/pages/CoursesListPage";
 import TimetablePage from "@/features/timetable/pages/TimetablePage";
 import StatisticsPage from "@/features/statistics/pages/StatisticsPage";
+import TutorsPage from "@/features/tutors/pages/TutorsPage";
+import ProfessorMentorRequestsPage from "@/features/tutors/pages/ProfessorMentorRequestsPage";
 import StudentCoursesPage from "@/features/dashboard-student/pages/StudentCoursesPage";
 import StudentCourseDetailPage from "@/features/dashboard-student/pages/StudentCourseDetailPage";
 import AdminDashboardPage from "@/features/admin/pages/AdminDashboardPage";
@@ -32,7 +39,6 @@ import { FloatingChatButton } from "@/features/chat/components/FloatingChatButto
 import { ChatPanel } from "@/features/chat/components/ChatPanel";
 import { useAuth } from "@/features/auth/context/AuthContext";
 
-
 /**
  * Chatbot global: provider-ul rămâne montat permanent (cost minim), iar
  * butonul + panoul sunt vizibile doar pentru utilizatorii autentificați.
@@ -41,73 +47,89 @@ import { useAuth } from "@/features/auth/context/AuthContext";
  */
 function ChatMount() {
   const { isAuthenticated, user } = useAuth();
+
   if (!isAuthenticated || user?.role !== "PROFESSOR") return null;
+
   return (
-    <>
-      <FloatingChatButton />
-      <ChatPanel />
-    </>
+      <>
+        <FloatingChatButton />
+        <ChatPanel />
+      </>
   );
 }
 
 export default function App() {
   return (
-    <ChatProvider>
-    <Routes>
-      {/* Public */}
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/auth" element={<AuthPage />} />
-      <Route path="/auth/callback" element={<AuthCallbackPage />} />
-      <Route path="/auth/complete-profile" element={<CompleteProfilePage />} />
-      <Route path="/terms" element={<TermsOfServicePage />} />
-      <Route path="/privacy" element={<PrivacyPolicyPage />} />
-      <Route path="/unauthorized" element={<UnauthorizedPage />} />
-      <Route path="/banned" element={<BannedPage />} />
+      <ChatProvider>
+        <Routes>
+          {/* Public */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/courses" element={<PublicCoursesPage />} />
+          <Route path="/tutors" element={<PublicTutorsPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/become-professor" element={<BecomeProfessorPage />} />
+          <Route path="/auth" element={<AuthPage />} />
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          <Route path="/auth/complete-profile" element={<CompleteProfilePage />} />
+          <Route path="/terms" element={<TermsOfServicePage />} />
+          <Route path="/privacy" element={<PrivacyPolicyPage />} />
+          <Route path="/unauthorized" element={<UnauthorizedPage />} />
+          <Route path="/banned" element={<BannedPage />} />
 
-      {/* Student-only */}
-      <Route element={<ProtectedRoute allowedRoles={[UserRole.STUDENT]} />}>
-        <Route path="/student/dashboard" element={<StudentDashboardPage />} />
-        <Route path="/student/courses" element={<StudentCoursesPage />} />
-        <Route path="/student/courses/:courseId" element={<StudentCourseDetailPage />} />
-        <Route path="/student/courses/:courseId/lectures/:lectureId" element={<LessonVideoPage />} />
-        <Route path="/student/quizzes/:quizId" element={<QuizPlayerPage />} />
-        <Route path="/student/timetable" element={<TimetablePage />} />
-        <Route path="/student/statistics" element={<StatisticsPage />} />
-      </Route>
+          {/* Student-only */}
+          <Route element={<ProtectedRoute allowedRoles={[UserRole.STUDENT]} />}>
+            <Route path="/student/dashboard" element={<StudentDashboardPage />} />
+            <Route path="/student/courses" element={<StudentCoursesPage />} />
+            <Route path="/student/courses/:courseId" element={<StudentCourseDetailPage />} />
+            <Route path="/student/courses/:courseId/lectures/:lectureId" element={<LessonVideoPage />} />
+            <Route path="/student/quizzes/:quizId" element={<QuizPlayerPage />} />
+            <Route path="/student/timetable" element={<TimetablePage />} />
+            <Route path="/student/statistics" element={<StatisticsPage />} />
+            <Route path="/student/tutors" element={<TutorsPage />} />
+          </Route>
 
-      {/* Professor-only */}
-      <Route element={<ProtectedRoute allowedRoles={[UserRole.PROFESSOR]} />}>
-        <Route path="/professor/dashboard" element={<ProfessorDashboardPage />} />
-        <Route path="/professor/courses" element={<CoursesListPage />} />
-        <Route path="/professor/quizzes" element={<MyQuizzesPage />} />
-        <Route path="/professor/courses/:courseId" element={<CourseBuilderPage />} />
-        <Route path="/professor/timetable" element={<TimetablePage />} />
-        <Route path="/professor/preview/:courseId" element={<ProfessorPreviewRedirectPage />} />
-        <Route path="/professor/preview/:courseId/lectures/:lectureId" element={<LessonVideoPage />} />
-      </Route>
+          {/* Professor-only */}
+          <Route element={<ProtectedRoute allowedRoles={[UserRole.PROFESSOR]} />}>
+            <Route path="/professor/dashboard" element={<ProfessorDashboardPage />} />
+            <Route path="/professor/courses" element={<CoursesListPage />} />
+            <Route path="/professor/quizzes" element={<MyQuizzesPage />} />
+            <Route path="/professor/courses/:courseId" element={<CourseBuilderPage />} />
+            <Route path="/professor/timetable" element={<TimetablePage />} />
+            <Route path="/professor/statistics" element={<StatisticsPage />} />
+            <Route path="/professor/mentor-requests" element={<ProfessorMentorRequestsPage />} />
 
-      {/* Admin-only */}
-      <Route element={<ProtectedRoute allowedRoles={[UserRole.ADMIN]} />}>
-        <Route path="/admin/dashboard"   element={<AdminDashboardPage />} />
-        <Route path="/admin/users"       element={<AdminUsersPage />} />
-        <Route path="/admin/courses"     element={<AdminCoursesPage />} />
-        <Route path="/admin/enrollments" element={<AdminEnrollmentsPage />} />
-      </Route>
+            {/* Professor course preview */}
+            <Route path="/professor/preview/:courseId" element={<ProfessorPreviewRedirectPage />} />
+            <Route
+                path="/professor/preview/:courseId/lectures/:lectureId"
+                element={<LessonVideoPage previewMode />}
+            />
+          </Route>
 
-      {/* Role-aware dashboard alias */}
-      <Route element={<ProtectedRoute allowedRoles={[UserRole.STUDENT, UserRole.PROFESSOR, UserRole.ADMIN]} />}>
-        <Route path="/dashboard" element={<RoleDashboardRedirect />} />
-      </Route>
+          {/* Admin-only */}
+          <Route element={<ProtectedRoute allowedRoles={[UserRole.ADMIN]} />}>
+            <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+            <Route path="/admin/users" element={<AdminUsersPage />} />
+            <Route path="/admin/courses" element={<AdminCoursesPage />} />
+            <Route path="/admin/enrollments" element={<AdminEnrollmentsPage />} />
+          </Route>
 
-      {/* Compatibility shims for legacy / external links */}
-      <Route path="/login" element={<Navigate to="/auth" replace />} />
-      <Route path="/signup" element={<Navigate to="/auth" replace />} />
-      <Route path="/cursuri" element={<Navigate to="/professor/courses" replace />} />
+          {/* Role-aware dashboard alias */}
+          <Route element={<ProtectedRoute allowedRoles={[UserRole.STUDENT, UserRole.PROFESSOR, UserRole.ADMIN]} />}>
+            <Route path="/dashboard" element={<RoleDashboardRedirect />} />
+          </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-    <ChatMount />
-    <Toaster richColors position="top-right" />
-    </ChatProvider>
+          {/* Compatibility shims for legacy / external links */}
+          <Route path="/login" element={<Navigate to="/auth" replace />} />
+          <Route path="/signup" element={<Navigate to="/auth" replace />} />
+          <Route path="/cursuri" element={<Navigate to="/courses" replace />} />
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+
+        <ChatMount />
+        <Toaster richColors position="top-right" />
+      </ChatProvider>
   );
 }
