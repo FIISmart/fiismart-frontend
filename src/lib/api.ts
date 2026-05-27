@@ -331,6 +331,11 @@ export interface ModuleQuizQuestionPayload {
   correctIdx?: number | null;
   correctText?: string | null;
   explanation?: string;
+  // Free-text (AI-graded) rubric. Only sent when type === "free_text";
+  // omitted on the wire for other types via JSON.stringify drop-undefined.
+  sampleAnswer?: string;
+  keyConcepts?: string[];
+  passThreshold?: number;
 }
 
 export interface ModuleQuizPayload {
