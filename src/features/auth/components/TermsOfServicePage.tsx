@@ -1,10 +1,10 @@
-﻿import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /**
  * Terms of Service. Long-form copy ported verbatim from
- * `origin/login-signin-front:src/auth/components/TermsOfService.tsx` â€”
+ * `origin/login-signin-front:src/auth/components/TermsOfService.tsx` —
  * only the presentation layer was rewritten in Tailwind. No inline styles.
  */
 export default function TermsOfServicePage() {
@@ -17,7 +17,7 @@ export default function TermsOfServicePage() {
         <div className="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
             <ArrowLeft className="size-4" aria-hidden="true" />
-            ÃŽnapoi
+            Înapoi
           </Button>
           <Link to="/" className="flex items-center gap-2">
             <GraduationCap className="size-5 text-edu-purple" aria-hidden="true" />
@@ -50,7 +50,7 @@ export default function TermsOfServicePage() {
             These Terms of Service ("Terms") govern your access to and use of the
             FII Smart platform ("Service"), operated by the FII Smart student project
             team at the Faculty of Computer Science (FII), Alexandru Ioan Cuza
-            University, IaÈ™i, Romania ("we", "us", or "our").
+            University, Iași, Romania ("we", "us", or "our").
           </p>
           <p>
             By registering an account, logging in, or otherwise accessing or using
@@ -139,8 +139,8 @@ export default function TermsOfServicePage() {
             <li>Circumvent or attempt to circumvent any technological protection measures on the Service.</li>
           </ul>
           <p>
-            We reserve the right to investigate and take appropriate action â€”
-            including suspension or termination of accounts â€” against anyone who,
+            We reserve the right to investigate and take appropriate action —
+            including suspension or termination of accounts — against anyone who,
             in our sole discretion, violates this section.
           </p>
         </Section>
@@ -207,8 +207,8 @@ export default function TermsOfServicePage() {
           <p>
             To the fullest extent permitted by applicable law, we shall not be
             liable for any indirect, incidental, special, consequential, or
-            punitive damages â€” including loss of data, loss of profits, or
-            interruption of service â€” arising out of or in connection with your
+            punitive damages — including loss of data, loss of profits, or
+            interruption of service — arising out of or in connection with your
             use of the Service, even if we have been advised of the possibility
             of such damages.
           </p>
@@ -237,7 +237,7 @@ export default function TermsOfServicePage() {
           <p>
             We may update these Terms from time to time. When we do, we will
             revise the "Last updated" date at the top of this page. If the
-            changes are material, we will make reasonable efforts to notify you â€”
+            changes are material, we will make reasonable efforts to notify you —
             for example, via an in-app notice or email.
           </p>
           <p>
@@ -252,7 +252,7 @@ export default function TermsOfServicePage() {
             These Terms are governed by and construed in accordance with the
             laws of Romania, without regard to its conflict of law provisions.
             Any disputes arising under these Terms shall be subject to the
-            exclusive jurisdiction of the courts of IaÈ™i, Romania.
+            exclusive jurisdiction of the courts of Iași, Romania.
           </p>
           <p>
             If you are a consumer resident in the European Union, you also
@@ -270,7 +270,7 @@ export default function TermsOfServicePage() {
             <p><strong>FII Smart Project Team</strong></p>
             <p>Faculty of Computer Science (FII)</p>
             <p>Alexandru Ioan Cuza University</p>
-            <p>Bd. Carol I nr. 11, IaÈ™i 700506, RomÃ¢nia</p>
+            <p>Bd. Carol I nr. 11, Iași 700506, România</p>
             <p>
               Email:{" "}
               <a
@@ -285,7 +285,7 @@ export default function TermsOfServicePage() {
 
         <div className="mt-12 flex items-center justify-between border-t border-border/60 pt-6">
           <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-            <ArrowLeft className="size-4" aria-hidden="true" /> ÃŽnapoi
+            <ArrowLeft className="size-4" aria-hidden="true" /> Înapoi
           </Button>
           <Link to="/privacy" className="text-sm text-edu-purple hover:underline">
             Privacy Policy â†’

@@ -1,4 +1,4 @@
-﻿import { Heart, Reply } from "lucide-react";
+import { Heart, Reply } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { CommentPreview } from "../types";
 
@@ -60,11 +60,11 @@ export function CommentList({ comments }: CommentListProps) {
                     <span className="font-semibold text-edu-foreground">
                       {comment.authorDisplayName}
                     </span>
-                                        <span className="text-edu-border">â€¢</span>
+                                        <span className="text-edu-border">•</span>
                                         <span className="text-xs font-medium bg-edu-bg px-2 py-0.5 rounded-md text-edu-muted-fg border border-edu-border/50">
                       {comment.courseTitle}
                     </span>
-                                        <span className="text-edu-border">â€¢</span>
+                                        <span className="text-edu-border">•</span>
                                         <span className="text-xs text-edu-muted-fg">{dataFormatata}</span>
                                     </div>
 
@@ -77,11 +77,11 @@ export function CommentList({ comments }: CommentListProps) {
                                         </span>
                                         <span className="flex items-center gap-1.5 text-xs font-medium text-edu-muted-fg">
                                             <Reply size={14} />
-                                            <span>{comment.repliesCount} RÄƒspunsuri</span>
+                                            <span>{comment.repliesCount} Răspunsuri</span>
                                         </span>
 
                                         {comment.isAnswered && (
-                                            <span className="text-xs text-emerald-500 font-medium ml-auto">âœ“ RÄƒspuns</span>
+                                            <span className="text-xs text-emerald-500 font-medium ml-auto">âœ“ Răspuns</span>
                                         )}
                                     </div>
                                 </div>

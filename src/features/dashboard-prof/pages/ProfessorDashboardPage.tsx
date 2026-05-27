@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Users,
   BookOpen,
@@ -19,7 +19,7 @@ import { QuizTable } from "../components/QuizTable";
 import { CommentList } from "../components/CommentList";
 import type { DashboardOverviewResponse } from "../types";
 
-// Fallback shape returned by the overview endpoint â€” used when the
+// Fallback shape returned by the overview endpoint — used when the
 // backend is unreachable so the dashboard chrome still renders.
 const EMPTY_OVERVIEW: DashboardOverviewResponse = {
   stats: {
@@ -61,7 +61,7 @@ export function ProfessorDashboardPage() {
         })
         .catch(() => {
           if (cancelled) return;
-          // Backend offline / 404 / network error â€” render dashboard
+          // Backend offline / 404 / network error — render dashboard
           // chrome with an empty state instead of failing loudly.
           setData(EMPTY_OVERVIEW);
           setHasFetchError(true);
@@ -73,7 +73,7 @@ export function ProfessorDashboardPage() {
     };
   }, [teacherId]);
 
-  // Auth still loading â€” no user available yet.
+  // Auth still loading — no user available yet.
   if (!user) {
     return (
         <div className="min-h-screen bg-edu-bg text-edu-foreground flex items-center justify-center">
@@ -90,7 +90,7 @@ export function ProfessorDashboardPage() {
             <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex justify-center items-center">
               <div className="flex items-center gap-3 text-edu-muted-fg">
                 <Spinner className="size-6 text-edu-primary" />
-                <p className="text-xl font-medium animate-pulse">Se Ã®ncarcÄƒ dashboard-ul...</p>
+                <p className="text-xl font-medium animate-pulse">Se încarcă dashboard-ul...</p>
               </div>
             </main>
         ) : (
@@ -102,7 +102,7 @@ export function ProfessorDashboardPage() {
                       className="mb-6 flex items-center gap-2 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-2.5 text-sm text-amber-800"
                   >
                     <WifiOff size={16} className="shrink-0" />
-                    <span>Backend offline â€” vei vedea o vizualizare goalÄƒ.</span>
+                    <span>Backend offline — vei vedea o vizualizare goală.</span>
                   </div>
               )}
 
@@ -111,15 +111,15 @@ export function ProfessorDashboardPage() {
                   Bine ai venit, Profesor!
                 </h2>
                 <p className="text-edu-muted-fg mt-2 text-lg">
-                  IatÄƒ o privire de ansamblu asupra cursurilor tale È™i a activitÄƒÈ›ii studenÈ›ilor.
+                  Iată o privire de ansamblu asupra cursurilor tale și a activității studenților.
                 </p>
               </div>
 
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
                 <StatCard
-                    title="StudenÈ›i activi"
+                    title="Studenți activi"
                     value={data.stats.studentsEnrolled}
-                    subtitle="ÃŽnrolati Ã®n total"
+                    subtitle="Înrolati în total"
                     icon={<Users size={24} />}
                     iconBgColor="bg-edu-secondary/20"
                     iconColor="text-edu-primary"
@@ -127,7 +127,7 @@ export function ProfessorDashboardPage() {
                 <StatCard
                     title="Cursuri active"
                     value={data.stats.activeCourses}
-                    subtitle="Publicate pe platformÄƒ"
+                    subtitle="Publicate pe platformă"
                     icon={<BookOpen size={24} />}
                     iconBgColor="bg-edu-accent/30"
                     iconColor="text-edu-foreground"
@@ -153,14 +153,14 @@ export function ProfessorDashboardPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
                 <ActionCard
                     title="Creare Quiz Rapid"
-                    description="AdaugÄƒ un test scurt pentru evaluarea studenÈ›ilor."
+                    description="Adaugă un test scurt pentru evaluarea studenților."
                     icon={<PlusCircle size={28} />}
                     bgColorClass="bg-[#B794F4]"
                     to="/professor/quizzes"
                 />
                 <ActionCard
                     title="Course Builder"
-                    description="ConfigureazÄƒ È™i publicÄƒ un curs nou pas cu pas."
+                    description="Configurează și publică un curs nou pas cu pas."
                     icon={<BookOpen size={28} />}
                     bgColorClass="bg-[#4FD1C5]"
                     to="/professor/courses"

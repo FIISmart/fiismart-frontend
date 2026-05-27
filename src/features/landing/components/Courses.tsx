@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { BookOpen, Clock, Star, Users } from "lucide-react";
 import { landingService, type PopularCourse } from "../services/landing.service";
+import { resolveFileUrl } from "@/lib/api";
 
 const FALLBACK_THUMBNAIL =
   "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=640&h=360&fit=crop";
@@ -106,7 +107,7 @@ export default function Courses() {
                 <Link key={course.id} to="/courses" className="landing-card group overflow-hidden p-0">
                   <div className="relative h-44 bg-muted flex items-center justify-center overflow-hidden">
                     <img
-                      src={course.thumbnailUrl || FALLBACK_THUMBNAIL}
+                      src={resolveFileUrl(course.thumbnailUrl) || FALLBACK_THUMBNAIL}
                       alt={course.title}
                       className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
