@@ -59,24 +59,18 @@ export default function QuizQuestionPage({
     }
   };
 
-  const normalizedWrittenAnswer = writtenAnswer.trim().toLowerCase();
-  const normalizedCorrectText = (question.correctText ?? "").trim().toLowerCase();
-  // We CANNOT determine MCQ or free_text correctness locally: the
-  // student-facing /student-quizzes/{id} payload deliberately strips
-  // `correctIdx` (and `correctText`) so the answer key never reaches the
-  // browser — see StudentPlayableQuestionDTO on the BE. The authoritative
-  // verdict comes back from the BE on submit and is reflected on the
-  // result page. Report `false` optimistically for MCQ/free_text and let
-  // the BE win.
+  // We CANNOT determine ANY question type's correctness locally — the
+  // student-facing /student-quizzes/{id} payload deliberately strips the
+  // answer key (correctIdx, correctText, sampleAnswer, keyConcepts) so it
+  // never reaches the browser. See StudentPlayableQuestionDTO on the BE.
+  // The authoritative verdict comes back on submit and is reflected on the
+  // result page. Always report `false` here and let the BE win.
   //
-  // Previously this read `selectedIdx === question.correctIdx`, which was
-  // ALWAYS false for MCQ because correctIdx was undefined on the wire —
-  // every confirmed MCQ answer flashed "Greșit" regardless of pick.
-  const isCorrect = isFreeText
-    ? false
-    : isWritten
-      ? Boolean(normalizedCorrectText) && normalizedWrittenAnswer === normalizedCorrectText
-      : false;
+  // Previously the `written` branch read `question.correctText` (always
+  // null on the wire), so it computed isCorrect=false AND rendered
+  // "Raspuns asteptat: nu este definit" — confusing the prof who had
+  // actually configured a correct answer that's stored fine server-side.
+  const isCorrect = false;
   const canConfirm = isTextAnswer ? writtenAnswer.trim() !== "" : selectedIdx !== null;
 
   return (
@@ -122,19 +116,12 @@ export default function QuizQuestionPage({
                 Evaluat de AI
               </div>
             )}
-            {isSubmitted && isWritten && (
-              <div
-                className={`text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow-sm ${
-                  isCorrect ? "bg-[#84C5C4]" : "bg-[#E57373]"
-                }`}
-              >
-                {isCorrect ? "Corect!" : "Greșit"}
-              </div>
-            )}
-            {/* MCQ verdicts are computed server-side (the answer key never
-                reaches the browser). Show a neutral "Răspuns trimis" pill
-                here and let QuizResultPage display the authoritative score. */}
-            {isSubmitted && !isFreeText && !isWritten && (
+            {/* All verdicts are server-side (the answer key never reaches
+                the browser). Neutral "Răspuns trimis" pill for MCQ + written;
+                the dedicated "Evaluat de AI" pill above is enough for
+                free_text. The authoritative verdict surfaces on the
+                QuizResultPage. */}
+            {isSubmitted && !isFreeText && (
               <div className="bg-[#9B8EC7] text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow-sm">
                 Răspuns trimis
               </div>
@@ -182,12 +169,9 @@ export default function QuizQuestionPage({
                 </div>
               )}
               {isWritten && isSubmitted && (
-                <div className={`mt-4 rounded-[16px] p-4 text-sm ${
-                  isCorrect ? "bg-[#F2F8F8] text-[#31706E]" : "bg-[#FDF6F6] text-[#C62828]"
-                }`}>
-                  {isCorrect
-                    ? "Raspuns corect."
-                    : `Raspuns asteptat: ${question.correctText || "nu este definit"}`}
+                <div className="mt-4 rounded-[16px] p-4 text-sm bg-[#F4F1F8] text-[#5A4A7A]">
+                  Răspunsul tău a fost trimis. Scorul final apare pe pagina
+                  de rezultate.
                 </div>
               )}
             </div>
