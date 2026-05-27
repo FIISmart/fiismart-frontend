@@ -61,14 +61,22 @@ export default function QuizQuestionPage({
 
   const normalizedWrittenAnswer = writtenAnswer.trim().toLowerCase();
   const normalizedCorrectText = (question.correctText ?? "").trim().toLowerCase();
-  // For free_text we cannot determine correctness locally — grading happens
-  // server-side and asynchronously. Report `false` optimistically; the result
-  // page reads the authoritative score off the BE response.
+  // We CANNOT determine MCQ or free_text correctness locally: the
+  // student-facing /student-quizzes/{id} payload deliberately strips
+  // `correctIdx` (and `correctText`) so the answer key never reaches the
+  // browser — see StudentPlayableQuestionDTO on the BE. The authoritative
+  // verdict comes back from the BE on submit and is reflected on the
+  // result page. Report `false` optimistically for MCQ/free_text and let
+  // the BE win.
+  //
+  // Previously this read `selectedIdx === question.correctIdx`, which was
+  // ALWAYS false for MCQ because correctIdx was undefined on the wire —
+  // every confirmed MCQ answer flashed "Greșit" regardless of pick.
   const isCorrect = isFreeText
     ? false
     : isWritten
       ? Boolean(normalizedCorrectText) && normalizedWrittenAnswer === normalizedCorrectText
-      : selectedIdx === question.correctIdx;
+      : false;
   const canConfirm = isTextAnswer ? writtenAnswer.trim() !== "" : selectedIdx !== null;
 
   return (
@@ -114,13 +122,21 @@ export default function QuizQuestionPage({
                 Evaluat de AI
               </div>
             )}
-            {isSubmitted && !isFreeText && (
+            {isSubmitted && isWritten && (
               <div
                 className={`text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow-sm ${
                   isCorrect ? "bg-[#84C5C4]" : "bg-[#E57373]"
                 }`}
               >
                 {isCorrect ? "Corect!" : "Greșit"}
+              </div>
+            )}
+            {/* MCQ verdicts are computed server-side (the answer key never
+                reaches the browser). Show a neutral "Răspuns trimis" pill
+                here and let QuizResultPage display the authoritative score. */}
+            {isSubmitted && !isFreeText && !isWritten && (
+              <div className="bg-[#9B8EC7] text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow-sm">
+                Răspuns trimis
               </div>
             )}
           </div>
@@ -179,51 +195,24 @@ export default function QuizQuestionPage({
             <div className="flex flex-col gap-4 mb-8">
             {(question.options ?? []).map((option, optIdx) => {
               const isSelected = selectedIdx === optIdx;
-              const isThisCorrect = optIdx === question.correctIdx;
 
               let containerClasses =
                 "border-[#E5E7EB] bg-white hover:border-[#BDA6CE]";
               let circleClasses = "bg-[#F2EAE0] text-[#6A7282]";
               let textClasses = "text-[#4B5563]";
-              let content: ReactNode = OPTION_LABELS[optIdx] ?? "";
+              const content: ReactNode = OPTION_LABELS[optIdx] ?? "";
 
+              // After submit we only know which option the student picked —
+              // we do NOT know which one was correct (the BE intentionally
+              // strips the answer key from /student-quizzes responses). So
+              // we highlight the selected option neutrally and leave the
+              // others dimmed. The authoritative verdict surfaces on the
+              // result page once the BE has graded the submission.
               if (isSubmitted) {
-                if (isThisCorrect) {
-                  containerClasses = "border-[#84C5C4] bg-[#F2F8F8]";
-                  circleClasses = "bg-[#84C5C4] text-white";
-                  textClasses = "text-[#31706E] font-semibold";
-                  content = (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  );
-                } else if (isSelected && !isThisCorrect) {
-                  containerClasses = "border-[#E57373] bg-[#FDF6F6]";
-                  circleClasses = "bg-[#E57373] text-white";
-                  textClasses = "text-[#C62828] font-semibold";
-                  content = (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  );
+                if (isSelected) {
+                  containerClasses = "border-[#9B8EC7] bg-[#F9F7FA]";
+                  circleClasses = "bg-[#9B8EC7] text-white";
+                  textClasses = "text-[#333333] font-semibold";
                 } else {
                   containerClasses = "border-[#E5E7EB] bg-white opacity-60";
                 }
