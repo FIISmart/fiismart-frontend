@@ -34,6 +34,7 @@ import AdminDashboardPage from "@/features/admin/pages/AdminDashboardPage";
 import AdminUsersPage from "@/features/admin/pages/AdminUsersPage";
 import AdminCoursesPage from "@/features/admin/pages/AdminCoursesPage";
 import AdminEnrollmentsPage from "@/features/admin/pages/AdminEnrollmentsPage";
+import AccountPage from "@/features/account/pages/AccountPage";
 import ProfessorPreviewRedirectPage from "@/features/lesson-video/pages/ProfessorPreviewRedirectPage";
 import { Toaster } from "sonner";
 import { ChatProvider } from "@/features/chat/context/ChatContext";
@@ -91,6 +92,7 @@ export default function App() {
             <Route path="/student/tutors" element={<TutorsPage />} />
             <Route path="/student/mentor-requests" element={<StudentMentorRequestsPage />} />
             <Route path="/student/mentor-requests/:requestId/chat" element={<MentorConversationPage />} />
+            <Route path="/student/account" element={<AccountPage />} />
           </Route>
 
           {/* Professor-only */}
@@ -103,6 +105,7 @@ export default function App() {
             <Route path="/professor/statistics" element={<StatisticsPage />} />
             <Route path="/professor/mentor-requests" element={<ProfessorMentorRequestsPage />} />
             <Route path="/professor/mentor-requests/:requestId/chat" element={<MentorConversationPage />} />
+            <Route path="/professor/account" element={<AccountPage />} />
 
             {/* Professor course preview */}
             <Route path="/professor/preview/:courseId" element={<ProfessorPreviewRedirectPage />} />
@@ -118,6 +121,7 @@ export default function App() {
             <Route path="/admin/users" element={<AdminUsersPage />} />
             <Route path="/admin/courses" element={<AdminCoursesPage />} />
             <Route path="/admin/enrollments" element={<AdminEnrollmentsPage />} />
+            <Route path="/admin/account" element={<AccountPage />} />
           </Route>
 
           {/* Role-aware dashboard alias */}

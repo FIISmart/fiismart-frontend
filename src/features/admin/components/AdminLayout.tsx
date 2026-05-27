@@ -83,6 +83,14 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
         <p className="text-xs text-muted-foreground truncate mb-1">{user?.email}</p>
         <p className="text-xs font-semibold text-primary mb-3">Administrator</p>
         <Button
+          variant="ghost"
+          size="sm"
+          className="mb-2 w-full justify-start"
+          onClick={() => navigate("/admin/account")}
+        >
+          Contul meu
+        </Button>
+        <Button
           variant="outline"
           size="sm"
           className="w-full gap-2 text-destructive border-destructive/30 hover:bg-destructive/10"

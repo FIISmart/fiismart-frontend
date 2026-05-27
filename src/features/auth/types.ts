@@ -14,6 +14,9 @@ export interface AuthUser {
   /** Câmp de conveniență — backend-ul returnează și displayName. */
   displayName?: string;
   role: UserRole;
+  phone?: string | null;
+  bio?: string | null;
+  avatarUrl?: string | null;
   emailVerified?: boolean;
   /** True pentru utilizatorii Google nou-creați care nu și-au selectat rolul încă. */
   needsRoleSelection?: boolean;

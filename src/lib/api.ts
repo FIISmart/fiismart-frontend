@@ -698,6 +698,38 @@ export function markAllNotificationsRead() {
   return request<void>("/notifications/read-all", { method: "PATCH" });
 }
 
+export interface AccountProfileAPI {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  displayName?: string;
+  role: string;
+  phone?: string | null;
+  bio?: string | null;
+  avatarUrl?: string | null;
+}
+
+export interface AccountProfilePayload {
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
+  phone?: string;
+  bio?: string;
+  avatarUrl?: string;
+}
+
+export function getMyProfile() {
+  return request<AccountProfileAPI>("/auth/me");
+}
+
+export function updateMyProfile(data: AccountProfilePayload) {
+  return request<AccountProfileAPI>("/auth/me", {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
 // ── Quiz attempt lifecycle (timer + anti-cheat flow) ───────────────────────
 //
 // IMPORTANT: the FE never sends score/passed/correct. Grading is server-side.
