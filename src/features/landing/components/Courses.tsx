@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { BookOpen, Clock, Star, Users } from "lucide-react";
+import { resolveFileUrl } from "@/lib/api";
 import { landingService, type PopularCourse } from "../services/landing.service";
 
 const FALLBACK_THUMBNAIL =
@@ -34,8 +35,10 @@ export default function Courses() {
           setCourses(courseData);
           setCategories(categoryData);
         }
-      } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Nu am putut incarca lista de cursuri.");
+      } catch {
+        if (!cancelled) {
+          setError("Nu am putut incarca momentan aceasta sectiune. Incearca din nou mai tarziu.");
+        }
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -106,7 +109,7 @@ export default function Courses() {
                 <Link key={course.id} to="/courses" className="landing-card group overflow-hidden p-0">
                   <div className="relative h-44 bg-muted flex items-center justify-center overflow-hidden">
                     <img
-                      src={course.thumbnailUrl || FALLBACK_THUMBNAIL}
+                      src={resolveFileUrl(course.thumbnailUrl) || FALLBACK_THUMBNAIL}
                       alt={course.title}
                       className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
