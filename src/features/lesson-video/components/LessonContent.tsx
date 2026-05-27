@@ -247,24 +247,33 @@ export default function LessonContent({ lecture, onMarkComplete, isSaving = fals
   }
 
   return (
-    <section className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+    // min-h ties the card to a reasonable height even when the lecture
+    // content is just a paragraph — keeps the layout from looking like a
+    // floating header above a sea of empty cream-colored background.
+    // flex-col + flex-1 on the body block lets the markdown grow naturally
+    // for long content but still pad out short content with breathing room.
+    <section className="bg-card border border-border rounded-2xl p-6 shadow-sm flex flex-col min-h-[60vh] lg:min-h-[70vh]">
       <div className="mb-6">
         <p className="text-xs font-semibold uppercase tracking-wide text-primary">Lectie text</p>
         <h1 className="text-2xl font-bold text-foreground">{lecture.title}</h1>
       </div>
 
-      {loadingMarkdown ? (
-        <div className="flex min-h-[220px] items-center justify-center text-muted-foreground">
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Se incarca textul...
-        </div>
-      ) : markdownContent.trim() ? (
-        <MarkdownPreview content={markdownContent} />
-      ) : (
-        <p className="rounded-lg border border-dashed border-border p-6 text-sm text-muted-foreground">
-          Aceasta lectie nu are continut text.
-        </p>
-      )}
+      <div className="flex-1">
+        {loadingMarkdown ? (
+          <div className="flex min-h-[220px] items-center justify-center text-muted-foreground">
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Se incarca textul...
+          </div>
+        ) : markdownContent.trim() ? (
+          <MarkdownPreview content={markdownContent} />
+        ) : (
+          <div className="flex min-h-[220px] items-center justify-center">
+            <p className="rounded-lg border border-dashed border-border p-6 text-sm text-muted-foreground text-center max-w-md">
+              Aceasta lectie nu are continut text inca.
+            </p>
+          </div>
+        )}
+      </div>
 
       {!readOnly && <div className="mt-6 border-t border-border pt-5">
         <Button
