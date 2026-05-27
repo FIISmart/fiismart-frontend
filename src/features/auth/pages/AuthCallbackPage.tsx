@@ -47,8 +47,11 @@ export default function AuthCallbackPage() {
           return;
         }
         toast.success(`Bine ai revenit, ${user.firstName || user.email}!`);
-        const dest = user.role === "PROFESSOR" ? "/professor/dashboard" : "/student/dashboard";
-        navigate(dest, { replace: true });
+        // Route via the role-aware redirect so ADMIN users land on
+        // /admin/dashboard. Hardcoding the destination here used to send
+        // admin/google-federated users to /student/dashboard, where
+        // ProtectedRoute then bounced them to /unauthorized.
+        navigate("/dashboard", { replace: true });
       })
       .catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : "Autentificare eșuată.";
