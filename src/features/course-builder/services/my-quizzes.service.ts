@@ -18,8 +18,29 @@ export function quizToModuleQuizPayload(quiz: Quiz): api.ModuleQuizPayload {
     timeLimit: quiz.timeLimit ?? 30,
     shuffleQuestions: quiz.shuffleQuestions ?? false,
     questions: quiz.questions.map((question) => {
-      const isWritten = question.type === "written";
-      if (isWritten) {
+      if (question.type === "free_text") {
+        // AI-graded: ship the rubric (sample + concepts + threshold) so the
+        // BE has something to grade against. Without these the grader runs
+        // on an empty rubric and every answer lands below the pass threshold.
+        const sampleAnswer = (question.sampleAnswer ?? "").trim();
+        const keyConcepts = (question.keyConcepts ?? [])
+          .map((concept) => concept.trim())
+          .filter(Boolean);
+        return {
+          text: question.question,
+          type: "free_text",
+          points: 1,
+          options: [],
+          correctIdx: null,
+          correctText: null,
+          sampleAnswer,
+          keyConcepts,
+          passThreshold:
+            typeof question.passThreshold === "number" ? question.passThreshold : 70,
+          explanation: question.explanation?.trim() || undefined,
+        };
+      }
+      if (question.type === "written") {
         const correctText =
           typeof question.correctAnswer === "string" ? question.correctAnswer.trim() : "";
         return {
