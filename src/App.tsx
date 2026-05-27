@@ -26,6 +26,8 @@ import TimetablePage from "@/features/timetable/pages/TimetablePage";
 import StatisticsPage from "@/features/statistics/pages/StatisticsPage";
 import TutorsPage from "@/features/tutors/pages/TutorsPage";
 import ProfessorMentorRequestsPage from "@/features/tutors/pages/ProfessorMentorRequestsPage";
+import StudentMentorRequestsPage from "@/features/tutors/pages/StudentMentorRequestsPage";
+import MentorConversationPage from "@/features/tutors/pages/MentorConversationPage";
 import StudentCoursesPage from "@/features/dashboard-student/pages/StudentCoursesPage";
 import StudentCourseDetailPage from "@/features/dashboard-student/pages/StudentCourseDetailPage";
 import AdminDashboardPage from "@/features/admin/pages/AdminDashboardPage";
@@ -87,6 +89,8 @@ export default function App() {
             <Route path="/student/timetable" element={<TimetablePage />} />
             <Route path="/student/statistics" element={<StatisticsPage />} />
             <Route path="/student/tutors" element={<TutorsPage />} />
+            <Route path="/student/mentor-requests" element={<StudentMentorRequestsPage />} />
+            <Route path="/student/mentor-requests/:requestId/chat" element={<MentorConversationPage />} />
           </Route>
 
           {/* Professor-only */}
@@ -98,6 +102,7 @@ export default function App() {
             <Route path="/professor/timetable" element={<TimetablePage />} />
             <Route path="/professor/statistics" element={<StatisticsPage />} />
             <Route path="/professor/mentor-requests" element={<ProfessorMentorRequestsPage />} />
+            <Route path="/professor/mentor-requests/:requestId/chat" element={<MentorConversationPage />} />
 
             {/* Professor course preview */}
             <Route path="/professor/preview/:courseId" element={<ProfessorPreviewRedirectPage />} />

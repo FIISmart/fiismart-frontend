@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { MessageCircle } from "lucide-react";
 import { ProfDashboardNavbar } from "@/features/dashboard-prof/components/ProfDashboardNavbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +15,7 @@ const statusLabel: Record<TutorRequestAPI["status"], string> = {
 };
 
 export default function ProfessorMentorRequestsPage() {
+  const navigate = useNavigate();
   const [requests, setRequests] = useState<TutorRequestAPI[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -117,6 +120,17 @@ export default function ProfessorMentorRequestsPage() {
                     >
                       Marcheaza rezolvata
                     </Button>
+                    {(request.status === "accepted" || request.status === "resolved") && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => navigate(`/professor/mentor-requests/${request.id}/chat`)}
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        Conversatie
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>

@@ -7,9 +7,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { StudentNavbar } from "@/features/dashboard-student/components/StudentNavbar";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { createTutorRequest, getTutors, type TutorAPI } from "@/lib/api";
+import { useNavigate } from "react-router-dom";
 
 export default function TutorsPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [tutors, setTutors] = useState<TutorAPI[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -91,14 +93,19 @@ export default function TutorsPage() {
               Alege un profesor real din platforma FII Smart. Lista este construita din conturile cu rol PROFESSOR si cursurile publicate.
             </p>
           </div>
-          <div className="relative w-full md:w-[360px]">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cauta dupa nume sau tag..."
-              className="bg-white pl-9"
-            />
+          <div className="flex w-full flex-col gap-3 md:w-[420px]">
+            <Button type="button" variant="outline" onClick={() => navigate("/student/mentor-requests")}>
+              Vezi cererile mele
+            </Button>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Cauta dupa nume sau tag..."
+                className="bg-white pl-9"
+              />
+            </div>
           </div>
         </div>
 

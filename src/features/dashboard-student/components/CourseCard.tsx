@@ -2,6 +2,7 @@ import { Star, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { lessonVideoService } from "@/features/lesson-video/services/lesson-video.service";
+import { resolveFileUrl } from "@/lib/api";
 import type { StudentCourse } from "../types";
 
 interface CourseCardProps {
@@ -15,6 +16,7 @@ export function CourseCard({ course, idx }: CourseCardProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const headerColor = HEADER_COLORS[idx % HEADER_COLORS.length];
+  const thumbnail = resolveFileUrl(course.thumbnailUrl);
   const handleCourseClick = async () => {
     if (!course.courseId) {
       navigate("/student/courses");
@@ -44,7 +46,15 @@ export function CourseCard({ course, idx }: CourseCardProps) {
 
   return (
     <div className="bg-white rounded-[22px] overflow-hidden shadow-sm border border-black/5 flex flex-col group h-full">
-      <div className={`h-32 ${headerColor} relative group-hover:h-36 transition-all duration-300`}>
+      <div
+        className={`h-32 ${thumbnail ? "" : headerColor} relative overflow-hidden group-hover:h-36 transition-all duration-300`}
+        style={thumbnail ? {
+          backgroundImage: `url("${thumbnail}")`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        } : undefined}
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-black/20 via-black/5 to-black/35" />
         <div className="absolute top-3 right-3 bg-[#22c55e] text-white px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase shadow-sm">
           ACTIV
         </div>

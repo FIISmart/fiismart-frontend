@@ -822,6 +822,7 @@ export interface TutorRequestAPI {
   tutorName?: string | null;
   message: string;
   status: "pending" | "accepted" | "declined" | "resolved";
+  conversationId?: string | null;
   createdAt: string;
 }
 
@@ -829,10 +830,50 @@ export function getProfessorTutorRequests() {
   return request<TutorRequestAPI[]>("/tutor-requests/professor/me");
 }
 
+export function getStudentTutorRequests() {
+  return request<TutorRequestAPI[]>("/tutor-requests/student/me");
+}
+
 export function updateTutorRequestStatus(id: string, status: TutorRequestAPI["status"]) {
   return request<TutorRequestAPI>(`/tutor-requests/${id}/status`, {
     method: "PATCH",
     body: JSON.stringify({ status }),
+  });
+}
+
+export interface MentorMessageAPI {
+  id: string;
+  senderId: string;
+  senderName?: string | null;
+  senderRole?: string | null;
+  text: string;
+  createdAt: string;
+}
+
+export interface MentorConversationAPI {
+  id: string;
+  requestId: string;
+  studentId: string;
+  studentName?: string | null;
+  tutorId: string;
+  tutorName?: string | null;
+  messages: MentorMessageAPI[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function getTutorRequestConversation(requestId: string) {
+  return request<MentorConversationAPI>(`/tutor-requests/${requestId}/conversation`);
+}
+
+export function getMentorConversationMessages(conversationId: string) {
+  return request<MentorMessageAPI[]>(`/tutor-requests/conversations/${conversationId}/messages`);
+}
+
+export function sendMentorConversationMessage(conversationId: string, text: string) {
+  return request<MentorMessageAPI>(`/tutor-requests/conversations/${conversationId}/messages`, {
+    method: "POST",
+    body: JSON.stringify({ text }),
   });
 }
 
