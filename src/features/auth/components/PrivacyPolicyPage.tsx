@@ -1,10 +1,10 @@
-﻿import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /**
  * Privacy Policy. Long-form copy ported verbatim from
- * `origin/login-signin-front:src/auth/components/PrivacyPolicy.tsx` -
+ * `origin/login-signin-front:src/auth/components/PrivacyPolicy.tsx` —
  * only the presentation layer was rewritten in Tailwind. No inline styles.
  */
 export default function PrivacyPolicyPage() {
@@ -92,7 +92,7 @@ export default function PrivacyPolicyPage() {
           <p>
             When you register, we collect your first name, last name, email
             address, chosen role (student or teacher), and a hashed version of
-            your password. We never store your password in plain text - it is
+            your password. We never store your password in plain text — it is
             immediately hashed using BCrypt before being saved.
           </p>
 
@@ -186,21 +186,21 @@ export default function PrivacyPolicyPage() {
           </p>
           <ul className="list-disc pl-6 space-y-2">
             <li>
-              <strong>Account data</strong> - retained for as long as your
+              <strong>Account data</strong> — retained for as long as your
               account is active. If you delete your account, we will delete
               your personal data within 30 days, except where retention is
               required by law.
             </li>
             <li>
-              <strong>Activity data</strong> - retained for the duration of
+              <strong>Activity data</strong> — retained for the duration of
               your account plus 90 days.
             </li>
             <li>
-              <strong>Server logs</strong> - retained for a maximum of 90 days
+              <strong>Server logs</strong> — retained for a maximum of 90 days
               for security purposes.
             </li>
             <li>
-              <strong>Session tokens</strong> - expire automatically or are
+              <strong>Session tokens</strong> — expire automatically or are
               deleted on logout.
             </li>
           </ul>

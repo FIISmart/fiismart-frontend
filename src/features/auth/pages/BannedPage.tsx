@@ -1,4 +1,4 @@
-﻿import { Ban } from "lucide-react";
+import { Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "../context/AuthContext";
 

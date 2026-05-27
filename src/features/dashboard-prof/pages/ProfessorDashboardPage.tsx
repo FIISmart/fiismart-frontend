@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Users,
   BookOpen,
@@ -19,7 +19,7 @@ import { QuizTable } from "../components/QuizTable";
 import { CommentList } from "../components/CommentList";
 import type { DashboardOverviewResponse } from "../types";
 
-// Fallback shape returned by the overview endpoint - used when the
+// Fallback shape returned by the overview endpoint — used when the
 // backend is unreachable so the dashboard chrome still renders.
 const EMPTY_OVERVIEW: DashboardOverviewResponse = {
   stats: {
@@ -61,7 +61,7 @@ export function ProfessorDashboardPage() {
         })
         .catch(() => {
           if (cancelled) return;
-          // Backend offline / 404 / network error - render dashboard
+          // Backend offline / 404 / network error — render dashboard
           // chrome with an empty state instead of failing loudly.
           setData(EMPTY_OVERVIEW);
           setHasFetchError(true);
@@ -73,7 +73,7 @@ export function ProfessorDashboardPage() {
     };
   }, [teacherId]);
 
-  // Auth still loading - no user available yet.
+  // Auth still loading — no user available yet.
   if (!user) {
     return (
         <div className="min-h-screen bg-edu-bg text-edu-foreground flex items-center justify-center">
@@ -102,7 +102,7 @@ export function ProfessorDashboardPage() {
                       className="mb-6 flex items-center gap-2 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-2.5 text-sm text-amber-800"
                   >
                     <WifiOff size={16} className="shrink-0" />
-                    <span>Backend offline - vei vedea o vizualizare goală.</span>
+                    <span>Backend offline — vei vedea o vizualizare goală.</span>
                   </div>
               )}
 

@@ -1,10 +1,10 @@
-﻿import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /**
  * Terms of Service. Long-form copy ported verbatim from
- * `origin/login-signin-front:src/auth/components/TermsOfService.tsx` -
+ * `origin/login-signin-front:src/auth/components/TermsOfService.tsx` —
  * only the presentation layer was rewritten in Tailwind. No inline styles.
  */
 export default function TermsOfServicePage() {
@@ -139,8 +139,8 @@ export default function TermsOfServicePage() {
             <li>Circumvent or attempt to circumvent any technological protection measures on the Service.</li>
           </ul>
           <p>
-            We reserve the right to investigate and take appropriate action -
-            including suspension or termination of accounts - against anyone who,
+            We reserve the right to investigate and take appropriate action —
+            including suspension or termination of accounts — against anyone who,
             in our sole discretion, violates this section.
           </p>
         </Section>
@@ -207,15 +207,15 @@ export default function TermsOfServicePage() {
           <p>
             To the fullest extent permitted by applicable law, we shall not be
             liable for any indirect, incidental, special, consequential, or
-            punitive damages - including loss of data, loss of profits, or
-            interruption of service - arising out of or in connection with your
+            punitive damages — including loss of data, loss of profits, or
+            interruption of service — arising out of or in connection with your
             use of the Service, even if we have been advised of the possibility
             of such damages.
           </p>
           <p>
             Our total liability to you for any claim arising out of these Terms
             shall not exceed the greater of (a) the amount you paid us in the
-            twelve months preceding the claim, or (b) EUR 50.
+            twelve months preceding the claim, or (b) €50.
           </p>
         </Section>
 
@@ -237,7 +237,7 @@ export default function TermsOfServicePage() {
           <p>
             We may update these Terms from time to time. When we do, we will
             revise the "Last updated" date at the top of this page. If the
-            changes are material, we will make reasonable efforts to notify you -
+            changes are material, we will make reasonable efforts to notify you —
             for example, via an in-app notice or email.
           </p>
           <p>
