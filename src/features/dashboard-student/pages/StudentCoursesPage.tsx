@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { StudentNavbar } from "../components/StudentNavbar";
-import { getPublishedCourses } from "@/lib/api";
+import { getPublishedCourses, resolveFileUrl } from "@/lib/api";
 import type { CourseAPI } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -80,7 +80,7 @@ export default function StudentCoursesPage() {
             >
               <div className="aspect-video overflow-hidden">
                 <img
-                  src={course.thumbnailUrl ?? FALLBACK_THUMBNAIL}
+                  src={resolveFileUrl(course.thumbnailUrl) || FALLBACK_THUMBNAIL}
                   alt={course.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
