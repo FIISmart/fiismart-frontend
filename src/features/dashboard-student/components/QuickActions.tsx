@@ -60,7 +60,7 @@ export function QuickActions({ continueStudy }: QuickActionsProps) {
       )}
 
       <div
-        onClick={() => navigate("/student/courses")}
+        onClick={() => navigate("/student/tutors")}
         className="p-6 md:p-8 rounded-[20px] bg-gradient-to-r from-[#b4d3d9] to-[#2dd4bf] flex items-center gap-6 border border-white/20 shadow-sm cursor-pointer hover:opacity-95 transition-all"
       >
         <div className="w-12 h-12 bg-white/50 backdrop-blur-md rounded-xl flex items-center justify-center text-[#1a1a2e] shrink-0">

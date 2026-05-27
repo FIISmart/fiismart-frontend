@@ -31,8 +31,15 @@ type Props = {
   onTimeUpdate?: (time: number) => void;
   markers?: GroupedVideoMarker[];
   onMarkerClick?: (time: number, id: string) => void;
-  onProgressSaved?: () => void;
+  onProgressSaved?: (response?: {
+    lectureId: string;
+    watchedPercent: number;
+    positionSecs: number;
+    completed: boolean;
+    overallProgress: number;
+  }) => void;
   onDurationDetected?: (durationSecs: number) => void;
+  previewMode?: boolean;
 };
 
 function formatTime(time: number): string {
@@ -57,6 +64,7 @@ export default function VideoPlayer({
                                       onMarkerClick,
                                       onProgressSaved,
                                       onDurationDetected,
+                                      previewMode = false,
                                     }: Props) {
   const youtubeId = useMemo(() => (src ? getYouTubeId(src) : null), [src]);
   const isYouTube = Boolean(youtubeId);
@@ -97,26 +105,24 @@ export default function VideoPlayer({
 
   const syncWithBackend = useCallback(
       async (currTime: number, dur: number) => {
+        if (previewMode) return;
         if (!lectureId || lectureId === "undefined") return;
         if (currTime <= 0 || dur <= 0) return;
         const watchedPercent = Math.floor((currTime / dur) * 100);
         try {
-          await lessonVideoService.saveProgress(studentId, courseId, lectureId, {
+          const response = await lessonVideoService.saveProgress(studentId, courseId, lectureId, {
             watchedPercent,
             positionSecs: Math.floor(currTime),
             completed: watchedPercent >= 95,
             durationSecs: Math.round(dur),
           });
 
-          // Tell the parent component to refresh the sidebar
-          if (onProgressSaved) {
-            onProgressSaved();
-          }
+          onProgressSaved?.(response);
         } catch (error) {
           console.error("Eroare la salvare progres:", error);
         }
       },
-      [studentId, courseId, lectureId, onProgressSaved]
+      [studentId, courseId, lectureId, onProgressSaved, previewMode]
   );
 
   useEffect(() => {
@@ -161,9 +167,13 @@ export default function VideoPlayer({
   useEffect(() => {
     if (!isYouTube || !youtubeId) return;
     let interval: number;
+    let isCancelled = false;
 
     loadYouTubeAPI().then(() => {
-      ytPlayerRef.current = new window.YT.Player(ytContainerRef.current!, {
+      if (isCancelled) return;
+      if (!ytContainerRef.current) return;
+
+      ytPlayerRef.current = new window.YT.Player(ytContainerRef.current, {
         videoId: youtubeId,
         playerVars: {
           controls: 0,
@@ -173,12 +183,24 @@ export default function VideoPlayer({
         },
         events: {
           onReady: (e: { target: YouTubePlayerType }) => {
-            reportDuration(e.target.getDuration());
+            if (isCancelled) return;
+            const d = e.target.getDuration();
+            reportDuration(d);
           },
+          onStateChange: (e: { data: number }) => {
+            if (e.data === window.YT.PlayerState.ENDED) {
+              setIsPlaying(false);
+            } else if (e.data === window.YT.PlayerState.PLAYING) {
+              setIsPlaying(true);
+            } else if (e.data === window.YT.PlayerState.PAUSED) {
+              setIsPlaying(false);
+            }
+          }
         },
       });
 
       interval = window.setInterval(() => {
+        if (isCancelled) return;
         const player = ytPlayerRef.current;
         if (!player || typeof player.getCurrentTime !== "function") return;
 
@@ -186,7 +208,7 @@ export default function VideoPlayer({
         setCurrentTime(t);
         onTimeUpdate?.(t);
 
-        if (duration === 0) {
+        if (reportedDurationRef.current === 0) {
           const d = player.getDuration();
           if (d > 0) reportDuration(d);
         }
@@ -194,11 +216,19 @@ export default function VideoPlayer({
     });
 
     return () => {
+      isCancelled = true;
       window.clearInterval(interval);
-      ytPlayerRef.current?.destroy();
-      ytPlayerRef.current = null;
+      if (ytPlayerRef.current) {
+        try {
+          ytPlayerRef.current.destroy();
+        } catch (e) {
+          console.error("Error destroying YT player", e);
+        }
+        ytPlayerRef.current = null;
+      }
     };
-  }, [isYouTube, youtubeId, onTimeUpdate, savedPosition, duration, reportDuration]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isYouTube, youtubeId, savedPosition]);
 
   useEffect(() => {
     if (!targetTime) return;

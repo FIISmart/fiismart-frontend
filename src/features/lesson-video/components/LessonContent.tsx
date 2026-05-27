@@ -8,6 +8,7 @@ type Props = {
   lecture: LectureDetails;
   onMarkComplete: (durationSecs?: number) => Promise<void> | void;
   isSaving?: boolean;
+  readOnly?: boolean;
 };
 
 const URL_RE = /^(https?:)?\/\//i;
@@ -122,9 +123,10 @@ function MarkdownPreview({ content }: { content: string }) {
   return <div className="space-y-1">{blocks}</div>;
 }
 
-export default function LessonContent({ lecture, onMarkComplete, isSaving = false }: Props) {
+export default function LessonContent({ lecture, onMarkComplete, isSaving = false, readOnly = false }: Props) {
   const type = inferLessonType(lecture);
-  const source = lecture.content || lecture.pdfUrl || lecture.videoUrl || "";
+  // For PDF, prefer pdfUrl explicitly. For others, prefer content.
+  const source = type === "pdf" ? (lecture.pdfUrl || lecture.content || "") : (lecture.content || lecture.videoUrl || lecture.pdfUrl || "");
   const [remoteMarkdown, setRemoteMarkdown] = useState<string | null>(null);
   const [loadingMarkdown, setLoadingMarkdown] = useState(false);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
@@ -151,7 +153,7 @@ export default function LessonContent({ lecture, onMarkComplete, isSaving = fals
   }, [source, type]);
 
   useEffect(() => {
-    const pdfSource = lecture.pdfUrl || lecture.content || lecture.videoUrl || "";
+    const pdfSource = lecture.pdfUrl || (lecture.content && (lecture.content.includes('/api/v1/files/') || lecture.content.endsWith('.pdf')) ? lecture.content : null);
     if (type !== "pdf" || !pdfSource) {
       setPdfBlobUrl(null);
       setPdfError(null);
@@ -232,12 +234,14 @@ export default function LessonContent({ lecture, onMarkComplete, isSaving = fals
           </div>
         )}
 
-        <div className="border-t border-border p-5">
-          <Button onClick={() => onMarkComplete()} disabled={lecture.completed || isSaving} className="gap-2">
-            {lecture.completed ? <CheckCircle2 className="h-4 w-4" /> : null}
-            {lecture.completed ? "Parcurs" : "Marcheaza ca parcursa"}
-          </Button>
-        </div>
+        {!readOnly && (
+          <div className="border-t border-border p-5">
+            <Button onClick={() => onMarkComplete()} disabled={lecture.completed || isSaving} className="gap-2">
+              {lecture.completed ? <CheckCircle2 className="h-4 w-4" /> : null}
+              {lecture.completed ? "Parcurs" : "Marcheaza ca parcursa"}
+            </Button>
+          </div>
+        )}
       </section>
     );
   }
@@ -262,7 +266,7 @@ export default function LessonContent({ lecture, onMarkComplete, isSaving = fals
         </p>
       )}
 
-      <div className="mt-6 border-t border-border pt-5">
+      {!readOnly && <div className="mt-6 border-t border-border pt-5">
         <Button
           onClick={() => onMarkComplete(estimatedDuration)}
           disabled={lecture.completed || isSaving}
@@ -271,7 +275,7 @@ export default function LessonContent({ lecture, onMarkComplete, isSaving = fals
           {lecture.completed ? <CheckCircle2 className="h-4 w-4" /> : null}
           {lecture.completed ? "Parcurs" : "Marcheaza ca parcursa"}
         </Button>
-      </div>
+      </div>}
     </section>
   );
 }

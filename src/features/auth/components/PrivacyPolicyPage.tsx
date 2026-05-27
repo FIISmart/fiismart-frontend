@@ -1,10 +1,10 @@
-import { Link, useNavigate } from "react-router-dom";
+﻿import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /**
  * Privacy Policy. Long-form copy ported verbatim from
- * `origin/login-signin-front:src/auth/components/PrivacyPolicy.tsx` —
+ * `origin/login-signin-front:src/auth/components/PrivacyPolicy.tsx` â€”
  * only the presentation layer was rewritten in Tailwind. No inline styles.
  */
 export default function PrivacyPolicyPage() {
@@ -16,14 +16,14 @@ export default function PrivacyPolicyPage() {
         <div className="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
             <ArrowLeft className="size-4" aria-hidden="true" />
-            Înapoi
+            ÃŽnapoi
           </Button>
           <Link to="/" className="flex items-center gap-2">
             <GraduationCap className="size-5 text-edu-purple" aria-hidden="true" />
-            <span className="font-semibold tracking-tight">FIISmart</span>
+            <span className="font-semibold tracking-tight">FII Smart</span>
           </Link>
           <Link to="/terms" className="text-sm text-edu-purple hover:underline">
-            Terms of Service →
+            Terms of Service â†’
           </Link>
         </div>
       </header>
@@ -41,17 +41,17 @@ export default function PrivacyPolicyPage() {
         </h1>
         <p className="mt-4 text-lg text-muted-foreground">
           Your privacy matters to us. This policy explains exactly what personal
-          data FIISmart collects, why we collect it, how we use and protect it,
+          data FII Smart collects, why we collect it, how we use and protect it,
           and what rights you have under the GDPR.
         </p>
         <hr className="mt-8 border-border/60" />
 
         <Section id="intro" title="1. Introduction">
           <p>
-            This Privacy Policy applies to the FIISmart e-learning platform
-            ("Service") operated by the FIISmart student project team at the
+            This Privacy Policy applies to the FII Smart e-learning platform
+            ("Service") operated by the FII Smart student project team at the
             Faculty of Computer Science (FII), Alexandru Ioan Cuza University,
-            Iași, Romania ("we", "us", "our").
+            IaÈ™i, Romania ("we", "us", "our").
           </p>
           <p>
             We are committed to protecting your personal data in accordance with
@@ -69,10 +69,10 @@ export default function PrivacyPolicyPage() {
         <Section id="controller" title="2. Data Controller">
           <p>The data controller responsible for your personal data is:</p>
           <ContactBox>
-            <p><strong>FIISmart Project Team</strong></p>
+            <p><strong>FII Smart Project Team</strong></p>
             <p>Faculty of Computer Science (FII)</p>
             <p>Alexandru Ioan Cuza University</p>
-            <p>Bd. Carol I nr. 11, Iași 700506, România</p>
+            <p>Bd. Carol I nr. 11, IaÈ™i 700506, RomÃ¢nia</p>
             <p>
               Email:{" "}
               <a
@@ -92,7 +92,7 @@ export default function PrivacyPolicyPage() {
           <p>
             When you register, we collect your first name, last name, email
             address, chosen role (student or teacher), and a hashed version of
-            your password. We never store your password in plain text — it is
+            your password. We never store your password in plain text â€” it is
             immediately hashed using BCrypt before being saved.
           </p>
 
@@ -186,21 +186,21 @@ export default function PrivacyPolicyPage() {
           </p>
           <ul className="list-disc pl-6 space-y-2">
             <li>
-              <strong>Account data</strong> — retained for as long as your
+              <strong>Account data</strong> â€” retained for as long as your
               account is active. If you delete your account, we will delete
               your personal data within 30 days, except where retention is
               required by law.
             </li>
             <li>
-              <strong>Activity data</strong> — retained for the duration of
+              <strong>Activity data</strong> â€” retained for the duration of
               your account plus 90 days.
             </li>
             <li>
-              <strong>Server logs</strong> — retained for a maximum of 90 days
+              <strong>Server logs</strong> â€” retained for a maximum of 90 days
               for security purposes.
             </li>
             <li>
-              <strong>Session tokens</strong> — expire automatically or are
+              <strong>Session tokens</strong> â€” expire automatically or are
               deleted on logout.
             </li>
           </ul>
@@ -276,7 +276,7 @@ export default function PrivacyPolicyPage() {
               rel="noopener noreferrer"
               className="text-edu-purple underline"
             >
-              Autoritatea Națională de Supraveghere (ANSPDCP)
+              Autoritatea NaÈ›ionalÄƒ de Supraveghere (ANSPDCP)
             </a>
             .
           </p>
@@ -284,7 +284,7 @@ export default function PrivacyPolicyPage() {
 
         <Section id="cookies" title="9. Cookies & Local Storage">
           <p>
-            FIISmart does not currently use tracking or advertising cookies.
+            FII Smart does not currently use tracking or advertising cookies.
             We use browser <strong>localStorage</strong> to store your session
             tokens (access token and refresh token) so that you remain logged
             in between browser sessions. These are strictly necessary for the
@@ -359,10 +359,10 @@ export default function PrivacyPolicyPage() {
             or the processing of your personal data, please contact us:
           </p>
           <ContactBox>
-            <p><strong>FIISmart Privacy Team</strong></p>
+            <p><strong>FII Smart Privacy Team</strong></p>
             <p>Faculty of Computer Science (FII)</p>
             <p>Alexandru Ioan Cuza University</p>
-            <p>Bd. Carol I nr. 11, Iași 700506, România</p>
+            <p>Bd. Carol I nr. 11, IaÈ™i 700506, RomÃ¢nia</p>
             <p>
               Privacy email:{" "}
               <a
@@ -380,12 +380,12 @@ export default function PrivacyPolicyPage() {
           <ContactBox>
             <p>
               <strong>
-                Autoritatea Națională de Supraveghere a Prelucrării Datelor cu
+                Autoritatea NaÈ›ionalÄƒ de Supraveghere a PrelucrÄƒrii Datelor cu
                 Caracter Personal (ANSPDCP)
               </strong>
             </p>
             <p>
-              B-dul G-ral. Gheorghe Magheru 28-30, Sector 1, București 010336
+              B-dul G-ral. Gheorghe Magheru 28-30, Sector 1, BucureÈ™ti 010336
             </p>
             <p>
               Website:{" "}
@@ -403,10 +403,10 @@ export default function PrivacyPolicyPage() {
 
         <div className="mt-12 flex items-center justify-between border-t border-border/60 pt-6">
           <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-            <ArrowLeft className="size-4" aria-hidden="true" /> Înapoi
+            <ArrowLeft className="size-4" aria-hidden="true" /> ÃŽnapoi
           </Button>
           <Link to="/terms" className="text-sm text-edu-purple hover:underline">
-            Terms of Service →
+            Terms of Service â†’
           </Link>
         </div>
       </article>
@@ -454,3 +454,4 @@ function ContactBox({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+

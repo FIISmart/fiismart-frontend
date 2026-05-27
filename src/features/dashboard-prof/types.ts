@@ -3,6 +3,10 @@ export interface DashboardStats {
   studentsEnrolled: number;
   activeCourses: number;
   quizzesCompleted: number;
+  totalQuizzes: number;
+  lectureQuizzes: number;
+  moduleQuizzes: number;
+  finalQuizzes: number;
   completionRatePct: number;
 }
 
@@ -24,6 +28,7 @@ export interface QuizPreview {
   title: string;
   courseId: string;
   courseTitle: string;
+  quizScope?: string;
   attemptsCount: number;
   avgScorePct: number;
   status: string; // "active" sau "draft"

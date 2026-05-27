@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import {
   Users,
   BookOpen,
@@ -19,13 +19,17 @@ import { QuizTable } from "../components/QuizTable";
 import { CommentList } from "../components/CommentList";
 import type { DashboardOverviewResponse } from "../types";
 
-// Fallback shape returned by the overview endpoint — used when the
+// Fallback shape returned by the overview endpoint â€” used when the
 // backend is unreachable so the dashboard chrome still renders.
 const EMPTY_OVERVIEW: DashboardOverviewResponse = {
   stats: {
     studentsEnrolled: 0,
     activeCourses: 0,
     quizzesCompleted: 0,
+    totalQuizzes: 0,
+    lectureQuizzes: 0,
+    moduleQuizzes: 0,
+    finalQuizzes: 0,
     completionRatePct: 0,
   },
   coursesPreview: [],
@@ -57,7 +61,7 @@ export function ProfessorDashboardPage() {
         })
         .catch(() => {
           if (cancelled) return;
-          // Backend offline / 404 / network error — render dashboard
+          // Backend offline / 404 / network error â€” render dashboard
           // chrome with an empty state instead of failing loudly.
           setData(EMPTY_OVERVIEW);
           setHasFetchError(true);
@@ -69,7 +73,7 @@ export function ProfessorDashboardPage() {
     };
   }, [teacherId]);
 
-  // Auth still loading — no user available yet.
+  // Auth still loading â€” no user available yet.
   if (!user) {
     return (
         <div className="min-h-screen bg-edu-bg text-edu-foreground flex items-center justify-center">
@@ -86,7 +90,7 @@ export function ProfessorDashboardPage() {
             <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex justify-center items-center">
               <div className="flex items-center gap-3 text-edu-muted-fg">
                 <Spinner className="size-6 text-edu-primary" />
-                <p className="text-xl font-medium animate-pulse">Se încarcă dashboard-ul...</p>
+                <p className="text-xl font-medium animate-pulse">Se Ã®ncarcÄƒ dashboard-ul...</p>
               </div>
             </main>
         ) : (
@@ -98,7 +102,7 @@ export function ProfessorDashboardPage() {
                       className="mb-6 flex items-center gap-2 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-2.5 text-sm text-amber-800"
                   >
                     <WifiOff size={16} className="shrink-0" />
-                    <span>Backend offline — vei vedea o vizualizare goală.</span>
+                    <span>Backend offline â€” vei vedea o vizualizare goalÄƒ.</span>
                   </div>
               )}
 
@@ -107,15 +111,15 @@ export function ProfessorDashboardPage() {
                   Bine ai venit, Profesor!
                 </h2>
                 <p className="text-edu-muted-fg mt-2 text-lg">
-                  Iată o privire de ansamblu asupra cursurilor tale și a activității studenților.
+                  IatÄƒ o privire de ansamblu asupra cursurilor tale È™i a activitÄƒÈ›ii studenÈ›ilor.
                 </p>
               </div>
 
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
                 <StatCard
-                    title="Studenți activi"
+                    title="StudenÈ›i activi"
                     value={data.stats.studentsEnrolled}
-                    subtitle="Înrolati în total"
+                    subtitle="ÃŽnrolati Ã®n total"
                     icon={<Users size={24} />}
                     iconBgColor="bg-edu-secondary/20"
                     iconColor="text-edu-primary"
@@ -123,15 +127,15 @@ export function ProfessorDashboardPage() {
                 <StatCard
                     title="Cursuri active"
                     value={data.stats.activeCourses}
-                    subtitle="Publicate pe platformă"
+                    subtitle="Publicate pe platformÄƒ"
                     icon={<BookOpen size={24} />}
                     iconBgColor="bg-edu-accent/30"
                     iconColor="text-edu-foreground"
                 />
                 <StatCard
-                    title="Quiz-uri completate"
-                    value={data.stats.quizzesCompleted}
-                    subtitle="De către studenți"
+                    title="Quiz-uri create"
+                    value={data.stats.totalQuizzes ?? 0}
+                    subtitle={`${data.stats.lectureQuizzes ?? 0} lectie · ${data.stats.moduleQuizzes ?? 0} modul · ${data.stats.finalQuizzes ?? 0} final`}
                     icon={<Star size={24} />}
                     iconBgColor="bg-edu-secondary/30"
                     iconColor="text-edu-primary"
@@ -149,17 +153,24 @@ export function ProfessorDashboardPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
                 <ActionCard
                     title="Creare Quiz Rapid"
-                    description="Adaugă un test scurt pentru evaluarea studenților."
+                    description="AdaugÄƒ un test scurt pentru evaluarea studenÈ›ilor."
                     icon={<PlusCircle size={28} />}
                     bgColorClass="bg-[#B794F4]"
                     to="/professor/quizzes"
                 />
                 <ActionCard
                     title="Course Builder"
-                    description="Configurează și publică un curs nou pas cu pas."
+                    description="ConfigureazÄƒ È™i publicÄƒ un curs nou pas cu pas."
                     icon={<BookOpen size={28} />}
                     bgColorClass="bg-[#4FD1C5]"
                     to="/professor/courses"
+                />
+                <ActionCard
+                    title="Cereri de mentorat"
+                    description="Raspunde studentilor care au nevoie de sprijin."
+                    icon={<Users size={28} />}
+                    bgColorClass="bg-[#9B8EC7]"
+                    to="/professor/mentor-requests"
                 />
               </div>
 
@@ -218,3 +229,5 @@ export function ProfessorDashboardPage() {
 }
 
 export default ProfessorDashboardPage;
+
+

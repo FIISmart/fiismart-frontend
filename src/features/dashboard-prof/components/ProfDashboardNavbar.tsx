@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { toast } from "sonner";
 import { NotificationBell } from "@/features/notifications/NotificationBell";
+import { Logo } from "@/components/brand/Logo";
 
 export function ProfDashboardNavbar() {
   const { logout, user } = useAuth();
@@ -25,11 +26,7 @@ export function ProfDashboardNavbar() {
           <button className="md:hidden text-edu-foreground hover:text-edu-primary transition">
             <Menu size={24} />
           </button>
-          <Link to="/professor/dashboard">
-            <h1 className="text-xl md:text-2xl font-bold font-poppins text-edu-primary">
-              FII<span className="text-edu-foreground">Smart</span>
-            </h1>
-          </Link>
+          <Logo textClassName="text-xl md:text-2xl font-poppins" />
         </div>
 
         <nav className="hidden md:flex items-center gap-8">
@@ -44,6 +41,18 @@ export function ProfDashboardNavbar() {
             className="text-edu-muted-fg font-medium hover:text-edu-primary transition"
           >
             Cursuri
+          </Link>
+          <Link
+            to="/professor/statistics"
+            className="text-edu-muted-fg font-medium hover:text-edu-primary transition"
+          >
+            Statistici
+          </Link>
+          <Link
+            to="/professor/mentor-requests"
+            className="text-edu-muted-fg font-medium hover:text-edu-primary transition"
+          >
+            Mentorat
           </Link>
         </nav>
 

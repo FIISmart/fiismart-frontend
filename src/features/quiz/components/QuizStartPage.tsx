@@ -39,7 +39,7 @@ export default function QuizStartPage({
   return (
     <div className="flex-grow flex flex-col items-center justify-center p-4">
       <div className="bg-[#9B8EC7] text-white text-sm font-medium px-6 h-[32px] flex items-center justify-center rounded-full mb-6 shadow-sm">
-        FIISmart Learning
+        FII Smart Learning
       </div>
 
       <div className="bg-white w-full max-w-[512px] rounded-[24px] shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1),0_8px_10px_-6px_rgba(0,0,0,0.1)] relative overflow-hidden flex flex-col items-center">

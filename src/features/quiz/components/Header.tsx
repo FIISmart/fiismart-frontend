@@ -17,7 +17,10 @@ export default function Header() {
           <ArrowLeft size={15} />
           Înapoi
         </button>
-        <div className="font-bold text-[16px] text-[#9B8EC7]">FIISmart</div>
+        <div className="font-bold text-[16px]">
+          <span className="text-[#9B8EC7]">FII</span>
+          <span className="text-black"> Smart</span>
+        </div>
       </div>
 
       <div className="flex items-center gap-4">

@@ -1,4 +1,5 @@
-import { Heart, Reply } from "lucide-react";
+﻿import { Heart, Reply } from "lucide-react";
+import { Link } from "react-router-dom";
 import type { CommentPreview } from "../types";
 
 interface CommentListProps {
@@ -19,9 +20,9 @@ export function CommentList({ comments }: CommentListProps) {
         <div className="mb-12">
             <div className="flex items-center justify-between mb-6">
                 <h3 className="text-2xl font-bold font-poppins text-edu-foreground">Comentarii Relevante</h3>
-                <a href="#" className="text-sm font-medium text-[#BDA6CE] hover:text-edu-primary transition">
+                <Link to="/professor/courses" className="text-sm font-medium text-[#BDA6CE] hover:text-edu-primary transition">
                     Vezi toate
-                </a>
+                </Link>
             </div>
             <div className="bg-edu-card rounded-2xl shadow-sm flex flex-col">
                 {comments.length === 0 ? (
@@ -59,28 +60,28 @@ export function CommentList({ comments }: CommentListProps) {
                     <span className="font-semibold text-edu-foreground">
                       {comment.authorDisplayName}
                     </span>
-                                        <span className="text-edu-border">•</span>
+                                        <span className="text-edu-border">â€¢</span>
                                         <span className="text-xs font-medium bg-edu-bg px-2 py-0.5 rounded-md text-edu-muted-fg border border-edu-border/50">
                       {comment.courseTitle}
                     </span>
-                                        <span className="text-edu-border">•</span>
+                                        <span className="text-edu-border">â€¢</span>
                                         <span className="text-xs text-edu-muted-fg">{dataFormatata}</span>
                                     </div>
 
                                     <p className="text-sm text-edu-muted-fg mt-2 leading-relaxed">{comment.body}</p>
 
                                     <div className="flex items-center gap-4 mt-4">
-                                        <button className="flex items-center gap-1.5 text-xs font-medium text-edu-muted-fg hover:text-rose-500 transition">
+                                        <span className="flex items-center gap-1.5 text-xs font-medium text-edu-muted-fg">
                                             <Heart size={14} />
                                             <span>{comment.likeCount}</span>
-                                        </button>
-                                        <button className="flex items-center gap-1.5 text-xs font-medium text-edu-muted-fg hover:text-edu-primary transition">
+                                        </span>
+                                        <span className="flex items-center gap-1.5 text-xs font-medium text-edu-muted-fg">
                                             <Reply size={14} />
-                                            <span>{comment.repliesCount} Răspunsuri</span>
-                                        </button>
+                                            <span>{comment.repliesCount} RÄƒspunsuri</span>
+                                        </span>
 
                                         {comment.isAnswered && (
-                                            <span className="text-xs text-emerald-500 font-medium ml-auto">✓ Răspuns</span>
+                                            <span className="text-xs text-emerald-500 font-medium ml-auto">âœ“ RÄƒspuns</span>
                                         )}
                                     </div>
                                 </div>
@@ -92,3 +93,4 @@ export function CommentList({ comments }: CommentListProps) {
         </div>
     );
 }
+

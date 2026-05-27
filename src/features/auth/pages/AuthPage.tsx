@@ -166,7 +166,7 @@ export default function AuthPage() {
             <span className="grid place-items-center size-11 rounded-xl bg-white/15 backdrop-blur-sm ring-1 ring-white/30">
               <GraduationCap className="size-6" aria-hidden="true" />
             </span>
-            <span className="text-xl font-semibold tracking-tight">FIISmart</span>
+            <span className="text-xl font-semibold tracking-tight">FII Smart</span>
           </Link>
           <div className="space-y-6 max-w-md">
             <h1 className="text-4xl xl:text-5xl font-serif font-semibold leading-tight">
@@ -178,7 +178,7 @@ export default function AuthPage() {
             </p>
           </div>
           <p className="text-xs text-white/70">
-            &copy; {new Date().getFullYear()} FIISmart &middot; Faculty of Computer Science, UAIC
+            &copy; {new Date().getFullYear()} FII Smart &middot; Faculty of Computer Science, UAIC
           </p>
         </div>
       </aside>
@@ -191,7 +191,7 @@ export default function AuthPage() {
             <span className="grid place-items-center size-10 rounded-xl bg-edu-purple text-white">
               <GraduationCap className="size-5" aria-hidden="true" />
             </span>
-            <span className="text-xl font-semibold tracking-tight text-edu-foreground">FIISmart</span>
+            <span className="text-xl font-semibold tracking-tight text-edu-foreground">FII Smart</span>
           </div>
 
           {view === "tabs" && isCognitoConfigured && <GoogleLoginButton />}

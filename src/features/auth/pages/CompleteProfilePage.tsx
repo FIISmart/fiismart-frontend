@@ -34,7 +34,7 @@ export default function CompleteProfilePage() {
     setError(null);
     try {
       const user = await assignRole(selected, firstName.trim(), lastName.trim());
-      toast.success(`Bun venit pe FIISmart, ${user.firstName || user.email}!`);
+      toast.success(`Bun venit pe FII Smart, ${user.firstName || user.email}!`);
       const dest = user.role === "PROFESSOR" ? "/professor/dashboard" : "/student/dashboard";
       navigate(dest, { replace: true });
     } catch (err) {
@@ -51,7 +51,7 @@ export default function CompleteProfilePage() {
           <span className="grid place-items-center size-11 rounded-xl bg-edu-purple text-white">
             <GraduationCap className="size-6" aria-hidden="true" />
           </span>
-          <span className="text-xl font-semibold tracking-tight text-edu-foreground">FIISmart</span>
+          <span className="text-xl font-semibold tracking-tight text-edu-foreground">FII Smart</span>
         </div>
 
         <Card className="border-border/60 shadow-lg">

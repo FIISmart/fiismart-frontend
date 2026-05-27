@@ -1,4 +1,4 @@
-import { Ban } from "lucide-react";
+﻿import { Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "../context/AuthContext";
 
@@ -22,7 +22,7 @@ export default function BannedPage() {
             Cont suspendat
           </h1>
           <p className="text-muted-foreground">
-            Contul tău a fost suspendat de un administrator și nu mai poți accesa platforma FIISmart.
+            Contul tÄƒu a fost suspendat de un administrator È™i nu mai poÈ›i accesa platforma FII Smart.
           </p>
           {user?.banReason && (
             <div className="mt-2 rounded-xl bg-destructive/5 border border-destructive/20 px-4 py-3 text-sm text-destructive text-left">
@@ -30,7 +30,7 @@ export default function BannedPage() {
             </div>
           )}
           <p className="text-sm text-muted-foreground pt-2">
-            Dacă crezi că este o greșeală, contactează administratorii platformei.
+            DacÄƒ crezi cÄƒ este o greÈ™ealÄƒ, contacteazÄƒ administratorii platformei.
           </p>
         </div>
 
@@ -41,3 +41,4 @@ export default function BannedPage() {
     </div>
   );
 }
+

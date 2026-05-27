@@ -121,7 +121,7 @@ export default function StudentDashboardPage() {
           <p className="text-[14.5px] text-gray-500 font-medium opacity-80 mt-1">
             {loading
               ? "Se încarcă datele tale..."
-              : "Continuă-ți parcursul de învățare pe FiiSmart."}
+              : "Continuă-ți parcursul de învățare pe FII Smart."}
           </p>
         </div>
 
