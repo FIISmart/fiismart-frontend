@@ -126,7 +126,7 @@ export default function CoursesListPage() {
               id: course.id,
               title: course.title,
               description: course.description,
-              thumbnail: course.thumbnailUrl || FALLBACK_THUMBNAIL,
+              thumbnail: api.resolveFileUrl(course.thumbnailUrl) || FALLBACK_THUMBNAIL,
               modules: modules.length,
               lessons: lessonsCount,
               duration,
